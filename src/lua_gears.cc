@@ -70,7 +70,11 @@ LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
   int id = lua_->newthread<const string &, const Segment &>(fname_.c_str(), input, segment);
-  return New<LuaTranslation>(lua_, id);
+  an<Translation> t = New<LuaTranslation>(lua_, id);
+  if (t->exhausted())
+    return an<Translation>();
+  else
+    return t;
 }
 
 }  // namespace rime
