@@ -13,9 +13,11 @@ extern "C" {
 
 #if LUA_VERSION_NUM >= 502
 #define xlua_resume(L, a) lua_resume(L, NULL, a)
+#define LUA_UNPACK "table.unpack"
 #else
 #define xlua_resume lua_resume
 #define lua_rawlen lua_objlen
+#define LUA_UNPACK "unpack"
 #endif
 
 namespace rime {

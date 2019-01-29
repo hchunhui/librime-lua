@@ -267,27 +267,9 @@ namespace LuaImpl {
     return lua_yield(L, lua_gettop(L));
   }
 
-#if LUA_VERSION_NUM >= 502
-#if LUA_VERSION_NUM == 502
-  static int thread_stubk(lua_State *L) {
-#else
-  static int thread_stubk(lua_State *L, int status, lua_KContext ctx) {
-#endif
-    return 1;
-  }
-
-  int thread_stub(lua_State *L) {
-    int n = lua_tointeger(L, lua_upvalueindex(1));
-    lua_pushvalue(L, lua_upvalueindex(2));
-    for (int i = 0; i < n; i++) {
-      lua_pushvalue(L, lua_upvalueindex(3 + i));
-    }
-    lua_callk(L, n, 1, 0, thread_stubk);
-    return 1;
-  }
-#endif
-
   extern "C" void xluaopen_utf8(lua_State *);
+
+  static const char makeclosurekey = 'k';
 
   static int pmain(lua_State *L) {
     luaL_openlibs(L);
@@ -309,12 +291,12 @@ namespace LuaImpl {
       printf("dofile(err=%d): %s\n", status, e);
     }
 
-#if LUA_VERSION_NUM < 502
-    luaL_dostring(L, "function __make_closure(f, ...)\n"
+    lua_pushlightuserdata(L, (void *)&makeclosurekey);
+    luaL_dostring(L, "return function (f, ...)\n"
                   "local args = {...}\n"
-                  "return (function () return f(unpack(args)) end)\n"
+                  "return (function () return f(" LUA_UNPACK "(args)) end)\n"
                   "end\n");
-#endif
+    lua_settable(L, LUA_REGISTRYINDEX);
 
     return 0;
   }
@@ -356,15 +338,10 @@ int Lua::newthread(lua_State *L, int nargs) {
   lua_State *C = lua_newthread(L_);
   int id = luaL_ref(L_, LUA_REGISTRYINDEX);
 
-#if LUA_VERSION_NUM >= 502
-  lua_pushinteger(C, nargs);
-  lua_xmove(L, C, 1 + nargs);
-  lua_pushcclosure(C, LuaImpl::thread_stub, 2 + nargs);
-#else
-  lua_getglobal(C, "__make_closure");
+  lua_pushlightuserdata(C, (void *)&LuaImpl::makeclosurekey);
+  lua_gettable(C, LUA_REGISTRYINDEX);
   lua_xmove(L, C, 1 + nargs);
   lua_call(C, 1 + nargs, 1);
-#endif
 
   return id;
 }
