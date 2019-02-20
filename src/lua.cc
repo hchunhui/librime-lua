@@ -110,30 +110,37 @@ namespace CandidateReg {
 }
 
 //--- wrappers for an<Translation>
-int raw_lua_translation(lua_State *L);
+an<Translation> lua_translation_new(Lua *lua, int id);
 namespace TranslationReg {
   typedef an<Translation> T;
 
-  static int raw_next(lua_State *L) {
-    an<Translation> t = LuaType<an<Translation>>::todata(L, 1);
-    auto c = t->Peek();
-    if (!c) {
-      lua_pushnil(L);
-    } else {
-      LuaType<an<Candidate>>::pushdata(L, c);
-      t->Next();
-    }
+  int raw_make(lua_State *L) {
+    Lua *lua = Lua::from_state(L);
+    int n = lua_gettop(L);
+
+    if (n < 1)
+      return 0;
+
+    int id = lua->newthread(L, n - 1);
+    auto r = lua_translation_new(lua, id);
+    LuaType<an<Translation>>::pushdata(L, r);
     return 1;
   }
 
+  static an<Candidate> next(T t) {
+    auto c = t->Peek();
+    t->Next();
+    return c;
+  }
+
   static int raw_iter(lua_State *L) {
-    lua_pushcfunction(L, raw_next);
+    lua_pushcfunction(L, WRAP(next));
     lua_pushvalue(L, 1);
     return 2;
   }
 
   static const luaL_Reg funcs[] = {
-    { "Translation", raw_lua_translation },
+    { "Translation", raw_make },
     { NULL, NULL },
   };
 

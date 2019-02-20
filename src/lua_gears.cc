@@ -38,17 +38,8 @@ public:
   }
 };
 
-int raw_lua_translation(lua_State *L) {
-  Lua *lua = Lua::from_state(L);
-  int n = lua_gettop(L);
-
-  if (n < 1)
-    return 0;
-
-  int id = lua->newthread(L, n - 1);
-  auto r = New<LuaTranslation>(lua, id);
-  LuaType<an<Translation>>::pushdata(L, r);
-  return 1;
+an<Translation> lua_translation_new(Lua *lua, int id) {
+  return New<LuaTranslation>(lua, id);
 }
 
 //--- LuaFilter

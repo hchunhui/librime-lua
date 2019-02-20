@@ -288,6 +288,30 @@ struct LuaWrapper<S(*)(T...), f> {
         }
       };
 
+      template<int n, typename Rp>
+      struct ret<n, Rp *> {
+        static int wrap(lua_State *L, Us... us) {
+          Rp *r = f(us...);
+          if (r)
+            LuaType<Rp *>::pushdata(L, r);
+          else
+            lua_pushnil(L);
+          return 1;
+        }
+      };
+
+      template<int n, typename Rp>
+      struct ret<n, an<Rp>> {
+        static int wrap(lua_State *L, Us... us) {
+          an<Rp> r = f(us...);
+          if (r)
+            LuaType<an<Rp>>::pushdata(L, r);
+          else
+            lua_pushnil(L);
+          return 1;
+        }
+      };
+
       template<int n>
       static int wrap(lua_State *L, Us... us) {
         return ret<n, R>::wrap(L, us...);
