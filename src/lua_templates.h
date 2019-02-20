@@ -256,10 +256,9 @@ O Lua::resume(int id) {
 
 // --- LuaWrapper
 // WRAP(f): wraps function f
-// WRAP_AN(C, f): wraps member function C::f  (object wraped by shared_ptr)
-// WRAP_REF(C, f): wraps member function C::f (object wraped by reference)
-// WRAP_PTR(C, f): wraps member function C::f (object wraped by pointer)
-// WRAP_*_GET/SET(C, f): wraps member variable C::f
+// WRAPT(f, R, T...): wraps function f (R: return type, T...: argument types)
+// WRAPMEM(C', C::f): wraps member function C::f  (object wraped by C')
+// WRAPMEM_GET/SET(C', C::f): wraps member variable C::f (object wraped by C')
 
 template<typename F, F f>
 struct LuaWrapper;
