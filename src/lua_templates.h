@@ -402,7 +402,7 @@ struct MemberWrapper<D *, R (C::*), f> {
     return c->*f;
   }
 
-  static R wrap_set(D *c, R r) {
+  static void wrap_set(D *c, R r) {
     c->*f = r;
   }
 };
@@ -413,7 +413,7 @@ struct MemberWrapper<D &, R (C::*), f> {
     return c.*f;
   }
 
-  static R wrap_set(D &c, R r) {
+  static void wrap_set(D &c, R r) {
     c.*f = r;
   }
 };
@@ -425,7 +425,7 @@ struct MemberWrapper<an<D>, R (C::*), f> {
     return c->*f;
   }
 
-  static R wrap_set(an<D> ac, R r) {
+  static void wrap_set(an<D> ac, R r) {
     C *c = ac.get();
     c->*f = r;
   }
