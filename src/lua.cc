@@ -76,6 +76,7 @@ namespace LuaImpl {
     lua_pushstring(L, "__newindex");
     lua_pushcfunction(L, newindex);
     lua_settable(L, -3);
+    lua_pop(L, 1);
   }
 
   static int yield(lua_State *L) {
