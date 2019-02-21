@@ -360,7 +360,7 @@ struct MemberWrapper<D *, R (C::*)(T...), f> {
 };
 
 template<typename D, typename R, typename C, typename... T, R (C::*f)(T...)>
-struct MemberWrapper<D &, R (C::*)(T...), f> {
+struct MemberWrapper<D, R (C::*)(T...), f> {
   static R wrap(D &c, T... t) {
     return (c.*f)(t...);
   }
@@ -382,7 +382,7 @@ struct MemberWrapper<D *, R (C::*)(T...) const, f> {
 };
 
 template<typename D, typename R, typename C, typename... T, R (C::*f)(T...) const>
-struct MemberWrapper<D &, R (C::*)(T...) const, f> {
+struct MemberWrapper<D, R (C::*)(T...) const, f> {
   static R wrap(D &c, T... t) {
     return (c.*f)(t...);
   }
@@ -408,7 +408,7 @@ struct MemberWrapper<D *, R (C::*), f> {
 };
 
 template<typename D, typename R, typename C, R C::*f>
-struct MemberWrapper<D &, R (C::*), f> {
+struct MemberWrapper<D, R (C::*), f> {
   static R wrap_get(D &c) {
     return c.*f;
   }
