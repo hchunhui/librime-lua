@@ -66,10 +66,6 @@ struct LuaType<T &> {
     // return string("R") + typeid(T).name();
   }
 
-  static int gc(lua_State *L) {
-    return 0;
-  }
-
   static void pushdata(lua_State *L, T &o) {
     T **u = (T**) lua_newuserdata(L, sizeof(T *));
     *u = &o;

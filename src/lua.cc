@@ -55,9 +55,11 @@ namespace LuaImpl {
     }
 
     luaL_newmetatable(L, name);
-    lua_pushstring(L, "__gc");
-    lua_pushcfunction(L, gc);
-    lua_settable(L, -3);
+    if (gc) {
+      lua_pushstring(L, "__gc");
+      lua_pushcfunction(L, gc);
+      lua_settable(L, -3);
+    }
     lua_pushstring(L, "methods");
     lua_createtable(L, 0, 4);
     luaL_setfuncs(L, methods, 0);

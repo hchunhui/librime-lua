@@ -7,22 +7,40 @@
 
 namespace rime {
 
-//--- wrappers for Segment &
-namespace SegmentReg {
-  typedef const Segment &T;
+//--- wrappers for const Segment
+namespace ConstSegmentReg {
+  typedef const Segment T;
+
+  static string get_status(T &t) {
+    switch (t.status) {
+    case Segment::kVoid: return "kVoid";
+    case Segment::kGuess: return "kGuess";
+    case Segment::kSelected: return "kSelected";
+    case Segment::kConfirmed: return "kConfirmed";
+    }
+    return "";
+  }
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
+    { "has_tag", WRAPMEM(T, Segment::HasTag) },
+    { "get_candidate_at", WRAPMEM(T, Segment::GetCandidateAt) },
+    { "get_selected_candidate", WRAPMEM(T, Segment::GetSelectedCandidate) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    { "status", WRAP(get_status) },
     { "start", WRAPMEM_GET(T, Segment::start) },
     { "_end", WRAPMEM_GET(T, Segment::end) }, // end is keyword in Lua...
     { "length", WRAPMEM_GET(T, Segment::length) },
+    { "tags", WRAPMEM_GET(T, Segment::tags) },
+    { "menu", WRAPMEM_GET(T, Segment::menu) },
+    { "selected_index", WRAPMEM_GET(T, Segment::selected_index) },
+    { "prompt", WRAPMEM_GET(T, Segment::prompt) },
     { NULL, NULL },
   };
 
@@ -195,8 +213,13 @@ namespace ReverseDbReg {
 
 //--- Lua
 #define EXPORT(ns, L) \
-    export_type(L, LuaType<ns::T>::name().c_str(), LuaType<ns::T>::gc, \
-                ns::funcs, ns::methods, ns::vars_get, ns::vars_set)
+  do { \
+  export_type(L, LuaType<ns::T>::name().c_str(), LuaType<ns::T>::gc,     \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set);       \
+  export_type(L, LuaType<ns::T &>::name().c_str(), NULL, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  } while (0)
+
 namespace LuaImpl {
   void export_type(lua_State *L,
                    const char *name, lua_CFunction gc,
@@ -204,7 +227,7 @@ namespace LuaImpl {
                    const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
   void types_init(lua_State *L) {
-    EXPORT(SegmentReg, L);
+    EXPORT(ConstSegmentReg, L);
     EXPORT(CandidateReg, L);
     EXPORT(TranslationReg, L);
     EXPORT(ReverseDbReg, L);
