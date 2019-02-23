@@ -28,11 +28,12 @@ public:
     if (exhausted()) {
       return false;
     }
-    c_ = lua_->resume<an<Candidate>>(id_);
-    if (!c_) {
+    auto r = lua_->resume<an<Candidate>>(id_);
+    if (!r) {
       set_exhausted(true);
       return false;
     } else {
+      c_ = *r;
       return true;
     }
   }

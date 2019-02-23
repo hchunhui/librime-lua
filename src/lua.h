@@ -20,7 +20,7 @@ class Lua {
   int newthread(const string &f, I ... input);
 
   template <typename O>
-  O resume(int id);
+  optional<O> resume(int id);
 
   void unref(int id);
 

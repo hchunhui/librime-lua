@@ -144,7 +144,10 @@ namespace TranslationReg {
     return 1;
   }
 
-  static an<Candidate> next(T t) {
+  static optional<an<Candidate>> next(T t) {
+    if (t->exhausted())
+      return {};
+
     auto c = t->Peek();
     t->Next();
     return c;

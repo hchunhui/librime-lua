@@ -83,6 +83,17 @@ struct LuaType<T &> {
   }
 };
 
+// Optional
+template<typename T>
+struct LuaType<optional<T>> {
+  static void pushdata(lua_State *L, optional<T> o) {
+    if (o)
+      LuaType<T>::pushdata(L, *o);
+    else
+      lua_pushnil(L);
+  }
+};
+
 // Bool
 template<>
 struct LuaType<bool> {
@@ -229,7 +240,7 @@ int Lua::newthread(const string &f, I ... input) {
 }
 
 template <typename O>
-O Lua::resume(int id) {
+optional<O> Lua::resume(int id) {
   lua_rawgeti(L_, LUA_REGISTRYINDEX, id);
   lua_State *C = lua_tothread(L_, -1);
   lua_pop(L_, 1);
@@ -244,7 +255,7 @@ O Lua::resume(int id) {
       const char *e = lua_tostring(C, -1);
       printf("resume(err=%d): %s\n", status, e);
     }
-    return O();
+    return {};
   }
 }
 
