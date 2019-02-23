@@ -17,23 +17,23 @@ namespace SegmentReg {
 
   static string get_status(const T &t) {
     switch (t.status) {
-    case Segment::kVoid: return "kVoid";
-    case Segment::kGuess: return "kGuess";
-    case Segment::kSelected: return "kSelected";
-    case Segment::kConfirmed: return "kConfirmed";
+    case T::kVoid: return "kVoid";
+    case T::kGuess: return "kGuess";
+    case T::kSelected: return "kSelected";
+    case T::kConfirmed: return "kConfirmed";
     }
     return "";
   }
 
   static void set_status(T &t, const string &r) {
     if (r == "kVoid")
-      t.status = Segment::kVoid;
+      t.status = T::kVoid;
     else if (r == "kGuess")
-      t.status = Segment::kGuess;
+      t.status = T::kGuess;
     else if (r == "kSelected")
-      t.status = Segment::kSelected;
+      t.status = T::kSelected;
     else if (r == "kConfirmed")
-      t.status = Segment::kConfirmed;
+      t.status = T::kConfirmed;
   }
 
   static const luaL_Reg funcs[] = {
@@ -42,78 +42,78 @@ namespace SegmentReg {
   };
 
   static const luaL_Reg methods[] = {
-    { "clear", WRAPMEM(T, Segment::Clear) },
-    { "close", WRAPMEM(T, Segment::Close) },
-    { "reopen", WRAPMEM(T, Segment::Reopen) },
-    { "has_tag", WRAPMEM(T, Segment::HasTag) },
-    { "get_candidate_at", WRAPMEM(T, Segment::GetCandidateAt) },
-    { "get_selected_candidate", WRAPMEM(T, Segment::GetSelectedCandidate) },
+    { "clear", WRAPMEM(T::Clear) },
+    { "close", WRAPMEM(T::Close) },
+    { "reopen", WRAPMEM(T::Reopen) },
+    { "has_tag", WRAPMEM(T::HasTag) },
+    { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
+    { "get_selected_candidate", WRAPMEM(T::GetSelectedCandidate) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
     { "status", WRAP(get_status) },
-    { "start", WRAPMEM_GET(T, Segment::start) },
-    { "_end", WRAPMEM_GET(T, Segment::end) }, // end is keyword in Lua...
-    { "length", WRAPMEM_GET(T, Segment::length) },
-    { "tags", WRAPMEM_GET(T, Segment::tags) },
-    { "menu", WRAPMEM_GET(T, Segment::menu) },
-    { "selected_index", WRAPMEM_GET(T, Segment::selected_index) },
-    { "prompt", WRAPMEM_GET(T, Segment::prompt) },
+    { "start", WRAPMEM_GET(T::start) },
+    { "_end", WRAPMEM_GET(T::end) }, // end is keyword in Lua...
+    { "length", WRAPMEM_GET(T::length) },
+    { "tags", WRAPMEM_GET(T::tags) },
+    { "menu", WRAPMEM_GET(T::menu) },
+    { "selected_index", WRAPMEM_GET(T::selected_index) },
+    { "prompt", WRAPMEM_GET(T::prompt) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
     { "status", WRAP(set_status) },
-    { "start", WRAPMEM_SET(T, Segment::start) },
-    { "_end", WRAPMEM_SET(T, Segment::end) }, // end is keyword in Lua...
-    { "length", WRAPMEM_SET(T, Segment::length) },
-    { "tags", WRAPMEM_SET(T, Segment::tags) },
-    { "menu", WRAPMEM_SET(T, Segment::menu) },
-    { "selected_index", WRAPMEM_SET(T, Segment::selected_index) },
-    { "prompt", WRAPMEM_SET(T, Segment::prompt) },
+    { "start", WRAPMEM_SET(T::start) },
+    { "_end", WRAPMEM_SET(T::end) }, // end is keyword in Lua...
+    { "length", WRAPMEM_SET(T::length) },
+    { "tags", WRAPMEM_SET(T::tags) },
+    { "menu", WRAPMEM_SET(T::menu) },
+    { "selected_index", WRAPMEM_SET(T::selected_index) },
+    { "prompt", WRAPMEM_SET(T::prompt) },
     { NULL, NULL },
   };
 }
 
 //--- wrappers for an<Candidate>
 namespace CandidateReg {
-  typedef an<Candidate> T;
+  typedef Candidate T;
 
-  static string dynamic_type(T c) {
-    if (Is<Phrase>(c))
+  static string dynamic_type(T &c) {
+    if (dynamic_cast<Phrase *>(&c))
       return "Phrase";
-    if (Is<SimpleCandidate>(c))
+    if (dynamic_cast<SimpleCandidate *>(&c))
       return "Simple";
-    if (Is<ShadowCandidate>(c))
+    if (dynamic_cast<ShadowCandidate *>(&c))
       return "Shadow";
-    if (Is<UniquifiedCandidate>(c))
+    if (dynamic_cast<UniquifiedCandidate *>(&c))
       return "uniquified";
     return "Other";
   }
 
-  static void set_text(T c, const string &v) {
-    if (Is<SimpleCandidate>(c))
-      As<SimpleCandidate>(c)->set_text(v);
+  static void set_text(T &c, const string &v) {
+    if (auto p = dynamic_cast<SimpleCandidate *>(&c))
+      p->set_text(v);
   }
 
-  static void set_comment(T c, const string &v) {
-    if (Is<Phrase>(c))
-      As<Phrase>(c)->set_comment(v);
-    else if (Is<SimpleCandidate>(c))
-      As<SimpleCandidate>(c)->set_comment(v);
+  static void set_comment(T &c, const string &v) {
+    if (auto p = dynamic_cast<Phrase *>(&c))
+      p->set_comment(v);
+    else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
+      p->set_comment(v);
   }
 
-  static void set_preedit(T c, const string &v) {
-    if (Is<Phrase>(c))
-      As<Phrase>(c)->set_preedit(v);
-    else if (Is<SimpleCandidate>(c))
-      As<SimpleCandidate>(c)->set_preedit(v);
+  static void set_preedit(T &c, const string &v) {
+    if (auto p = dynamic_cast<Phrase *>(&c))
+      p->set_preedit(v);
+    else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
+      p->set_preedit(v);
   }
 
-  static T make(const string type,
-                size_t start, size_t end,
-                const string text, const string comment)
+  static an<T> make(const string type,
+                    size_t start, size_t end,
+                    const string text, const string comment)
   {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
@@ -125,27 +125,27 @@ namespace CandidateReg {
 
   static const luaL_Reg methods[] = {
     { "get_dynamic_type", WRAP(dynamic_type) },
-    { "get_genuine", WRAP(Candidate::GetGenuineCandidate) },
-    { "get_genuines", WRAP(Candidate::GetGenuineCandidates) },
+    { "get_genuine", WRAP(T::GetGenuineCandidate) },
+    { "get_genuines", WRAP(T::GetGenuineCandidates) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
-    { "type", WRAPMEM(T, Candidate::type) },
-    { "start", WRAPMEM(T, Candidate::start) },
-    { "_end", WRAPMEM(T, Candidate::end) }, // end is keyword in Lua...
-    { "quality", WRAPMEM(T, Candidate::quality) },
-    { "text", WRAPMEM(T, Candidate::text) },
-    { "comment", WRAPMEM(T, Candidate::comment) },
-    { "preedit", WRAPMEM(T, Candidate::preedit) },
+    { "type", WRAPMEM(T::type) },
+    { "start", WRAPMEM(T::start) },
+    { "_end", WRAPMEM(T::end) }, // end is keyword in Lua...
+    { "quality", WRAPMEM(T::quality) },
+    { "text", WRAPMEM(T::text) },
+    { "comment", WRAPMEM(T::comment) },
+    { "preedit", WRAPMEM(T::preedit) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
-    { "type", WRAPMEM(T, Candidate::set_type) },
-    { "start", WRAPMEM(T, Candidate::set_start) },
-    { "_end", WRAPMEM(T, Candidate::set_end) },
-    { "quality", WRAPMEM(T, Candidate::set_quality) },
+    { "type", WRAPMEM(T::set_type) },
+    { "start", WRAPMEM(T::set_start) },
+    { "_end", WRAPMEM(T::set_end) },
+    { "quality", WRAPMEM(T::set_quality) },
     { "text", WRAP(set_text) },
     { "comment", WRAP(set_comment) },
     { "preedit", WRAP(set_preedit) },
@@ -156,7 +156,7 @@ namespace CandidateReg {
 //--- wrappers for an<Translation>
 an<Translation> lua_translation_new(Lua *lua, int id);
 namespace TranslationReg {
-  typedef an<Translation> T;
+  typedef Translation T;
 
   int raw_make(lua_State *L) {
     Lua *lua = Lua::from_state(L);
@@ -171,12 +171,12 @@ namespace TranslationReg {
     return 1;
   }
 
-  static optional<an<Candidate>> next(T t) {
-    if (t->exhausted())
+  static optional<an<Candidate>> next(T &t) {
+    if (t.exhausted())
       return {};
 
-    auto c = t->Peek();
-    t->Next();
+    auto c = t.Peek();
+    t.Next();
     return c;
   }
 
@@ -206,17 +206,17 @@ namespace TranslationReg {
 }
 
 namespace ReverseDbReg {
-  typedef an<ReverseDb> T;
+  typedef ReverseDb T;
 
-  static T make(const string &file) {
-    T db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
+  static an<T> make(const string &file) {
+    an<T> db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
     db->Load();
     return db;
   }
 
-  static string lookup(T db, const string &key) {
+  static string lookup(T &db, const string &key) {
     string res;
-    if (db->Lookup(key, &res))
+    if (db.Lookup(key, &res))
       return res;
     else
       return string("");
@@ -251,6 +251,14 @@ namespace ReverseDbReg {
   export_type(L, LuaType<const ns::T>::name().c_str(), LuaType<ns::T>::gc,     \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set);       \
   export_type(L, LuaType<const ns::T &>::name().c_str(), NULL, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<an<ns::T>>::name().c_str(), NULL,         \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<an<const ns::T>>::name().c_str(), NULL,   \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<ns::T *>::name().c_str(), NULL,           \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T *>::name().c_str(), NULL,     \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 

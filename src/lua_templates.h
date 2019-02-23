@@ -36,7 +36,7 @@ struct LuaType {
     return 0;
   }
 
-  static void pushdata(lua_State *L, T o) {
+  static void pushdata(lua_State *L, T &o) {
     void *u = lua_newuserdata(L, sizeof(T));
     new(u) T(o);
     luaL_getmetatable(L, name().c_str());
@@ -52,7 +52,7 @@ struct LuaType {
     lua_setmetatable(L, -2);
   }
 
-  static T todata(lua_State *L, int i) {
+  static T &todata(lua_State *L, int i) {
     typedef typename std::remove_const<T>::type U;
     T *o = (T *) luaL_testudata(L, i, name().c_str());
     if (o)
@@ -94,6 +94,26 @@ struct LuaType<T &> {
       T **po = (T **) luaL_testudata(L, i, LuaType<U &>::name().c_str());
       if (po)
         return **po;
+    }
+
+    an<T> *ao = (an<T> *) luaL_testudata(L, i, LuaType<an<T>>::name().c_str());
+    if (ao)
+      return *(*ao).get();
+
+    if (std::is_const<T>::value) {
+      an<T> *ao = (an<T> *) luaL_testudata(L, i, LuaType<an<U>>::name().c_str());
+      if (ao)
+        return *(*ao).get();
+    }
+
+    T **p = (T **) luaL_testudata(L, i, LuaType<T *>::name().c_str());
+    if (p)
+      return **p;
+
+    if (std::is_const<T>::value) {
+      T **p = (T **) luaL_testudata(L, i, LuaType<U *>::name().c_str());
+      if (p)
+        return **p;
     }
 
     T *o = (T *) luaL_testudata(L, i, LuaType<T>::name().c_str());
@@ -216,7 +236,7 @@ struct LuaType<const string &> : LuaType<string> {};
 // The index starts form 1 in Lua...
 template<typename T>
 struct LuaType<vector<T>> {
-  static void pushdata(lua_State *L, const vector<T> &o) {
+  static void pushdata(lua_State *L, vector<T> &o) {
     int n = o.size();
     lua_createtable(L, n, 0);
     for (int i = 0; i < n; i++) {
@@ -246,12 +266,12 @@ struct LuaType<const vector<T> &> : LuaType<vector<T>> {};
 static void pushdataX(lua_State *L) {}
 
 template<typename T>
-static void pushdataX(lua_State *L, T o) {
+static void pushdataX(lua_State *L, T &o) {
   LuaType<T>::pushdata(L, o);
 }
 
 template<typename T, typename ... Targs>
-static void pushdataX(lua_State *L, T o, Targs ... oargs) {
+static void pushdataX(lua_State *L, T &o, Targs ... oargs) {
   LuaType<T>::pushdata(L, o);
   pushdataX<Targs ...>(L, oargs ...);
 }
@@ -381,98 +401,44 @@ struct LuaWrapper<S(*)(T...), f> {
   }
 };
 
-// MemberWrapper: R (C::*)(T..) -> R (*)(C *, T...) / R (C &, T...) / R (an<C>, T...)
-// MemberWrapper(get variable): R (C::*) -> R (*)(C *) / R (C &) / R (an<C>)
-// MemberWrapper(set variable): R (C::*) -> void (*)(C *, R) / void (C &, R) / void (an<C>, R)
-template<typename D, typename F, F f>
+// MemberWrapper: R (C::*)(T..) -> R (C &, T...)
+// MemberWrapper(get variable): R (C::*) -> R (C &)
+// MemberWrapper(set variable): R (C::*) -> void (C &, R)
+template<typename F, F f>
 struct MemberWrapper;
 
-template<typename D, typename R, typename C, typename... T, R (C::*f)(T...)>
-struct MemberWrapper<D *, R (C::*)(T...), f> {
-  static R wrap(D *c, T... t) {
-    return (c->*f)(t...);
-  }
-};
-
-template<typename D, typename R, typename C, typename... T, R (C::*f)(T...)>
-struct MemberWrapper<D, R (C::*)(T...), f> {
-  static R wrap(D &c, T... t) {
+template<typename R, typename C, typename... T, R (C::*f)(T...)>
+struct MemberWrapper<R (C::*)(T...), f> {
+  static R wrap(C &c, T... t) {
     return (c.*f)(t...);
   }
 };
 
-template<typename D, typename R, typename C, typename... T, R (C::*f)(T...)>
-struct MemberWrapper<an<D>, R (C::*)(T...), f> {
-  static R wrap(an<D> ac, T... t) {
-    C *c = ac.get();
-    return (c->*f)(t...);
-  }
-};
-
-template<typename D, typename R, typename C, typename... T, R (C::*f)(T...) const>
-struct MemberWrapper<D *, R (C::*)(T...) const, f> {
-  static R wrap(D *c, T... t) {
-    return (c->*f)(t...);
-  }
-};
-
-template<typename D, typename R, typename C, typename... T, R (C::*f)(T...) const>
-struct MemberWrapper<D, R (C::*)(T...) const, f> {
-  static R wrap(const D &c, T... t) {
+template<typename R, typename C, typename... T, R (C::*f)(T...) const>
+struct MemberWrapper<R (C::*)(T...) const, f> {
+  static R wrap(const C &c, T... t) {
     return (c.*f)(t...);
   }
 };
 
-template<typename D, typename R, typename C, typename... T, R (C::*f)(T...) const>
-struct MemberWrapper<an<D>, R (C::*)(T...) const, f> {
-  static R wrap(an<D> ac, T... t) {
-    C *c = ac.get();
-    return (c->*f)(t...);
-  }
-};
-
-template<typename D, typename R, typename C, R C::*f>
-struct MemberWrapper<D *, R (C::*), f> {
-  static R wrap_get(D *c) {
-    return c->*f;
-  }
-
-  static void wrap_set(D *c, R r) {
-    c->*f = r;
-  }
-};
-
-template<typename D, typename R, typename C, R C::*f>
-struct MemberWrapper<D, R (C::*), f> {
-  static R wrap_get(const D &c) {
+template<typename R, typename C, R C::*f>
+struct MemberWrapper<R (C::*), f> {
+  static R wrap_get(const C &c) {
     return c.*f;
   }
 
-  static void wrap_set(D &c, R r) {
+  static void wrap_set(C &c, R r) {
     c.*f = r;
-  }
-};
-
-template<typename D, typename R, typename C, R C::*f>
-struct MemberWrapper<an<D>, R (C::*), f> {
-  static R wrap_get(an<D> ac) {
-    C *c = ac.get();
-    return c->*f;
-  }
-
-  static void wrap_set(an<D> ac, R r) {
-    C *c = ac.get();
-    c->*f = r;
   }
 };
 
 #define WRAP(f) (&(LuaWrapper<decltype(&f), &f>::wrap))
 #define WRAPT(f, ...) (&(LuaWrapper<decltype(&f), &f>::wrapt<__VA_ARGS__>))
-#define WRAPMEM(C, f) (&(LuaWrapper<decltype(&MemberWrapper<C, decltype(&f), &f>::wrap), \
-                                             &MemberWrapper<C, decltype(&f), &f>::wrap>::wrap))
-#define WRAPMEM_GET(C, f) (&(LuaWrapper<decltype(&MemberWrapper<C, decltype(&f), &f>::wrap_get), \
-                                                 &MemberWrapper<C, decltype(&f), &f>::wrap_get>::wrap))
-#define WRAPMEM_SET(C, f) (&(LuaWrapper<decltype(&MemberWrapper<C, decltype(&f), &f>::wrap_set), \
-                                                 &MemberWrapper<C, decltype(&f), &f>::wrap_set>::wrap))
+#define WRAPMEM(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap), \
+                                          &MemberWrapper<decltype(&f), &f>::wrap>::wrap))
+#define WRAPMEM_GET(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap_get), \
+                                              &MemberWrapper<decltype(&f), &f>::wrap_get>::wrap))
+#define WRAPMEM_SET(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap_set), \
+                                              &MemberWrapper<decltype(&f), &f>::wrap_set>::wrap))
 }
 #endif /* RIME_LUA_TEMPLATES_H_ */
