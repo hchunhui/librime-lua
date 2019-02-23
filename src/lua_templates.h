@@ -36,7 +36,37 @@ struct LuaType {
     return 0;
   }
 
+  template<typename U>
+  struct X {
+    static bool pushnil(lua_State *L, U &o) {
+      return false;
+    }
+  };
+
+  template<typename U>
+  struct X<U *> {
+    static bool pushnil(lua_State *L, U *o) {
+      if (o)
+        return false;
+      lua_pushnil(L);
+      return true;
+    }
+  };
+
+  template<typename U>
+  struct X<an<U>> {
+    static bool pushnil(lua_State *L, an<U> &o) {
+      if (o)
+        return false;
+      lua_pushnil(L);
+      return true;
+    }
+  };
+
   static void pushdata(lua_State *L, T &o) {
+    if (X<T>::pushnil(L, o))
+      return;
+
     void *u = lua_newuserdata(L, sizeof(T));
     new(u) T(o);
     luaL_getmetatable(L, name().c_str());
@@ -80,7 +110,7 @@ struct LuaType<T &> {
 
   static void pushdata(lua_State *L, T &o) {
     T **u = (T**) lua_newuserdata(L, sizeof(T *));
-    *u = &o;
+    *u = std::addressof(o);
     luaL_setmetatable(L, name().c_str());
   }
 
@@ -311,9 +341,8 @@ optional<O> Lua::resume(int id) {
 
 // --- LuaWrapper
 // WRAP(f): wraps function f
-// WRAPT(f, R, T...): wraps function f (R: return type, T...: argument types)
-// WRAPMEM(C', C::f): wraps member function C::f  (object wraped by C')
-// WRAPMEM_GET/SET(C', C::f): wraps member variable C::f (object wraped by C')
+// WRAPMEM(C::f): wraps member function C::f
+// WRAPMEM_GET/SET(C::f): wraps member variable C::f
 
 template<typename F, F f>
 struct LuaWrapper;
@@ -343,30 +372,6 @@ struct LuaWrapper<S(*)(T...), f> {
         }
       };
 
-      template<int n, typename Rp>
-      struct ret<n, Rp *> {
-        static int wrap(lua_State *L, Us... us) {
-          Rp *r = f(us...);
-          if (r)
-            LuaType<Rp *>::pushdata(L, r);
-          else
-            lua_pushnil(L);
-          return 1;
-        }
-      };
-
-      template<int n, typename Rp>
-      struct ret<n, an<Rp>> {
-        static int wrap(lua_State *L, Us... us) {
-          an<Rp> r = f(us...);
-          if (r)
-            LuaType<an<Rp>>::pushdata(L, r);
-          else
-            lua_pushnil(L);
-          return 1;
-        }
-      };
-
       template<int n>
       static int wrap(lua_State *L, Us... us) {
         return ret<n, R>::wrap(L, us...);
@@ -389,15 +394,10 @@ struct LuaWrapper<S(*)(T...), f> {
     };
   };
 
-  template<typename... X>
-  static int wrapt(lua_State *L) {
-    return args<X...>::
+  static int wrap(lua_State *L) {
+    return args<S, T...>::
       template aux<>::
       template wrap<1>(L);
-  }
-
-  static int wrap(lua_State *L) {
-    return wrapt<S, T...>(L);
   }
 };
 
@@ -433,7 +433,6 @@ struct MemberWrapper<R (C::*), f> {
 };
 
 #define WRAP(f) (&(LuaWrapper<decltype(&f), &f>::wrap))
-#define WRAPT(f, ...) (&(LuaWrapper<decltype(&f), &f>::wrapt<__VA_ARGS__>))
 #define WRAPMEM(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap), \
                                           &MemberWrapper<decltype(&f), &f>::wrap>::wrap))
 #define WRAPMEM_GET(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap_get), \
