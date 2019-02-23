@@ -53,8 +53,20 @@ struct LuaType {
   }
 
   static T todata(lua_State *L, int i) {
-    T *o = (T *) luaL_checkudata(L, i, name().c_str());
-    return *o;
+    typedef typename std::remove_const<T>::type U;
+    T *o = (T *) luaL_testudata(L, i, name().c_str());
+    if (o)
+      return *o;
+
+    if (std::is_const<T>::value) {
+      T *o = (T *) luaL_testudata(L, i, LuaType<U>::name().c_str());
+      if (o)
+        return *o;
+    }
+
+    const char *msg = lua_pushfstring(L, "%s expected", name().c_str());
+    luaL_argerror(L, i, msg);
+    return *((T *) NULL);
   }
 };
 
@@ -73,13 +85,30 @@ struct LuaType<T &> {
   }
 
   static T &todata(lua_State *L, int i) {
+    typedef typename std::remove_const<T>::type U;
     T **po = (T **) luaL_testudata(L, i, name().c_str());
-    if (po) {
+    if (po)
       return **po;
-    } else {
-      T *o = (T *) luaL_checkudata(L, i, LuaType<T>::name().c_str());
-      return *o;
+
+    if (std::is_const<T>::value) {
+      T **po = (T **) luaL_testudata(L, i, LuaType<U &>::name().c_str());
+      if (po)
+        return **po;
     }
+
+    T *o = (T *) luaL_testudata(L, i, LuaType<T>::name().c_str());
+    if (o)
+      return *o;
+
+    if (std::is_const<T>::value) {
+      T *o = (T *) luaL_testudata(L, i, LuaType<U>::name().c_str());
+      if (o)
+        return *o;
+    }
+
+    const char *msg = lua_pushfstring(L, "%s expected", name().c_str());
+    luaL_argerror(L, i, msg);
+    return *((T *) NULL);
   }
 };
 
@@ -389,7 +418,7 @@ struct MemberWrapper<D *, R (C::*)(T...) const, f> {
 
 template<typename D, typename R, typename C, typename... T, R (C::*f)(T...) const>
 struct MemberWrapper<D, R (C::*)(T...) const, f> {
-  static R wrap(D &c, T... t) {
+  static R wrap(const D &c, T... t) {
     return (c.*f)(t...);
   }
 };
@@ -415,7 +444,7 @@ struct MemberWrapper<D *, R (C::*), f> {
 
 template<typename D, typename R, typename C, R C::*f>
 struct MemberWrapper<D, R (C::*), f> {
-  static R wrap_get(D &c) {
+  static R wrap_get(const D &c) {
     return c.*f;
   }
 

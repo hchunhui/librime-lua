@@ -7,11 +7,15 @@
 
 namespace rime {
 
-//--- wrappers for const Segment
-namespace ConstSegmentReg {
-  typedef const Segment T;
+//--- wrappers for Segment
+namespace SegmentReg {
+  typedef Segment T;
 
-  static string get_status(T &t) {
+  static T make(int start_pos, int end_pos) {
+    return Segment(start_pos, end_pos);
+  }
+
+  static string get_status(const T &t) {
     switch (t.status) {
     case Segment::kVoid: return "kVoid";
     case Segment::kGuess: return "kGuess";
@@ -21,11 +25,26 @@ namespace ConstSegmentReg {
     return "";
   }
 
+  static void set_status(T &t, const string &r) {
+    if (r == "kVoid")
+      t.status = Segment::kVoid;
+    else if (r == "kGuess")
+      t.status = Segment::kGuess;
+    else if (r == "kSelected")
+      t.status = Segment::kSelected;
+    else if (r == "kConfirmed")
+      t.status = Segment::kConfirmed;
+  }
+
   static const luaL_Reg funcs[] = {
+    { "Segment", WRAP(make) },
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
+    { "clear", WRAPMEM(T, Segment::Clear) },
+    { "close", WRAPMEM(T, Segment::Close) },
+    { "reopen", WRAPMEM(T, Segment::Reopen) },
     { "has_tag", WRAPMEM(T, Segment::HasTag) },
     { "get_candidate_at", WRAPMEM(T, Segment::GetCandidateAt) },
     { "get_selected_candidate", WRAPMEM(T, Segment::GetSelectedCandidate) },
@@ -45,6 +64,14 @@ namespace ConstSegmentReg {
   };
 
   static const luaL_Reg vars_set[] = {
+    { "status", WRAP(set_status) },
+    { "start", WRAPMEM_SET(T, Segment::start) },
+    { "_end", WRAPMEM_SET(T, Segment::end) }, // end is keyword in Lua...
+    { "length", WRAPMEM_SET(T, Segment::length) },
+    { "tags", WRAPMEM_SET(T, Segment::tags) },
+    { "menu", WRAPMEM_SET(T, Segment::menu) },
+    { "selected_index", WRAPMEM_SET(T, Segment::selected_index) },
+    { "prompt", WRAPMEM_SET(T, Segment::prompt) },
     { NULL, NULL },
   };
 }
@@ -98,8 +125,8 @@ namespace CandidateReg {
 
   static const luaL_Reg methods[] = {
     { "get_dynamic_type", WRAP(dynamic_type) },
-    { "get_genuine", WRAPT(Candidate::GetGenuineCandidate, T, T) },
-    { "get_genuines", WRAPT(Candidate::GetGenuineCandidates, vector<T>, T) },
+    { "get_genuine", WRAP(Candidate::GetGenuineCandidate) },
+    { "get_genuines", WRAP(Candidate::GetGenuineCandidates) },
     { NULL, NULL },
   };
 
@@ -221,6 +248,10 @@ namespace ReverseDbReg {
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set);       \
   export_type(L, LuaType<ns::T &>::name().c_str(), NULL, \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T>::name().c_str(), LuaType<ns::T>::gc,     \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set);       \
+  export_type(L, LuaType<const ns::T &>::name().c_str(), NULL, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 
 namespace LuaImpl {
@@ -230,7 +261,7 @@ namespace LuaImpl {
                    const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
   void types_init(lua_State *L) {
-    EXPORT(ConstSegmentReg, L);
+    EXPORT(SegmentReg, L);
     EXPORT(CandidateReg, L);
     EXPORT(TranslationReg, L);
     EXPORT(ReverseDbReg, L);
