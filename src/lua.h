@@ -22,6 +22,8 @@ class Lua {
   template <typename O>
   O resume(int id);
 
+  void unref(int id);
+
   static Lua *from_state(lua_State *L);
 private:
   lua_State *L_;

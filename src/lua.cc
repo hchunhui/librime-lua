@@ -156,4 +156,8 @@ int Lua::newthread(lua_State *L, int nargs) {
   return id;
 }
 
+void Lua::unref(int id) {
+  luaL_unref(L_, LUA_REGISTRYINDEX, id);
+}
+
 }  // namespace rime

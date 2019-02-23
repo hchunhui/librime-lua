@@ -244,7 +244,6 @@ O Lua::resume(int id) {
       const char *e = lua_tostring(C, -1);
       printf("resume(err=%d): %s\n", status, e);
     }
-    luaL_unref(L_, LUA_REGISTRYINDEX, id);
     return O();
   }
 }

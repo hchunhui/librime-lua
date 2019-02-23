@@ -20,6 +20,10 @@ public:
     Next();
   }
 
+  ~LuaTranslation() {
+    lua_->unref(id_);
+  }
+
   bool Next() {
     if (exhausted()) {
       return false;
