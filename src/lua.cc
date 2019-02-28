@@ -144,15 +144,15 @@ Lua *Lua::from_state(lua_State *L) {
   return lua;
 }
 
-an<LuaObj> Lua::newthread(lua_State *L, int nargs) {
+an<LuaObj> Lua::newthreadx(lua_State *L, int nargs) {
   lua_State *C = lua_newthread(L_);
   auto o = LuaObj::todata(L_, -1);
   lua_pop(L_, 1);
 
   lua_pushlightuserdata(C, (void *)&LuaImpl::makeclosurekey);
   lua_gettable(C, LUA_REGISTRYINDEX);
-  lua_xmove(L, C, 1 + nargs);
-  lua_call(C, 1 + nargs, 1);
+  lua_xmove(L, C, nargs);
+  lua_call(C, nargs, 1);
 
   return o;
 }

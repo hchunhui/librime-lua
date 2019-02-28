@@ -165,7 +165,7 @@ namespace TranslationReg {
     if (n < 1)
       return 0;
 
-    auto o = lua->newthread(L, n - 1);
+    auto o = lua->newthreadx(L, n);
     auto r = lua_translation_new(lua, o);
     LuaType<an<Translation>>::pushdata(L, r);
     return 1;

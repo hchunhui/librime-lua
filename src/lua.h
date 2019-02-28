@@ -23,18 +23,23 @@ private:
 };
 
 class Lua {
-  public:
+public:
   Lua();
   ~Lua();
 
-  an<LuaObj> newthread(lua_State *L, int nargs);
+  template <typename O>
+  O getglobal(const string &f);
+
+  an<LuaObj> newthreadx(lua_State *L, int nargs);
 
   template <typename ... I>
-  an<LuaObj> newthread(const string &f, I ... input);
+  an<LuaObj> newthread(I ... input);
 
   template <typename O>
   optional<O> resume(an<LuaObj> f);
 
+  template <typename O, typename ... I>
+  O call(I ... input);
 
   static Lua *from_state(lua_State *L);
 private:

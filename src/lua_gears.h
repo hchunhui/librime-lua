@@ -20,7 +20,7 @@ public:
   }
 private:
   Lua *lua_;
-  string fname_;
+  an<LuaObj> f_;
 };
 
 class LuaTranslator : public Translator {
@@ -32,7 +32,7 @@ public:
 
 private:
   Lua *lua_;
-  string fname_;
+  an<LuaObj> f_;
 };
 
 template<typename T>

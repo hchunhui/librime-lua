@@ -174,6 +174,14 @@ struct LuaType<an<LuaObj>> {
   }
 };
 
+// C Function
+template<>
+struct LuaType<lua_CFunction> {
+  static void pushdata(lua_State *L, lua_CFunction f) {
+    lua_pushcfunction(L, f);
+  }
+};
+
 // Optional
 template<typename T>
 struct LuaType<optional<T>> {
@@ -182,6 +190,13 @@ struct LuaType<optional<T>> {
       LuaType<T>::pushdata(L, *o);
     else
       lua_pushnil(L);
+  }
+
+  static optional<T> todata(lua_State *L, int i) {
+    if (lua_type(L, i) == LUA_TNIL)
+      return {};
+    else
+      return LuaType<T>::todata(L, i);
   }
 };
 
@@ -319,11 +334,18 @@ static void pushdataX(lua_State *L, T &o, Targs ... oargs) {
 }
 
 // --- Lua call/resume
+template <typename O>
+O Lua::getglobal(const string &v) {
+  lua_getglobal(L_, v.c_str());
+  O o = LuaType<O>::todata(L_, -1);
+  lua_pop(L_, 1);
+  return o;
+}
+
 template <typename ... I>
-an<LuaObj> Lua::newthread(const string &f, I ... input) {
-  lua_getglobal(L_, f.c_str());
+an<LuaObj> Lua::newthread(I ... input) {
   pushdataX<I ...>(L_, input ...);
-  return newthread(L_, sizeof...(input));
+  return newthreadx(L_, sizeof...(input));
 }
 
 template <typename O>
@@ -346,6 +368,22 @@ optional<O> Lua::resume(an<LuaObj> f) {
   }
 }
 
+template <typename O, typename ... I>
+O Lua::call(I ... input) {
+  pushdataX<I ...>(L_, input ...);
+
+  int status = lua_pcall(L_, sizeof...(input) - 1, 1, 0);
+  if (status != LUA_OK) {
+    const char *e = lua_tostring(L_, -1);
+    printf("call(err=%d): %s\n", status, e);
+    lua_pop(L_, 1);
+    return O();
+  }
+
+  O r = LuaType<O>::todata(L_, -1);
+  lua_pop(L_, 1);
+  return r;
+}
 
 // --- LuaWrapper
 // WRAP(f): wraps function f

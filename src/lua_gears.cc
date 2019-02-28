@@ -45,23 +45,25 @@ an<Translation> lua_translation_new(Lua *lua, an<LuaObj> o) {
 
 //--- LuaFilter
 LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
-  : Filter(ticket), TagMatching(ticket), fname_(ticket.name_space), lua_(lua) {
+  : Filter(ticket), TagMatching(ticket), lua_(lua) {
+  f_ = lua->getglobal<an<LuaObj>>(ticket.name_space);
 }
 
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
-  auto f = lua_->newthread<an<Translation>>(fname_.c_str(), translation);
+  auto f = lua_->newthread<an<LuaObj>, an<Translation>>(f_, translation);
   return New<LuaTranslation>(lua_, f);
 }
 
 //--- LuaTranslator
 LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
-  : Translator(ticket), fname_(ticket.name_space), lua_(lua) {
+  : Translator(ticket), lua_(lua) {
+  f_ = lua->getglobal<an<LuaObj>>(ticket.name_space);
 }
 
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
-  auto f = lua_->newthread<const string &, const Segment &>(fname_.c_str(), input, segment);
+  auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &>(f_, input, segment);
   an<Translation> t = New<LuaTranslation>(lua_, f);
   if (t->exhausted())
     return an<Translation>();
