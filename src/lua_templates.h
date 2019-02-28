@@ -162,6 +162,18 @@ struct LuaType<T &> {
   }
 };
 
+// Generic Lua Object
+template<>
+struct LuaType<an<LuaObj>> {
+  static void pushdata(lua_State *L, an<LuaObj> &o) {
+    LuaObj::pushdata(L, o);
+  }
+
+  static an<LuaObj> todata(lua_State *L, int i) {
+    return LuaObj::todata(L, i);
+  }
+};
+
 // Optional
 template<typename T>
 struct LuaType<optional<T>> {
@@ -312,15 +324,15 @@ namespace LuaImpl {
 
 // --- Lua call/resume
 template <typename ... I>
-int Lua::newthread(const string &f, I ... input) {
+an<LuaObj> Lua::newthread(const string &f, I ... input) {
   lua_getglobal(L_, f.c_str());
   pushdataX<I ...>(L_, input ...);
   return newthread(L_, sizeof...(input));
 }
 
 template <typename O>
-optional<O> Lua::resume(int id) {
-  lua_rawgeti(L_, LUA_REGISTRYINDEX, id);
+optional<O> Lua::resume(an<LuaObj> f) {
+  LuaObj::pushdata(L_, f);
   lua_State *C = lua_tothread(L_, -1);
   lua_pop(L_, 1);
 

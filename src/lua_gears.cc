@@ -13,22 +13,18 @@ public:
   Lua *lua_;
 private:
   an<Candidate> c_;
-  int id_;
+  an<LuaObj> f_;
 public:
-  LuaTranslation(Lua *lua, int id)
-    : lua_(lua), id_(id) {
+  LuaTranslation(Lua *lua, an<LuaObj> f)
+    : lua_(lua), f_(f) {
     Next();
-  }
-
-  ~LuaTranslation() {
-    lua_->unref(id_);
   }
 
   bool Next() {
     if (exhausted()) {
       return false;
     }
-    auto r = lua_->resume<an<Candidate>>(id_);
+    auto r = lua_->resume<an<Candidate>>(f_);
     if (!r) {
       set_exhausted(true);
       return false;
@@ -43,8 +39,8 @@ public:
   }
 };
 
-an<Translation> lua_translation_new(Lua *lua, int id) {
-  return New<LuaTranslation>(lua, id);
+an<Translation> lua_translation_new(Lua *lua, an<LuaObj> o) {
+  return New<LuaTranslation>(lua, o);
 }
 
 //--- LuaFilter
@@ -54,8 +50,8 @@ LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
 
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
-  int id = lua_->newthread<an<Translation>>(fname_.c_str(), translation);
-  return New<LuaTranslation>(lua_, id);
+  auto f = lua_->newthread<an<Translation>>(fname_.c_str(), translation);
+  return New<LuaTranslation>(lua_, f);
 }
 
 //--- LuaTranslator
@@ -65,8 +61,8 @@ LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
 
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
-  int id = lua_->newthread<const string &, const Segment &>(fname_.c_str(), input, segment);
-  an<Translation> t = New<LuaTranslation>(lua_, id);
+  auto f = lua_->newthread<const string &, const Segment &>(fname_.c_str(), input, segment);
+  an<Translation> t = New<LuaTranslation>(lua_, f);
   if (t->exhausted())
     return an<Translation>();
   else

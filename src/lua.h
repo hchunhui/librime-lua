@@ -9,20 +9,32 @@ struct lua_State;
 
 namespace rime {
 
+class LuaObj {
+public:
+  ~LuaObj();
+
+  static void pushdata(lua_State *L, an<LuaObj> &o);
+  static an<LuaObj> todata(lua_State *L, int i);
+
+private:
+  LuaObj(lua_State *L, int i);
+  lua_State *L_;
+  int id_;
+};
+
 class Lua {
   public:
   Lua();
   ~Lua();
 
-  int newthread(lua_State *L, int nargs);
+  an<LuaObj> newthread(lua_State *L, int nargs);
 
   template <typename ... I>
-  int newthread(const string &f, I ... input);
+  an<LuaObj> newthread(const string &f, I ... input);
 
   template <typename O>
-  optional<O> resume(int id);
+  optional<O> resume(an<LuaObj> f);
 
-  void unref(int id);
 
   static Lua *from_state(lua_State *L);
 private:

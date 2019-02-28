@@ -144,20 +144,34 @@ Lua *Lua::from_state(lua_State *L) {
   return lua;
 }
 
-int Lua::newthread(lua_State *L, int nargs) {
+an<LuaObj> Lua::newthread(lua_State *L, int nargs) {
   lua_State *C = lua_newthread(L_);
-  int id = luaL_ref(L_, LUA_REGISTRYINDEX);
+  auto o = LuaObj::todata(L_, -1);
+  lua_pop(L_, 1);
 
   lua_pushlightuserdata(C, (void *)&LuaImpl::makeclosurekey);
   lua_gettable(C, LUA_REGISTRYINDEX);
   lua_xmove(L, C, 1 + nargs);
   lua_call(C, 1 + nargs, 1);
 
-  return id;
+  return o;
 }
 
-void Lua::unref(int id) {
-  luaL_unref(L_, LUA_REGISTRYINDEX, id);
+LuaObj::LuaObj(lua_State *L, int i) : L_(L) {
+  lua_pushvalue(L, i);
+  id_ = luaL_ref(L, LUA_REGISTRYINDEX);
+}
+
+LuaObj::~LuaObj() {
+  luaL_unref(L_, LUA_REGISTRYINDEX, id_);
+}
+
+void LuaObj::pushdata(lua_State *L, an<LuaObj> &o) {
+  lua_rawgeti(L, LUA_REGISTRYINDEX, o->id_);
+}
+
+an<LuaObj> LuaObj::todata(lua_State *L, int i) {
+  return an<LuaObj>(new LuaObj(L, i));
 }
 
 }  // namespace rime

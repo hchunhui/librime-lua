@@ -154,7 +154,7 @@ namespace CandidateReg {
 }
 
 //--- wrappers for an<Translation>
-an<Translation> lua_translation_new(Lua *lua, int id);
+an<Translation> lua_translation_new(Lua *lua, an<LuaObj> o);
 namespace TranslationReg {
   typedef Translation T;
 
@@ -165,8 +165,8 @@ namespace TranslationReg {
     if (n < 1)
       return 0;
 
-    int id = lua->newthread(L, n - 1);
-    auto r = lua_translation_new(lua, id);
+    auto o = lua->newthread(L, n - 1);
+    auto r = lua_translation_new(lua, o);
     LuaType<an<Translation>>::pushdata(L, r);
     return 1;
   }
