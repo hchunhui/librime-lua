@@ -318,10 +318,6 @@ static void pushdataX(lua_State *L, T &o, Targs ... oargs) {
   pushdataX<Targs ...>(L, oargs ...);
 }
 
-namespace LuaImpl {
-  int thread_stub(lua_State *);
-}
-
 // --- Lua call/resume
 template <typename ... I>
 an<LuaObj> Lua::newthread(const string &f, I ... input) {
