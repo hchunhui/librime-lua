@@ -43,27 +43,59 @@ an<Translation> lua_translation_new(Lua *lua, an<LuaObj> o) {
   return New<LuaTranslation>(lua, o);
 }
 
+static void raw_init(lua_State *L, const Ticket &t,
+                     an<LuaObj> *env, an<LuaObj> *func) {
+  lua_newtable(L);
+  Engine *e = t.engine;
+  LuaType<Engine *>::pushdata(L, e);
+  lua_setfield(L, -2, "engine");
+  LuaType<const string &>::pushdata(L, t.name_space);
+  lua_setfield(L, -2, "name_space");
+  *env = LuaObj::todata(L, -1);
+  lua_pop(L, 1);
+
+  lua_getglobal(L, t.klass.c_str());
+  if (lua_type(L, -1) == LUA_TTABLE) {
+    lua_getfield(L, -1, "init");
+    if (lua_type(L, -1) == LUA_TFUNCTION) {
+      LuaObj::pushdata(L, *env);
+      int status = lua_pcall(L, 1, 1, 0);
+      if (status != LUA_OK) {
+        const char *e = lua_tostring(L, -1);
+        printf("call(err=%d): %s\n", status, e);
+      }
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, -1, "func");
+  }
+
+  *func = LuaObj::todata(L, -1);
+  lua_pop(L, 1);
+}
+
 //--- LuaFilter
 LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
   : Filter(ticket), TagMatching(ticket), lua_(lua) {
-  f_ = lua->getglobal<an<LuaObj>>(ticket.name_space);
+  raw_init(lua->to_state(), ticket, &env_, &func_);
 }
 
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
-  auto f = lua_->newthread<an<LuaObj>, an<Translation>>(f_, translation);
+  auto f = lua_->newthread<an<LuaObj>, an<Translation>,
+                           an<LuaObj>>(func_, translation, env_);
   return New<LuaTranslation>(lua_, f);
 }
 
 //--- LuaTranslator
 LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
   : Translator(ticket), lua_(lua) {
-  f_ = lua->getglobal<an<LuaObj>>(ticket.name_space);
+  raw_init(lua->to_state(), ticket, &env_, &func_);
 }
 
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
-  auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &>(f_, input, segment);
+  auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &,
+                           an<LuaObj>>(func_, input, segment, env_);
   an<Translation> t = New<LuaTranslation>(lua_, f);
   if (t->exhausted())
     return an<Translation>();

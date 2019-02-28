@@ -41,6 +41,8 @@ public:
   template <typename O, typename ... I>
   O call(I ... input);
 
+  lua_State *to_state() { return L_; }
+
   static Lua *from_state(lua_State *L);
 private:
   lua_State *L_;

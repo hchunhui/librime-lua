@@ -20,7 +20,8 @@ public:
   }
 private:
   Lua *lua_;
-  an<LuaObj> f_;
+  an<LuaObj> env_;
+  an<LuaObj> func_;
 };
 
 class LuaTranslator : public Translator {
@@ -32,7 +33,8 @@ public:
 
 private:
   Lua *lua_;
-  an<LuaObj> f_;
+  an<LuaObj> env_;
+  an<LuaObj> func_;
 };
 
 template<typename T>
@@ -41,8 +43,9 @@ private:
   an<Lua> lua_;
 public:
   LuaComponent(an<Lua> lua) : lua_(lua) {};
-  T* Create(const Ticket &arg) {
-    return new T(arg, lua_.get());
+  T* Create(const Ticket &a) {
+    Ticket t(a.engine, a.name_space, a.name_space);
+    return new T(t, lua_.get());
   }
 };
 
