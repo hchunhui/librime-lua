@@ -11,11 +11,11 @@ namespace rime {
 namespace SegmentReg {
   typedef Segment T;
 
-  static T make(int start_pos, int end_pos) {
+  T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
   }
 
-  static string get_status(const T &t) {
+  string get_status(const T &t) {
     switch (t.status) {
     case T::kVoid: return "kVoid";
     case T::kGuess: return "kGuess";
@@ -25,7 +25,7 @@ namespace SegmentReg {
     return "";
   }
 
-  static void set_status(T &t, const string &r) {
+  void set_status(T &t, const string &r) {
     if (r == "kVoid")
       t.status = T::kVoid;
     else if (r == "kGuess")
@@ -80,7 +80,7 @@ namespace SegmentReg {
 namespace CandidateReg {
   typedef Candidate T;
 
-  static string dynamic_type(T &c) {
+  string dynamic_type(T &c) {
     if (dynamic_cast<Phrase *>(&c))
       return "Phrase";
     if (dynamic_cast<SimpleCandidate *>(&c))
@@ -92,26 +92,26 @@ namespace CandidateReg {
     return "Other";
   }
 
-  static void set_text(T &c, const string &v) {
+  void set_text(T &c, const string &v) {
     if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_text(v);
   }
 
-  static void set_comment(T &c, const string &v) {
+  void set_comment(T &c, const string &v) {
     if (auto p = dynamic_cast<Phrase *>(&c))
       p->set_comment(v);
     else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_comment(v);
   }
 
-  static void set_preedit(T &c, const string &v) {
+  void set_preedit(T &c, const string &v) {
     if (auto p = dynamic_cast<Phrase *>(&c))
       p->set_preedit(v);
     else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_preedit(v);
   }
 
-  static an<T> make(const string type,
+  an<T> make(const string type,
                     size_t start, size_t end,
                     const string text, const string comment)
   {
@@ -171,7 +171,7 @@ namespace TranslationReg {
     return 1;
   }
 
-  static optional<an<Candidate>> next(T &t) {
+  optional<an<Candidate>> next(T &t) {
     if (t.exhausted())
       return {};
 
@@ -180,7 +180,7 @@ namespace TranslationReg {
     return c;
   }
 
-  static int raw_iter(lua_State *L) {
+  int raw_iter(lua_State *L) {
     lua_pushcfunction(L, WRAP(next));
     lua_pushvalue(L, 1);
     return 2;
@@ -208,13 +208,13 @@ namespace TranslationReg {
 namespace ReverseDbReg {
   typedef ReverseDb T;
 
-  static an<T> make(const string &file) {
+  an<T> make(const string &file) {
     an<T> db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
     db->Load();
     return db;
   }
 
-  static string lookup(T &db, const string &key) {
+  string lookup(T &db, const string &key) {
     string res;
     if (db.Lookup(key, &res))
       return res;
