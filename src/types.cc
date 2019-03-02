@@ -1,8 +1,14 @@
 #include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/segmentation.h>
+#include <rime/menu.h>
+#include <rime/engine.h>
+#include <rime/context.h>
+#include <rime/schema.h>
+#include <rime/config.h>
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
+#include <rime/key_event.h>
 #include "lua_templates.h"
 
 namespace rime {
@@ -241,6 +247,391 @@ namespace ReverseDbReg {
   };
 }
 
+namespace SegmentationReg {
+  typedef Segmentation T;
+
+  Segment &back(T &t) {
+    return t.back();
+  }
+
+  void pop_back(T &t) {
+    t.pop_back();
+  }
+
+  void reset_input(T &t, const string &input) {
+    t.Reset(input);
+  }
+
+  void reset_length(T &t, const size_t length) {
+    t.Reset(length);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "empty", WRAPMEM(T::empty) },
+    { "back", WRAP(back) },
+    { "pop_back", WRAP(pop_back) },
+    { "reset_length", WRAP(reset_length) },
+    { "add_segment", WRAPMEM(T::AddSegment) },
+    { "forward", WRAPMEM(T::Forward) },
+    { "trim", WRAPMEM(T::Trim) },
+    { "has_finished_segmentation", WRAPMEM(T::HasFinishedSegmentation) },
+    { "get_current_start_position", WRAPMEM(T::GetCurrentStartPosition) },
+    { "get_current_end_position", WRAPMEM(T::GetCurrentEndPosition) },
+    { "get_current_segment_length", WRAPMEM(T::GetCurrentSegmentLength) },
+    { "get_confirmed_position", WRAPMEM(T::GetConfirmedPosition) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "input", WRAPMEM(T::input) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "input", WRAP(reset_input) },
+    { NULL, NULL },
+  };
+}
+
+namespace MenuReg {
+  typedef Menu T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "add_translation", WRAPMEM(T::AddTranslation) },
+    //{ }, // AddFilter
+    { "prepare", WRAPMEM(T::Prepare) },
+    //{ }, // CreatePage
+    { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
+    { "candidate_count", WRAPMEM(T::candidate_count) },
+    { "empty", WRAPMEM(T::empty) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace KeyEventReg {
+  typedef KeyEvent T;
+
+  int keycode(const T &t) {
+    return t.keycode();
+  }
+
+  int modifier(const T &t) {
+    return t.modifier();
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "shift", WRAPMEM(T::shift) },
+    { "ctrl", WRAPMEM(T::ctrl) },
+    { "alt", WRAPMEM(T::alt) },
+    { "caps", WRAPMEM(T::caps) },
+    { "super", WRAPMEM(T::super) },
+    { "release", WRAPMEM(T::release) },
+    { "repr", WRAPMEM(T::repr) },
+    { "eq", WRAPMEM(T::operator==) },
+    { "lt", WRAPMEM(T::operator<) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "keycode", WRAP(keycode) },
+    { "modifier", WRAP(modifier) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace EngineReg {
+  typedef Engine T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "schema", WRAPMEM(T::schema) },
+    { "context", WRAPMEM(T::context) },
+    { "active_context", WRAPMEM(T::active_context) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "active_context", WRAPMEM(T::set_active_context) },
+    { NULL, NULL },
+  };
+}
+
+namespace ContextReg {
+  typedef Context T;
+
+  Composition &get_composition(T &t) {
+    return t.composition();
+  }
+
+  void set_composition(T &t, Composition &c) {
+    t.set_composition(std::move(c));
+  }
+
+  bool push_input(T &t, const string &str) {
+    return t.PushInput(str);
+  }
+
+  //CommitHistory &get_commit_history(T &t) {
+  //  return t.commit_history();
+  //}
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "commit", WRAPMEM(T::Commit) },
+    { "get_commit_text", WRAPMEM(T::GetCommitText) },
+    { "get_script_text", WRAPMEM(T::GetScriptText) },
+    { "get_preedit", WRAPMEM(T::GetPreedit) },
+    { "is_composing", WRAPMEM(T::IsComposing) },
+    { "has_menu", WRAPMEM(T::HasMenu) },
+    { "get_selected_candidate", WRAPMEM(T::GetSelectedCandidate) },
+
+    { "push_input", WRAP(push_input) },
+    { "pop_input", WRAPMEM(T::PopInput) },
+    { "delete_input", WRAPMEM(T::DeleteInput) },
+    { "clear", WRAPMEM(T::Clear) },
+
+    { "select", WRAPMEM(T::Select) },
+    { "confirm_current_selection", WRAPMEM(T::ConfirmCurrentSelection) },
+    { "delete_current_selection", WRAPMEM(T::DeleteCurrentSelection) },
+    { "confirm_previous_selection", WRAPMEM(T::ConfirmPreviousSelection) },
+    { "reopen_previous_selection", WRAPMEM(T::ReopenPreviousSelection) },
+    { "clear_previous_segment", WRAPMEM(T::ClearPreviousSegment) },
+    { "reopen_previous_segment", WRAPMEM(T::ReopenPreviousSegment) },
+    { "clear_non_confirmed_composition", WRAPMEM(T::ClearNonConfirmedComposition) },
+    { "refresh_non_confirmed_composition", WRAPMEM(T::RefreshNonConfirmedComposition) },
+    { "set_option", WRAPMEM(T::set_option) },
+    { "get_option", WRAPMEM(T::get_option) },
+    { "set_property", WRAPMEM(T::set_property) },
+    { "get_property", WRAPMEM(T::get_property) },
+    { "clear_transient_options", WRAPMEM(T::ClearTransientOptions) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "composition", WRAP(get_composition) },
+    { "input", WRAPMEM(T::input) },
+    { "caret_pos", WRAPMEM(T::caret_pos) },
+    //{ "commit_history", WRAP(get_commit_history) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "composition", WRAP(set_composition) },
+    { "input", WRAPMEM(T::set_input) },
+    { "caret_pos", WRAPMEM(T::set_caret_pos) },
+    { NULL, NULL },
+  };
+}
+
+namespace PreeditReg {
+  typedef Preedit T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "text", WRAPMEM_GET(T::text) },
+    { "caret_pos", WRAPMEM_GET(T::caret_pos) },
+    { "sel_start", WRAPMEM_GET(T::sel_start) },
+    { "sel_end", WRAPMEM_GET(T::sel_end) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "text", WRAPMEM_SET(T::text) },
+    { "caret_pos", WRAPMEM_SET(T::caret_pos) },
+    { "sel_start", WRAPMEM_SET(T::sel_start) },
+    { "sel_end", WRAPMEM_SET(T::sel_end) },
+    { NULL, NULL },
+  };
+}
+
+namespace CompositionReg {
+  typedef Composition T;
+
+  Segment &back(T &t) {
+    return t.back();
+  }
+
+  void push_back(T &t, Segment &seg) {
+    return t.push_back(seg);
+  }
+
+  void pop_back(T &t) {
+    t.pop_back();
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "empty", WRAPMEM(T::empty) },
+    { "back", WRAP(back) },
+    { "pop_back", WRAP(pop_back) },
+    { "push_back", WRAP(push_back) },
+    // XXX
+    { "has_finished_composition", WRAPMEM(T::HasFinishedComposition) },
+    { "get_prompt", WRAPMEM(T::GetPrompt) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace SchemaReg {
+  typedef Schema T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "schema_id", WRAPMEM(T::schema_id) },
+    { "schema_name", WRAPMEM(T::schema_name) },
+    { "config", WRAPMEM(T::config) },
+    { "page_size", WRAPMEM(T::page_size) },
+    { "select_keys", WRAPMEM(T::select_keys) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "config", WRAPMEM(T::set_config) },
+    { "select_keys", WRAPMEM(T::select_keys) },
+    { NULL, NULL },
+  };
+}
+
+namespace ConfigReg {
+  typedef Config T;
+
+  optional<bool> get_bool(T &t, const string &path) {
+    bool v;
+    if (t.GetBool(path, &v))
+      return v;
+    else
+      return {};
+  }
+
+  optional<int> get_int(T &t, const string &path) {
+    int v;
+    if (t.GetInt(path, &v))
+      return v;
+    else
+      return optional<int>{};
+  }
+
+  optional<double> get_double(T &t, const string &path) {
+    double v;
+    if (t.GetDouble(path, &v))
+      return v;
+    else
+      return optional<double>{};
+  }
+
+  optional<string> get_string(T &t, const string &path) {
+    string v;
+    if (t.GetString(path, &v))
+      return v;
+    else
+      return optional<string>{};
+  }
+
+  bool set_string(T &t, const string &path, const string &value) {
+    return t.SetString(path, value);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    //bool LoadFromStream(std::istream& stream);
+    //bool SaveToStream(std::ostream& stream);
+    { "load_from_file", WRAPMEM(T::LoadFromFile) },
+    { "save_to_file", WRAPMEM(T::SaveToFile) },
+
+    { "is_null", WRAPMEM(T::IsNull) },
+    { "is_value", WRAPMEM(T::IsValue) },
+    { "is_list", WRAPMEM(T::IsList) },
+    { "is_map", WRAPMEM(T::IsMap) },
+    { "get_bool", WRAP(get_bool) },
+    { "get_int", WRAP(get_int) },
+    { "get_double", WRAP(get_double) },
+    { "get_string", WRAP(get_string) },
+    { "get_list_size", WRAPMEM(T::GetListSize) },
+
+    //an<ConfigItem> GetItem(const string& path);
+    //an<ConfigValue> GetValue(const string& path);
+    //RIME_API an<ConfigList> GetList(const string& path);
+    //RIME_API an<ConfigMap> GetMap(const string& path);
+
+    { "set_bool", WRAPMEM(T::SetBool) },
+    { "set_int", WRAPMEM(T::SetInt) },
+    { "set_double", WRAPMEM(T::SetDouble) },
+    { "set_string", WRAP(set_string) },
+    //RIME_API bool SetItem(const string& path, an<ConfigItem> item);
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -273,6 +664,15 @@ namespace LuaImpl {
     EXPORT(CandidateReg, L);
     EXPORT(TranslationReg, L);
     EXPORT(ReverseDbReg, L);
+    EXPORT(SegmentationReg, L);
+    EXPORT(MenuReg, L);
+    EXPORT(KeyEventReg, L);
+    EXPORT(EngineReg, L);
+    EXPORT(ContextReg, L);
+    EXPORT(PreeditReg, L);
+    EXPORT(CompositionReg, L);
+    EXPORT(SchemaReg, L);
+    EXPORT(ConfigReg, L);
   }
 }
 
