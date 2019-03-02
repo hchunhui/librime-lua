@@ -81,6 +81,136 @@ namespace LuaImpl {
     lua_pop(L, 1);
   }
 
+  namespace SetReg {
+    static int raw_make(lua_State *L) {
+      if (lua_gettop(L) != 1 || lua_type(L, 1) != LUA_TTABLE)
+        return 0;
+      int n = lua_rawlen(L, 1);
+      lua_createtable(L, n, 0);
+      for (int i = 1; i <= n; i++) {
+        lua_rawgeti(L, 1, i);
+        LuaType<bool>::pushdata(L, true);
+        lua_rawset(L, -3);
+      }
+      luaL_setmetatable(L, "__set");
+      return 1;
+    }
+
+    static int raw_union(lua_State *L) {
+      int n = lua_gettop(L);
+      for (int i = 1; i <= n; i++)
+        if (lua_type(L, i) != LUA_TTABLE)
+          return 0;
+      lua_createtable(L, 0, 0);
+      for (int i = 1; i <= n; i++) {
+        lua_pushnil(L);
+        while (lua_next(L, i) != 0) {
+          lua_pushvalue(L, -2);
+          LuaType<bool>::pushdata(L, true);
+          lua_rawset(L, -5);
+          lua_pop(L, 1);
+        }
+      }
+      luaL_setmetatable(L, "__set");
+      return 1;
+    }
+
+    static int raw_inter(lua_State *L) {
+      int n = lua_gettop(L);
+      for (int i = 1; i <= n; i++)
+        if (lua_type(L, i) != LUA_TTABLE)
+          return 0;
+      lua_createtable(L, 0, 0);
+      if (n > 0) {
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+          bool b = true;
+          for (int i = 2; b && i <= n; i++) {
+            lua_pushvalue(L, -2);
+            lua_rawget(L, i);
+            b = (lua_type(L, -1) != LUA_TNIL);
+            lua_pop(L, 1);
+          }
+          if (b) {
+            lua_pushvalue(L, -2);
+            LuaType<bool>::pushdata(L, true);
+            lua_rawset(L, -5);
+          }
+          lua_pop(L, 1);
+        }
+      }
+      luaL_setmetatable(L, "__set");
+      return 1;
+    }
+
+    static int raw_diff(lua_State *L) {
+      int n = lua_gettop(L);
+      for (int i = 1; i <= n; i++)
+        if (lua_type(L, i) != LUA_TTABLE)
+          return 0;
+      lua_createtable(L, 0, 0);
+      if (n > 0) {
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+          bool b = true;
+          for (int i = 2; b && i <= n; i++) {
+            lua_pushvalue(L, -2);
+            lua_rawget(L, i);
+            b = (lua_type(L, -1) == LUA_TNIL);
+            lua_pop(L, 1);
+          }
+          if (b) {
+            lua_pushvalue(L, -2);
+            LuaType<bool>::pushdata(L, true);
+            lua_rawset(L, -5);
+          }
+          lua_pop(L, 1);
+        }
+      }
+      luaL_setmetatable(L, "__set");
+      return 1;
+    }
+
+    static int raw_empty(lua_State *L) {
+      if (lua_gettop(L) != 1)
+        return 0;
+
+      lua_pushnil(L);
+      if (lua_next(L, 1) == 0) {
+        LuaType<bool>::pushdata(L, true);
+      } else {
+        lua_pop(L, 2);
+        LuaType<bool>::pushdata(L, false);
+      }
+      return 1;
+    }
+
+    static const luaL_Reg methods[] = {
+      { "empty", raw_empty },
+      { NULL, NULL },
+    };
+
+    static const luaL_Reg mt[] = {
+      { "__index", index },
+      { "__add", raw_union },
+      { "__sub", raw_diff },
+      { "__mul", raw_inter },
+      { NULL, NULL },
+    };
+  }
+
+  void export_set(lua_State *L) {
+    lua_register(L, "Set", SetReg::raw_make);
+
+    luaL_newmetatable(L, "__set");
+    luaL_setfuncs(L, SetReg::mt, 0);
+    lua_pushstring(L, "methods");
+    lua_createtable(L, 0, 4);
+    luaL_setfuncs(L, SetReg::methods, 0);
+    lua_settable(L, -3);
+    lua_pop(L, 1);
+  }
+
   static int yield(lua_State *L) {
     return lua_yield(L, lua_gettop(L));
   }
@@ -95,6 +225,7 @@ namespace LuaImpl {
     luaL_openlibs(L);
     xluaopen_utf8(L);
     lua_register(L, "yield", yield);
+    export_set(L);
     types_init(L);
 
     int status = luaL_dofile(L, (string(RimeGetUserDataDir()) + "/rime.lua").c_str());

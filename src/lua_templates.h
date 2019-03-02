@@ -313,6 +313,30 @@ struct LuaType<vector<T>> {
   }
 };
 
+// Sets
+template<typename T>
+struct LuaType<set<T>> {
+  static void pushdata(lua_State *L, const set<T> &o) {
+    lua_createtable(L, 0, o.size());
+    for (auto it = o.begin(); it != o.end(); it++) {
+      LuaType<T>::pushdata(L, *it);
+      LuaType<bool>::pushdata(L, true);
+      lua_rawset(L, -3);
+    }
+    luaL_setmetatable(L, "__set");
+  }
+  static set<T> todata(lua_State *L, int j) {
+    set<T> o;
+    o.clear();
+    lua_pushnil(L);  /* first key */
+    while (lua_next(L, j) != 0) {
+      o.insert(LuaType<T>::todata(L, -2));
+      lua_pop(L, 1);
+    }
+    return o;
+  }
+};
+
 template<typename T>
 struct LuaType<const vector<T>> : LuaType<vector<T>> {};
 
