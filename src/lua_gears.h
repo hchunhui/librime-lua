@@ -4,6 +4,8 @@
 #include "lua.h"
 #include <rime/filter.h>
 #include <rime/translator.h>
+#include <rime/segmentor.h>
+#include <rime/processor.h>
 #include <rime/gear/filter_commons.h>
 
 namespace rime {
@@ -30,6 +32,30 @@ public:
 
   virtual an<Translation> Query(const string& input,
                                 const Segment& segment);
+
+private:
+  Lua *lua_;
+  an<LuaObj> env_;
+  an<LuaObj> func_;
+};
+
+class LuaSegmentor : public Segmentor {
+public:
+  explicit LuaSegmentor(const Ticket& ticket, Lua *lua);
+
+  virtual bool Proceed(Segmentation* Segmentation);
+
+private:
+  Lua *lua_;
+  an<LuaObj> env_;
+  an<LuaObj> func_;
+};
+
+class LuaProcessor : public Processor {
+public:
+  LuaProcessor(const Ticket& ticket, Lua *lua);
+
+  virtual ProcessResult ProcessKeyEvent(const KeyEvent& key_event);
 
 private:
   Lua *lua_;

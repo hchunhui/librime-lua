@@ -1,6 +1,7 @@
 #include <rime/engine.h>
 #include <rime/segmentation.h>
 #include <rime/translation.h>
+#include <rime/key_event.h>
 #include "lua.h"
 #include "lua_templates.h"
 #include "lua_gears.h"
@@ -101,6 +102,33 @@ an<Translation> LuaTranslator::Query(const string& input,
     return an<Translation>();
   else
     return t;
+}
+
+//--- LuaSegmentor
+LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
+  : Segmentor(ticket), lua_(lua) {
+  raw_init(lua->to_state(), ticket, &env_, &func_);
+}
+
+bool LuaSegmentor::Proceed(Segmentation* segmentation) {
+  return lua_->call<bool, an<LuaObj>, Segmentation &,
+                    an<LuaObj>>(func_, *segmentation, env_);
+}
+
+//--- LuaProcessor
+LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
+  : Processor(ticket), lua_(lua) {
+  raw_init(lua->to_state(), ticket, &env_, &func_);
+}
+
+ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
+  int r = lua_->call<int, an<LuaObj>, const KeyEvent&,
+                     an<LuaObj>>(func_, key_event, env_);
+  switch (r) {
+  case 0: return kRejected;
+  case 1: return kAccepted;
+  default: return kNoop;
+  }
 }
 
 }  // namespace rime

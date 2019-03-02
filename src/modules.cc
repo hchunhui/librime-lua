@@ -12,6 +12,8 @@ static void rime_lua_initialize() {
   an<Lua> lua(new Lua);
   r.Register("lua_translator", new LuaComponent<LuaTranslator>(lua));
   r.Register("lua_filter", new LuaComponent<LuaFilter>(lua));
+  r.Register("lua_segmentor", new LuaComponent<LuaSegmentor>(lua));
+  r.Register("lua_processor", new LuaComponent<LuaProcessor>(lua));
 }
 
 static void rime_lua_finalize() {
