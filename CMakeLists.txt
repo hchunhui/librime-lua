@@ -1,7 +1,3 @@
-set(RIME_SOURCE_DIR ${PROJECT_SOURCE_DIR})
-set(RIME_LUA_VERSION 1.0.0)
-set(RIME_LUA_SOVERSION 1)
-
 if(MSVC)
     include_directories(${RIME_SOURCE_DIR}/thirdparty/src/lua5.3)
     aux_source_directory(${RIME_SOURCE_DIR}/thirdparty/src/lua5.3 LUA_SRC)
@@ -11,7 +7,14 @@ else()
     include_directories(${LUA_INCLUDE_DIRS})
 endif()
 
-add_subdirectory(src)
+aux_source_directory(src RIME_LUA_SRC)
 
-set(rime_plugins_deps ${rime_plugins_deps} PARENT_SCOPE)
-set(rime_default_modules ${rime_default_modules} PARENT_SCOPE)
+add_library(rime-lua-objs OBJECT ${RIME_LUA_SRC} ${LUA_SRC})
+if(BUILD_SHARED_LIBS)
+  set_target_properties(rime-lua-objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
+set(plugin_name "rime-lua" PARENT_SCOPE)
+set(plugin_objs $<TARGET_OBJECTS:rime-lua-objs> PARENT_SCOPE)
+set(plugin_deps ${LUA_LIBRARIES} PARENT_SCOPE)
+set(plugin_default_modules "lua" PARENT_SCOPE)
