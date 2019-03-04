@@ -275,6 +275,10 @@ Lua *Lua::from_state(lua_State *L) {
   return lua;
 }
 
+void Lua::to_state(std::function<void (lua_State *)> f) {
+  f(L_);
+}
+
 an<LuaObj> Lua::newthreadx(lua_State *L, int nargs) {
   lua_State *C = lua_newthread(L_);
   auto o = LuaObj::todata(L_, -1);

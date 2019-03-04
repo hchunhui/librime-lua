@@ -77,7 +77,7 @@ static void raw_init(lua_State *L, const Ticket &t,
 //--- LuaFilter
 LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
   : Filter(ticket), TagMatching(ticket), lua_(lua) {
-  raw_init(lua->to_state(), ticket, &env_, &func_);
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_);});
 }
 
 an<Translation> LuaFilter::Apply(
@@ -90,7 +90,7 @@ an<Translation> LuaFilter::Apply(
 //--- LuaTranslator
 LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
   : Translator(ticket), lua_(lua) {
-  raw_init(lua->to_state(), ticket, &env_, &func_);
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_);});
 }
 
 an<Translation> LuaTranslator::Query(const string& input,
@@ -107,7 +107,7 @@ an<Translation> LuaTranslator::Query(const string& input,
 //--- LuaSegmentor
 LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
   : Segmentor(ticket), lua_(lua) {
-  raw_init(lua->to_state(), ticket, &env_, &func_);
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_);});
 }
 
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
@@ -118,7 +118,7 @@ bool LuaSegmentor::Proceed(Segmentation* segmentation) {
 //--- LuaProcessor
 LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
   : Processor(ticket), lua_(lua) {
-  raw_init(lua->to_state(), ticket, &env_, &func_);
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_);});
 }
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {

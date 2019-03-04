@@ -1,6 +1,7 @@
 #ifndef RIME_LUA_H_
 #define RIME_LUA_H_
 
+#include <functional>
 #include <rime/filter.h>
 #include <rime/translator.h>
 #include <rime/gear/filter_commons.h>
@@ -41,7 +42,7 @@ public:
   template <typename O, typename ... I>
   O call(I ... input);
 
-  lua_State *to_state() { return L_; }
+  void to_state(std::function<void (lua_State *)> f);
 
   static Lua *from_state(lua_State *L);
 private:
