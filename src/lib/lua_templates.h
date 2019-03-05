@@ -1,5 +1,5 @@
-#ifndef RIME_LUA_TEMPLATES_H_
-#define RIME_LUA_TEMPLATES_H_
+#ifndef LIB_LUA_TEMPLATES_H_
+#define LIB_LUA_TEMPLATES_H_
 
 #include "lua.h"
 #include <boost/type_index.hpp>
@@ -511,4 +511,4 @@ struct MemberWrapper<R (C::*), f> {
 #define WRAPMEM_SET(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap_set), \
                                               &MemberWrapper<decltype(&f), &f>::wrap_set>::wrap))
 
-#endif /* RIME_LUA_TEMPLATES_H_ */
+#endif /* LIB_LUA_TEMPLATES_H_ */

@@ -8,8 +8,9 @@ else()
 endif()
 
 aux_source_directory(src RIME_LUA_SRC)
+aux_source_directory(src/lib RIME_LUA_LIB_SRC)
 
-add_library(rime-lua-objs OBJECT ${RIME_LUA_SRC} ${LUA_SRC})
+add_library(rime-lua-objs OBJECT ${RIME_LUA_SRC} ${RIME_LUA_LIB_SRC} ${LUA_SRC})
 if(BUILD_SHARED_LIBS)
   set_target_properties(rime-lua-objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()

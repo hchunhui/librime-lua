@@ -1,5 +1,5 @@
-#ifndef RIME_LUA_H_
-#define RIME_LUA_H_
+#ifndef LIB_LUA_H_
+#define LIB_LUA_H_
 
 #include <memory>
 #include <functional>
@@ -47,4 +47,4 @@ private:
   lua_State *L_;
 };
 
-#endif  // RIME_LUA_H_
+#endif  // LIB_LUA_H_

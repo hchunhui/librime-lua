@@ -9,7 +9,7 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
-#include "lua_templates.h"
+#include "lib/lua_templates.h"
 
 using namespace rime;
 

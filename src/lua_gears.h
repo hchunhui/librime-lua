@@ -1,12 +1,12 @@
 #ifndef RIME_LUA_GEARS_H_
 #define RIME_LUA_GEARS_H_
 
-#include "lua.h"
 #include <rime/filter.h>
 #include <rime/translator.h>
 #include <rime/segmentor.h>
 #include <rime/processor.h>
 #include <rime/gear/filter_commons.h>
+#include "lib/lua.h"
 
 namespace rime {
 

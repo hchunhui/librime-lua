@@ -2,8 +2,7 @@
 #include <rime/segmentation.h>
 #include <rime/translation.h>
 #include <rime/key_event.h>
-#include "lua.h"
-#include "lua_templates.h"
+#include "lib/lua_templates.h"
 #include "lua_gears.h"
 
 namespace rime {
