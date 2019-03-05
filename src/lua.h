@@ -1,21 +1,19 @@
 #ifndef RIME_LUA_H_
 #define RIME_LUA_H_
 
+#include <memory>
 #include <functional>
-#include <rime/filter.h>
-#include <rime/translator.h>
-#include <rime/gear/filter_commons.h>
+#include <string>
+#include <boost/optional.hpp>
 
 struct lua_State;
-
-namespace rime {
 
 class LuaObj {
 public:
   ~LuaObj();
 
-  static void pushdata(lua_State *L, an<LuaObj> &o);
-  static an<LuaObj> todata(lua_State *L, int i);
+  static void pushdata(lua_State *L, std::shared_ptr<LuaObj> &o);
+  static std::shared_ptr<LuaObj> todata(lua_State *L, int i);
 
 private:
   LuaObj(lua_State *L, int i);
@@ -25,19 +23,19 @@ private:
 
 class Lua {
 public:
-  Lua();
+  Lua(const std::string &init_file);
   ~Lua();
 
   template <typename O>
-  O getglobal(const string &f);
+  O getglobal(const std::string &f);
 
-  an<LuaObj> newthreadx(lua_State *L, int nargs);
+  std::shared_ptr<LuaObj> newthreadx(lua_State *L, int nargs);
 
   template <typename ... I>
-  an<LuaObj> newthread(I ... input);
+  std::shared_ptr<LuaObj> newthread(I ... input);
 
   template <typename O>
-  optional<O> resume(an<LuaObj> f);
+  boost::optional<O> resume(std::shared_ptr<LuaObj> f);
 
   template <typename O, typename ... I>
   O call(I ... input);
@@ -48,7 +46,5 @@ public:
 private:
   lua_State *L_;
 };
-
-}  // namespace rime
 
 #endif  // RIME_LUA_H_

@@ -11,7 +11,7 @@
 #include <rime/key_event.h>
 #include "lua_templates.h"
 
-namespace rime {
+using namespace rime;
 
 //--- wrappers for Segment
 namespace SegmentReg {
@@ -160,7 +160,9 @@ namespace CandidateReg {
 }
 
 //--- wrappers for an<Translation>
-an<Translation> lua_translation_new(Lua *lua, an<LuaObj> o);
+namespace rime {
+  an<Translation> lua_translation_new(Lua *lua, an<LuaObj> o);
+}
 namespace TranslationReg {
   typedef Translation T;
 
@@ -172,7 +174,7 @@ namespace TranslationReg {
       return 0;
 
     auto o = lua->newthreadx(L, n);
-    auto r = lua_translation_new(lua, o);
+    auto r = rime::lua_translation_new(lua, o);
     LuaType<an<Translation>>::pushdata(L, r);
     return 1;
   }
@@ -675,5 +677,3 @@ namespace LuaImpl {
     EXPORT(ConfigReg, L);
   }
 }
-
-}  // namespace rime

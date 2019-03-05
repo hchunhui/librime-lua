@@ -1,9 +1,11 @@
 #ifndef RIME_LUA_TEMPLATES_H_
 #define RIME_LUA_TEMPLATES_H_
 
-#include <rime/common.h>
-#include <typeinfo>
 #include "lua.h"
+#include <boost/type_index.hpp>
+#include <typeinfo>
+#include <vector>
+#include <set>
 
 extern "C" {
 #include <lua.h>
@@ -20,12 +22,11 @@ extern "C" {
 #define LUA_UNPACK "unpack"
 #endif
 
-namespace rime {
 //--- LuaType
 // Generic case (includes pointers)
 template<typename T>
 struct LuaType {
-  static const string name() {
+  static const std::string name() {
     return boost::typeindex::type_id_with_cvr<T>().pretty_name();
     // return string("V") + typeid(T).name();
   }
@@ -54,8 +55,8 @@ struct LuaType {
   };
 
   template<typename U>
-  struct X<an<U>> {
-    static bool pushnil(lua_State *L, an<U> &o) {
+  struct X<std::shared_ptr<U>> {
+    static bool pushnil(lua_State *L, std::shared_ptr<U> &o) {
       if (o)
         return false;
       lua_pushnil(L);
@@ -103,7 +104,7 @@ struct LuaType {
 // References
 template<typename T>
 struct LuaType<T &> {
-  static const string name() {
+  static const std::string name() {
     return boost::typeindex::type_id_with_cvr<T &>().pretty_name();
     // return string("R") + typeid(T).name();
   }
@@ -126,12 +127,12 @@ struct LuaType<T &> {
         return **po;
     }
 
-    an<T> *ao = (an<T> *) luaL_testudata(L, i, LuaType<an<T>>::name().c_str());
+    auto ao = (std::shared_ptr<T> *) luaL_testudata(L, i, LuaType<std::shared_ptr<T>>::name().c_str());
     if (ao)
       return *(*ao).get();
 
     if (std::is_const<T>::value) {
-      an<T> *ao = (an<T> *) luaL_testudata(L, i, LuaType<an<U>>::name().c_str());
+      auto ao = (std::shared_ptr<T> *) luaL_testudata(L, i, LuaType<std::shared_ptr<U>>::name().c_str());
       if (ao)
         return *(*ao).get();
     }
@@ -164,12 +165,12 @@ struct LuaType<T &> {
 
 // Generic Lua Object
 template<>
-struct LuaType<an<LuaObj>> {
-  static void pushdata(lua_State *L, an<LuaObj> &o) {
+struct LuaType<std::shared_ptr<LuaObj>> {
+  static void pushdata(lua_State *L, std::shared_ptr<LuaObj> &o) {
     LuaObj::pushdata(L, o);
   }
 
-  static an<LuaObj> todata(lua_State *L, int i) {
+  static std::shared_ptr<LuaObj> todata(lua_State *L, int i) {
     return LuaObj::todata(L, i);
   }
 };
@@ -184,15 +185,15 @@ struct LuaType<lua_CFunction> {
 
 // Optional
 template<typename T>
-struct LuaType<optional<T>> {
-  static void pushdata(lua_State *L, optional<T> o) {
+struct LuaType<boost::optional<T>> {
+  static void pushdata(lua_State *L, boost::optional<T> o) {
     if (o)
       LuaType<T>::pushdata(L, *o);
     else
       lua_pushnil(L);
   }
 
-  static optional<T> todata(lua_State *L, int i) {
+  static boost::optional<T> todata(lua_State *L, int i) {
     if (lua_type(L, i) == LUA_TNIL)
       return {};
     else
@@ -271,29 +272,29 @@ struct LuaType<long double> : LuaType<double> {};
 
 // Strings
 template<>
-struct LuaType<string> {
-  static void pushdata(lua_State *L, const string &o) {
+struct LuaType<std::string> {
+  static void pushdata(lua_State *L, const std::string &o) {
     lua_pushstring(L, o.c_str());
   }
 
-  static string todata(lua_State *L, int i) {
-    return string(luaL_checkstring(L, i));
+  static std::string todata(lua_State *L, int i) {
+    return std::string(luaL_checkstring(L, i));
   }
 };
 
 template<>
-struct LuaType<const string> : LuaType<string> {};
+struct LuaType<const std::string> : LuaType<std::string> {};
 
 template<>
-struct LuaType<const string &> : LuaType<string> {};
+struct LuaType<const std::string &> : LuaType<std::string> {};
 
 /* string references/pointers are not supported now */
 
 // Arrays
 // The index starts form 1 in Lua...
 template<typename T>
-struct LuaType<vector<T>> {
-  static void pushdata(lua_State *L, vector<T> &o) {
+struct LuaType<std::vector<T>> {
+  static void pushdata(lua_State *L, std::vector<T> &o) {
     int n = o.size();
     lua_createtable(L, n, 0);
     for (int i = 0; i < n; i++) {
@@ -301,8 +302,8 @@ struct LuaType<vector<T>> {
       lua_rawseti(L, -2, i + 1);
     }
   }
-  static vector<T> todata(lua_State *L, int j) {
-    vector<T> o;
+  static std::vector<T> todata(lua_State *L, int j) {
+    std::vector<T> o;
     int n = lua_rawlen(L, j);
     for (int i = 0; i < n; i++) {
       lua_rawgeti(L, j, i + 1);
@@ -315,8 +316,8 @@ struct LuaType<vector<T>> {
 
 // Sets
 template<typename T>
-struct LuaType<set<T>> {
-  static void pushdata(lua_State *L, const set<T> &o) {
+struct LuaType<std::set<T>> {
+  static void pushdata(lua_State *L, const std::set<T> &o) {
     lua_createtable(L, 0, o.size());
     for (auto it = o.begin(); it != o.end(); it++) {
       LuaType<T>::pushdata(L, *it);
@@ -325,8 +326,8 @@ struct LuaType<set<T>> {
     }
     luaL_setmetatable(L, "__set");
   }
-  static set<T> todata(lua_State *L, int j) {
-    set<T> o;
+  static std::set<T> todata(lua_State *L, int j) {
+    std::set<T> o;
     o.clear();
     lua_pushnil(L);  /* first key */
     while (lua_next(L, j) != 0) {
@@ -338,10 +339,10 @@ struct LuaType<set<T>> {
 };
 
 template<typename T>
-struct LuaType<const vector<T>> : LuaType<vector<T>> {};
+struct LuaType<const std::vector<T>> : LuaType<std::vector<T>> {};
 
 template<typename T>
-struct LuaType<const vector<T> &> : LuaType<vector<T>> {};
+struct LuaType<const std::vector<T> &> : LuaType<std::vector<T>> {};
 
 // Helper function for push multiple data
 static void pushdataX(lua_State *L) {}
@@ -359,7 +360,7 @@ static void pushdataX(lua_State *L, T &o, Targs ... oargs) {
 
 // --- Lua call/resume
 template <typename O>
-O Lua::getglobal(const string &v) {
+O Lua::getglobal(const std::string &v) {
   lua_getglobal(L_, v.c_str());
   O o = LuaType<O>::todata(L_, -1);
   lua_pop(L_, 1);
@@ -367,13 +368,13 @@ O Lua::getglobal(const string &v) {
 }
 
 template <typename ... I>
-an<LuaObj> Lua::newthread(I ... input) {
+std::shared_ptr<LuaObj> Lua::newthread(I ... input) {
   pushdataX<I ...>(L_, input ...);
   return newthreadx(L_, sizeof...(input));
 }
 
 template <typename O>
-optional<O> Lua::resume(an<LuaObj> f) {
+boost::optional<O> Lua::resume(std::shared_ptr<LuaObj> f) {
   LuaObj::pushdata(L_, f);
   lua_State *C = lua_tothread(L_, -1);
   lua_pop(L_, 1);
@@ -509,5 +510,5 @@ struct MemberWrapper<R (C::*), f> {
                                               &MemberWrapper<decltype(&f), &f>::wrap_get>::wrap))
 #define WRAPMEM_SET(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap_set), \
                                               &MemberWrapper<decltype(&f), &f>::wrap_set>::wrap))
-}
+
 #endif /* RIME_LUA_TEMPLATES_H_ */

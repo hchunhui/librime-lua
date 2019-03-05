@@ -1,8 +1,6 @@
 #include "lua.h"
 #include "lua_templates.h"
 
-namespace rime {
-
 namespace LuaImpl {
   static int index(lua_State *L) {
     if (luaL_getmetafield(L, 1, "methods") != LUA_TNIL) {
@@ -228,12 +226,6 @@ namespace LuaImpl {
     export_set(L);
     types_init(L);
 
-    int status = luaL_dofile(L, (string(RimeGetUserDataDir()) + "/rime.lua").c_str());
-    if (status != LUA_OK) {
-      const char *e = lua_tostring(L, -1);
-      printf("dofile(err=%d): %s\n", status, e);
-    }
-
     lua_pushlightuserdata(L, (void *)&makeclosurekey);
     luaL_dostring(L, "return function (f, ...)\n"
                   "local args = {...}\n"
@@ -245,18 +237,25 @@ namespace LuaImpl {
   }
 }
 
-Lua::Lua() {
+Lua::Lua(const std::string &init_file) {
   L_ = luaL_newstate();
   if (L_) {
     lua_pushlightuserdata(L_, (void *)&LuaImpl::luakey);
     lua_pushlightuserdata(L_, (void *)this);
     lua_settable(L_, LUA_REGISTRYINDEX);
 
+    int status;
     lua_pushcfunction(L_, &LuaImpl::pmain);
-    int status = lua_pcall(L_, 0, 1, 0);
+    status = lua_pcall(L_, 0, 1, 0);
     if (status != LUA_OK) {
       const char *e = lua_tostring(L_, -1);
       printf("lua init(err=%d): %s\n", status, e);
+    }
+
+    status = luaL_dofile(L_, init_file.c_str());
+    if (status != LUA_OK) {
+      const char *e = lua_tostring(L_, -1);
+      printf("dofile(err=%d): %s\n", status, e);
     }
   }
 }
@@ -279,7 +278,7 @@ void Lua::to_state(std::function<void (lua_State *)> f) {
   f(L_);
 }
 
-an<LuaObj> Lua::newthreadx(lua_State *L, int nargs) {
+std::shared_ptr<LuaObj> Lua::newthreadx(lua_State *L, int nargs) {
   lua_State *C = lua_newthread(L_);
   auto o = LuaObj::todata(L_, -1);
   lua_pop(L_, 1);
@@ -301,12 +300,10 @@ LuaObj::~LuaObj() {
   luaL_unref(L_, LUA_REGISTRYINDEX, id_);
 }
 
-void LuaObj::pushdata(lua_State *L, an<LuaObj> &o) {
+void LuaObj::pushdata(lua_State *L, std::shared_ptr<LuaObj> &o) {
   lua_rawgeti(L, LUA_REGISTRYINDEX, o->id_);
 }
 
-an<LuaObj> LuaObj::todata(lua_State *L, int i) {
-  return an<LuaObj>(new LuaObj(L, i));
+std::shared_ptr<LuaObj> LuaObj::todata(lua_State *L, int i) {
+  return std::shared_ptr<LuaObj>(new LuaObj(L, i));
 }
-
-}  // namespace rime
