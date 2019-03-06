@@ -635,21 +635,21 @@ namespace ConfigReg {
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
-  export_type(L, LuaType<ns::T>::name().c_str(), LuaType<ns::T>::gc,     \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set);       \
-  export_type(L, LuaType<ns::T &>::name().c_str(), NULL, \
+  export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T>::name().c_str(), LuaType<ns::T>::gc,     \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set);       \
-  export_type(L, LuaType<const ns::T &>::name().c_str(), NULL, \
+  export_type(L, LuaType<ns::T &>::name(), NULL,                   \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<ns::T>>::name().c_str(), NULL,         \
+  export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<const ns::T>>::name().c_str(), NULL,   \
+  export_type(L, LuaType<const ns::T &>::name(), NULL,             \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T *>::name().c_str(), NULL,           \
+  export_type(L, LuaType<an<ns::T>>::name(), NULL,                 \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T *>::name().c_str(), NULL,     \
+  export_type(L, LuaType<an<const ns::T>>::name(), NULL,           \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<ns::T *>::name(), NULL,                   \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T *>::name(), NULL,             \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 

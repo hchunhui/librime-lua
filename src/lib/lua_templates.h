@@ -3,7 +3,6 @@
 
 #include "lua.h"
 #include <boost/type_index.hpp>
-#include <typeinfo>
 #include <vector>
 #include <set>
 
@@ -26,13 +25,12 @@ extern "C" {
 // Generic case (includes pointers)
 template<typename T>
 struct LuaType {
-  static const std::string name() {
-    return boost::typeindex::type_id_with_cvr<T>().pretty_name();
-    // return string("V") + typeid(T).name();
+  static const char *name() {
+    return boost::typeindex::type_id_with_cvr<T>().raw_name();
   }
 
   static int gc(lua_State *L) {
-    T *o = (T *) luaL_checkudata(L, 1, name().c_str());
+    T *o = (T *) luaL_checkudata(L, 1, name());
     o->~T();
     return 0;
   }
@@ -70,12 +68,12 @@ struct LuaType {
 
     void *u = lua_newuserdata(L, sizeof(T));
     new(u) T(o);
-    luaL_getmetatable(L, name().c_str());
+    luaL_getmetatable(L, name());
     if (lua_isnil(L, -1)) {
       // If T is not registered,
       // registers a "__gc" to prevent memory leaks.
       lua_pop(L, 1);
-      luaL_newmetatable(L, name().c_str());
+      luaL_newmetatable(L, name());
       lua_pushstring(L, "__gc");
       lua_pushcfunction(L, gc);
       lua_settable(L, -3);
@@ -85,17 +83,17 @@ struct LuaType {
 
   static T &todata(lua_State *L, int i) {
     typedef typename std::remove_const<T>::type U;
-    T *o = (T *) luaL_testudata(L, i, name().c_str());
+    T *o = (T *) luaL_testudata(L, i, name());
     if (o)
       return *o;
 
     if (std::is_const<T>::value) {
-      T *o = (T *) luaL_testudata(L, i, LuaType<U>::name().c_str());
+      T *o = (T *) luaL_testudata(L, i, LuaType<U>::name());
       if (o)
         return *o;
     }
 
-    const char *msg = lua_pushfstring(L, "%s expected", name().c_str());
+    const char *msg = lua_pushfstring(L, "%s expected", name());
     luaL_argerror(L, i, msg);
     return *((T *) NULL);
   }
@@ -104,60 +102,59 @@ struct LuaType {
 // References
 template<typename T>
 struct LuaType<T &> {
-  static const std::string name() {
-    return boost::typeindex::type_id_with_cvr<T &>().pretty_name();
-    // return string("R") + typeid(T).name();
+  static const char *name() {
+    return boost::typeindex::type_id_with_cvr<T &>().raw_name();
   }
 
   static void pushdata(lua_State *L, T &o) {
     T **u = (T**) lua_newuserdata(L, sizeof(T *));
     *u = std::addressof(o);
-    luaL_setmetatable(L, name().c_str());
+    luaL_setmetatable(L, name());
   }
 
   static T &todata(lua_State *L, int i) {
     typedef typename std::remove_const<T>::type U;
-    T **po = (T **) luaL_testudata(L, i, name().c_str());
+    T **po = (T **) luaL_testudata(L, i, name());
     if (po)
       return **po;
 
     if (std::is_const<T>::value) {
-      T **po = (T **) luaL_testudata(L, i, LuaType<U &>::name().c_str());
+      T **po = (T **) luaL_testudata(L, i, LuaType<U &>::name());
       if (po)
         return **po;
     }
 
-    auto ao = (std::shared_ptr<T> *) luaL_testudata(L, i, LuaType<std::shared_ptr<T>>::name().c_str());
+    auto ao = (std::shared_ptr<T> *) luaL_testudata(L, i, LuaType<std::shared_ptr<T>>::name());
     if (ao)
       return *(*ao).get();
 
     if (std::is_const<T>::value) {
-      auto ao = (std::shared_ptr<T> *) luaL_testudata(L, i, LuaType<std::shared_ptr<U>>::name().c_str());
+      auto ao = (std::shared_ptr<T> *) luaL_testudata(L, i, LuaType<std::shared_ptr<U>>::name());
       if (ao)
         return *(*ao).get();
     }
 
-    T **p = (T **) luaL_testudata(L, i, LuaType<T *>::name().c_str());
+    T **p = (T **) luaL_testudata(L, i, LuaType<T *>::name());
     if (p)
       return **p;
 
     if (std::is_const<T>::value) {
-      T **p = (T **) luaL_testudata(L, i, LuaType<U *>::name().c_str());
+      T **p = (T **) luaL_testudata(L, i, LuaType<U *>::name());
       if (p)
         return **p;
     }
 
-    T *o = (T *) luaL_testudata(L, i, LuaType<T>::name().c_str());
+    T *o = (T *) luaL_testudata(L, i, LuaType<T>::name());
     if (o)
       return *o;
 
     if (std::is_const<T>::value) {
-      T *o = (T *) luaL_testudata(L, i, LuaType<U>::name().c_str());
+      T *o = (T *) luaL_testudata(L, i, LuaType<U>::name());
       if (o)
         return *o;
     }
 
-    const char *msg = lua_pushfstring(L, "%s expected", name().c_str());
+    const char *msg = lua_pushfstring(L, "%s expected", name());
     luaL_argerror(L, i, msg);
     return *((T *) NULL);
   }
