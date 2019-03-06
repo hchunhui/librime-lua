@@ -26,8 +26,7 @@ public:
   Lua();
   ~Lua();
 
-  template <typename O>
-  O getglobal(const std::string &f);
+  std::shared_ptr<LuaObj> getglobal(const std::string &f);
 
   std::shared_ptr<LuaObj> newthreadx(lua_State *L, int nargs);
 
@@ -38,7 +37,7 @@ public:
   boost::optional<O> resume(std::shared_ptr<LuaObj> f);
 
   template <typename O, typename ... I>
-  O call(I ... input);
+  boost::optional<O> call(I ... input);
 
   void to_state(std::function<void (lua_State *)> f);
 

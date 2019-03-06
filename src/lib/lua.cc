@@ -248,6 +248,13 @@ std::shared_ptr<LuaObj> Lua::newthreadx(lua_State *L, int nargs) {
   return o;
 }
 
+std::shared_ptr<LuaObj> Lua::getglobal(const std::string &v) {
+  lua_getglobal(L_, v.c_str());
+  auto o = LuaObj::todata(L_, -1);
+  lua_pop(L_, 1);
+  return o;
+}
+
 LuaObj::LuaObj(lua_State *L, int i) : L_(L) {
   lua_pushvalue(L, i);
   id_ = luaL_ref(L, LUA_REGISTRYINDEX);

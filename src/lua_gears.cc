@@ -86,8 +86,12 @@ LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
 }
 
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
-  return lua_->call<bool, an<LuaObj>, Segmentation &,
-                    an<LuaObj>>(func_, *segmentation, env_);
+  auto r = lua_->call<bool, an<LuaObj>, Segmentation &,
+                      an<LuaObj>>(func_, *segmentation, env_);
+  if (!r)
+    return true;
+  else
+    return *r;
 }
 
 //--- LuaProcessor
@@ -97,13 +101,16 @@ LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
 }
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
-  int r = lua_->call<int, an<LuaObj>, const KeyEvent&,
-                     an<LuaObj>>(func_, key_event, env_);
-  switch (r) {
-  case 0: return kRejected;
-  case 1: return kAccepted;
-  default: return kNoop;
-  }
+  auto r = lua_->call<int, an<LuaObj>, const KeyEvent&,
+                      an<LuaObj>>(func_, key_event, env_);
+  if (!r)
+    return kNoop;
+  else
+    switch (*r) {
+    case 0: return kRejected;
+    case 1: return kAccepted;
+    default: return kNoop;
+    }
 }
 
 }  // namespace rime
