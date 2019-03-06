@@ -9,6 +9,7 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
+#include "lua_gears.h"
 #include "lib/lua_templates.h"
 
 using namespace rime;
@@ -160,9 +161,6 @@ namespace CandidateReg {
 }
 
 //--- wrappers for an<Translation>
-namespace rime {
-  an<Translation> lua_translation_new(Lua *lua, an<LuaObj> o);
-}
 namespace TranslationReg {
   typedef Translation T;
 
@@ -174,7 +172,7 @@ namespace TranslationReg {
       return 0;
 
     auto o = lua->newthreadx(L, n);
-    auto r = rime::lua_translation_new(lua, o);
+    an<Translation> r = New<LuaTranslation>(lua, o);
     LuaType<an<Translation>>::pushdata(L, r);
     return 1;
   }

@@ -1,6 +1,7 @@
 #ifndef RIME_LUA_GEARS_H_
 #define RIME_LUA_GEARS_H_
 
+#include <rime/translation.h>
 #include <rime/filter.h>
 #include <rime/translator.h>
 #include <rime/segmentor.h>
@@ -9,6 +10,25 @@
 #include "lib/lua.h"
 
 namespace rime {
+
+class LuaTranslation : public Translation {
+public:
+  LuaTranslation(Lua *lua, an<LuaObj> f)
+    : lua_(lua), f_(f) {
+    Next();
+  }
+
+  bool Next();
+
+  an<Candidate> Peek() {
+    return c_;
+  }
+
+private:
+  Lua *lua_;
+  an<Candidate> c_;
+  an<LuaObj> f_;
+};
 
 class LuaFilter : public Filter, TagMatching {
 public:
@@ -20,6 +40,7 @@ public:
   virtual bool AppliesToSegment(Segment* segment) {
     return TagsMatch(segment);
   }
+
 private:
   Lua *lua_;
   an<LuaObj> env_;
@@ -67,6 +88,7 @@ template<typename T>
 class LuaComponent : public T::Component {
 private:
   an<Lua> lua_;
+
 public:
   LuaComponent(an<Lua> lua) : lua_(lua) {};
   T* Create(const Ticket &a) {

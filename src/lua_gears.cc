@@ -1,48 +1,24 @@
-#include <rime/engine.h>
-#include <rime/segmentation.h>
-#include <rime/translation.h>
-#include <rime/key_event.h>
 #include "lib/lua_templates.h"
 #include "lua_gears.h"
 
 namespace rime {
 
 //--- LuaTranslation
-class LuaTranslation : public Translation {
-public:
-  Lua *lua_;
-private:
-  an<Candidate> c_;
-  an<LuaObj> f_;
-public:
-  LuaTranslation(Lua *lua, an<LuaObj> f)
-    : lua_(lua), f_(f) {
-    Next();
+bool LuaTranslation::Next() {
+  if (exhausted()) {
+    return false;
   }
-
-  bool Next() {
-    if (exhausted()) {
-      return false;
-    }
-    auto r = lua_->resume<an<Candidate>>(f_);
-    if (!r) {
-      set_exhausted(true);
-      return false;
-    } else {
-      c_ = *r;
-      return true;
-    }
+  auto r = lua_->resume<an<Candidate>>(f_);
+  if (!r) {
+    set_exhausted(true);
+    return false;
+  } else {
+    c_ = *r;
+    return true;
   }
-
-  an<Candidate> Peek() {
-    return c_;
-  }
-};
-
-an<Translation> lua_translation_new(Lua *lua, an<LuaObj> o) {
-  return New<LuaTranslation>(lua, o);
 }
 
+//---
 static void raw_init(lua_State *L, const Ticket &t,
                      an<LuaObj> *env, an<LuaObj> *func) {
   lua_newtable(L);
