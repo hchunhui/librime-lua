@@ -213,6 +213,7 @@ Lua::Lua() {
       const char *e = lua_tostring(L_, -1);
       printf("lua init(err=%d): %s\n", status, e);
     }
+    lua_pop(L_, 1);
   }
 }
 

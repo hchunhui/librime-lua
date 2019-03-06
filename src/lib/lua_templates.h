@@ -385,6 +385,7 @@ boost::optional<O> Lua::resume(std::shared_ptr<LuaObj> f) {
     if (status != LUA_OK) {
       const char *e = lua_tostring(C, -1);
       printf("resume(err=%d): %s\n", status, e);
+      lua_pop(C, 1);
     }
     return {};
   }
