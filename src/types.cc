@@ -653,25 +653,23 @@ namespace ConfigReg {
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 
-namespace LuaImpl {
-  void export_type(lua_State *L,
-                   const char *name, lua_CFunction gc,
-                   const luaL_Reg *funcs, const luaL_Reg *methods,
-                   const luaL_Reg *vars_get, const luaL_Reg *vars_set);
+void export_type(lua_State *L,
+                 const char *name, lua_CFunction gc,
+                 const luaL_Reg *funcs, const luaL_Reg *methods,
+                 const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
-  void types_init(lua_State *L) {
-    EXPORT(SegmentReg, L);
-    EXPORT(CandidateReg, L);
-    EXPORT(TranslationReg, L);
-    EXPORT(ReverseDbReg, L);
-    EXPORT(SegmentationReg, L);
-    EXPORT(MenuReg, L);
-    EXPORT(KeyEventReg, L);
-    EXPORT(EngineReg, L);
-    EXPORT(ContextReg, L);
-    EXPORT(PreeditReg, L);
-    EXPORT(CompositionReg, L);
-    EXPORT(SchemaReg, L);
-    EXPORT(ConfigReg, L);
-  }
+void types_init(lua_State *L) {
+  EXPORT(SegmentReg, L);
+  EXPORT(CandidateReg, L);
+  EXPORT(TranslationReg, L);
+  EXPORT(ReverseDbReg, L);
+  EXPORT(SegmentationReg, L);
+  EXPORT(MenuReg, L);
+  EXPORT(KeyEventReg, L);
+  EXPORT(EngineReg, L);
+  EXPORT(ContextReg, L);
+  EXPORT(PreeditReg, L);
+  EXPORT(CompositionReg, L);
+  EXPORT(SchemaReg, L);
+  EXPORT(ConfigReg, L);
 }

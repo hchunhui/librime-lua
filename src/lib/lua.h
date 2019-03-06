@@ -23,7 +23,7 @@ private:
 
 class Lua {
 public:
-  Lua(const std::string &init_file);
+  Lua();
   ~Lua();
 
   template <typename O>

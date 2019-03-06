@@ -44,35 +44,6 @@ namespace LuaImpl {
     return 0;
   }
 
-  void export_type(lua_State *L,
-                   const char *name, lua_CFunction gc,
-                   const luaL_Reg *funcs, const luaL_Reg *methods,
-                   const luaL_Reg *vars_get, const luaL_Reg *vars_set) {
-    for (int i = 0; funcs[i].name; i++) {
-      lua_register(L, funcs[i].name, funcs[i].func);
-    }
-
-    luaL_newmetatable(L, name);
-    if (gc) {
-      lua_pushcfunction(L, gc);
-      lua_setfield(L, -2, "__gc");
-    }
-    lua_createtable(L, 0, 0);
-    luaL_setfuncs(L, methods, 0);
-    lua_setfield(L, -2, "methods");
-    lua_createtable(L, 0, 0);
-    luaL_setfuncs(L, vars_get, 0);
-    lua_setfield(L, -2, "vars_get");
-    lua_createtable(L, 0, 0);
-    luaL_setfuncs(L, vars_set, 0);
-    lua_setfield(L, -2, "vars_set");
-    lua_pushcfunction(L, index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pop(L, 1);
-  }
-
   namespace SetReg {
     static int raw_make(lua_State *L) {
       if (lua_gettop(L) != 1 || lua_type(L, 1) != LUA_TTABLE)
@@ -207,7 +178,6 @@ namespace LuaImpl {
   }
 
   extern "C" void xluaopen_utf8(lua_State *);
-  void types_init(lua_State *L);
 
   static const char makeclosurekey = 'k';
   static const char luakey = 'k';
@@ -217,7 +187,6 @@ namespace LuaImpl {
     xluaopen_utf8(L);
     lua_register(L, "yield", yield);
     export_set(L);
-    types_init(L);
 
     lua_pushlightuserdata(L, (void *)&makeclosurekey);
     luaL_dostring(L, "return function (f, ...)\n"
@@ -230,7 +199,7 @@ namespace LuaImpl {
   }
 }
 
-Lua::Lua(const std::string &init_file) {
+Lua::Lua() {
   L_ = luaL_newstate();
   if (L_) {
     lua_pushlightuserdata(L_, (void *)&LuaImpl::luakey);
@@ -243,12 +212,6 @@ Lua::Lua(const std::string &init_file) {
     if (status != LUA_OK) {
       const char *e = lua_tostring(L_, -1);
       printf("lua init(err=%d): %s\n", status, e);
-    }
-
-    status = luaL_dofile(L_, init_file.c_str());
-    if (status != LUA_OK) {
-      const char *e = lua_tostring(L_, -1);
-      printf("dofile(err=%d): %s\n", status, e);
     }
   }
 }
@@ -299,4 +262,33 @@ void LuaObj::pushdata(lua_State *L, std::shared_ptr<LuaObj> &o) {
 
 std::shared_ptr<LuaObj> LuaObj::todata(lua_State *L, int i) {
   return std::shared_ptr<LuaObj>(new LuaObj(L, i));
+}
+
+void export_type(lua_State *L,
+                 const char *name, lua_CFunction gc,
+                 const luaL_Reg *funcs, const luaL_Reg *methods,
+                 const luaL_Reg *vars_get, const luaL_Reg *vars_set) {
+  for (int i = 0; funcs[i].name; i++) {
+    lua_register(L, funcs[i].name, funcs[i].func);
+  }
+
+  luaL_newmetatable(L, name);
+  if (gc) {
+    lua_pushcfunction(L, gc);
+    lua_setfield(L, -2, "__gc");
+  }
+  lua_createtable(L, 0, 0);
+  luaL_setfuncs(L, methods, 0);
+  lua_setfield(L, -2, "methods");
+  lua_createtable(L, 0, 0);
+  luaL_setfuncs(L, vars_get, 0);
+  lua_setfield(L, -2, "vars_get");
+  lua_createtable(L, 0, 0);
+  luaL_setfuncs(L, vars_set, 0);
+  lua_setfield(L, -2, "vars_set");
+  lua_pushcfunction(L, LuaImpl::index);
+  lua_setfield(L, -2, "__index");
+  lua_pushcfunction(L, LuaImpl::newindex);
+  lua_setfield(L, -2, "__newindex");
+  lua_pop(L, 1);
 }
