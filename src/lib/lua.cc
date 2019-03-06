@@ -54,28 +54,22 @@ namespace LuaImpl {
 
     luaL_newmetatable(L, name);
     if (gc) {
-      lua_pushstring(L, "__gc");
       lua_pushcfunction(L, gc);
-      lua_settable(L, -3);
+      lua_setfield(L, -2, "__gc");
     }
-    lua_pushstring(L, "methods");
-    lua_createtable(L, 0, 4);
+    lua_createtable(L, 0, 0);
     luaL_setfuncs(L, methods, 0);
-    lua_settable(L, -3);
-    lua_pushstring(L, "vars_get");
-    lua_createtable(L, 0, 4);
+    lua_setfield(L, -2, "methods");
+    lua_createtable(L, 0, 0);
     luaL_setfuncs(L, vars_get, 0);
-    lua_settable(L, -3);
-    lua_pushstring(L, "vars_set");
-    lua_createtable(L, 0, 4);
+    lua_setfield(L, -2, "vars_get");
+    lua_createtable(L, 0, 0);
     luaL_setfuncs(L, vars_set, 0);
-    lua_settable(L, -3);
-    lua_pushstring(L, "__index");
+    lua_setfield(L, -2, "vars_set");
     lua_pushcfunction(L, index);
-    lua_settable(L, -3);
-    lua_pushstring(L, "__newindex");
+    lua_setfield(L, -2, "__index");
     lua_pushcfunction(L, newindex);
-    lua_settable(L, -3);
+    lua_setfield(L, -2, "__newindex");
     lua_pop(L, 1);
   }
 
@@ -202,10 +196,9 @@ namespace LuaImpl {
 
     luaL_newmetatable(L, "__set");
     luaL_setfuncs(L, SetReg::mt, 0);
-    lua_pushstring(L, "methods");
-    lua_createtable(L, 0, 4);
+    lua_createtable(L, 0, 0);
     luaL_setfuncs(L, SetReg::methods, 0);
-    lua_settable(L, -3);
+    lua_setfield(L, -2, "methods");
     lua_pop(L, 1);
   }
 
