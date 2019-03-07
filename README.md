@@ -26,9 +26,9 @@ Usage
        local l = {}
        for cand in input:iter() do
           if (utf8.len(cand.text) == 1) then
-	     yield(cand)
+             yield(cand)
           else
-	     table.insert(l, cand)
+             table.insert(l, cand)
           end
        end
        for i, cand in ipairs(l) do
