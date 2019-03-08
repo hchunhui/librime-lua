@@ -2,7 +2,7 @@
 #define LIB_LUA_TEMPLATES_H_
 
 #include "lua.h"
-#include <boost/type_index.hpp>
+#include <typeinfo>
 #include <vector>
 #include <set>
 
@@ -26,7 +26,7 @@ extern "C" {
 template<typename T>
 struct LuaType {
   static const char *name() {
-    return boost::typeindex::type_id_with_cvr<T>().raw_name();
+    return typeid(LuaType<T>).name();
   }
 
   static int gc(lua_State *L) {
@@ -103,7 +103,7 @@ struct LuaType {
 template<typename T>
 struct LuaType<T &> {
   static const char *name() {
-    return boost::typeindex::type_id_with_cvr<T &>().raw_name();
+    return typeid(LuaType<T &>).name();
   }
 
   static void pushdata(lua_State *L, T &o) {
