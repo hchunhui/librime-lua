@@ -12,7 +12,7 @@ static void lua_init(lua_State *L) {
   int status = luaL_dofile(L, file.c_str());
   if (status != LUA_OK) {
     const char *e = lua_tostring(L, -1);
-    printf("dofile(err=%d): %s\n", status, e);
+    LOG(INFO) << "lua_init error(" << status << "): " << e;
   }
 }
 

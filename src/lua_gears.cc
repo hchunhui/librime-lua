@@ -12,7 +12,7 @@ bool LuaTranslation::Next() {
   if (!r.ok()) {
     LuaErr e = r.get_err();
     if (e.e != "")
-      printf("LuaTranslation err(%d): %s\n", e.status, e.e.c_str());
+      LOG(ERROR) << "LuaTranslation::Next error(" << e.status << "): " << e.e;
     set_exhausted(true);
     return false;
   } else {
@@ -41,7 +41,7 @@ static void raw_init(lua_State *L, const Ticket &t,
       int status = lua_pcall(L, 1, 1, 0);
       if (status != LUA_OK) {
         const char *e = lua_tostring(L, -1);
-        printf("call(err=%d): %s\n", status, e);
+        LOG(ERROR) << "Lua error:(" << status << "): " << e;
       }
     }
     lua_pop(L, 1);
@@ -93,7 +93,7 @@ bool LuaSegmentor::Proceed(Segmentation* segmentation) {
                       an<LuaObj>>(func_, *segmentation, env_);
   if (!r.ok()) {
     auto e = r.get_err();
-    printf("LuaSegmentor err(%d): %s\n", e.status, e.e.c_str());
+    LOG(ERROR) << "LuaSegmentor::Proceed error(" << e.status << "): " << e.e;
     return true;
   } else
     return r.get();
@@ -110,7 +110,7 @@ ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
                       an<LuaObj>>(func_, key_event, env_);
   if (!r.ok()) {
     auto e = r.get_err();
-    printf("LuaProcessor err(%d): %s\n", e.status, e.e.c_str());
+    LOG(ERROR) << "LuaProcessor::ProcessKeyEvent error(" << e.status << "): " << e.e;
     return kNoop;
   } else
     switch (r.get()) {

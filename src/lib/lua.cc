@@ -206,19 +206,12 @@ Lua::Lua() {
     lua_pushlightuserdata(L_, (void *)this);
     lua_settable(L_, LUA_REGISTRYINDEX);
 
-    int status;
     lua_pushcfunction(L_, &LuaImpl::pmain);
-    status = lua_pcall(L_, 0, 1, 0);
-    if (status != LUA_OK) {
-      const char *e = lua_tostring(L_, -1);
-      printf("lua init(err=%d): %s\n", status, e);
-    }
-    lua_pop(L_, 1);
+    lua_call(L_, 0, 0);
   }
 }
 
 Lua::~Lua() {
-  printf("lua_exit\n");
   lua_close(L_);
 }
 
