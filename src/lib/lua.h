@@ -4,7 +4,7 @@
 #include <memory>
 #include <functional>
 #include <string>
-#include <boost/optional.hpp>
+#include "result.h"
 
 struct lua_State;
 
@@ -21,6 +21,10 @@ private:
   int id_;
 };
 
+struct LuaErr { int status; std::string e; };
+template <typename T>
+using LuaResult = Result<T, LuaErr>;
+
 class Lua {
 public:
   Lua();
@@ -34,10 +38,10 @@ public:
   std::shared_ptr<LuaObj> newthread(I ... input);
 
   template <typename O>
-  boost::optional<O> resume(std::shared_ptr<LuaObj> f);
+  LuaResult<O> resume(std::shared_ptr<LuaObj> f);
 
   template <typename O, typename ... I>
-  boost::optional<O> call(I ... input);
+  LuaResult<O> call(I ... input);
 
   void to_state(std::function<void (lua_State *)> f);
 

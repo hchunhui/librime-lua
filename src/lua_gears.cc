@@ -9,11 +9,14 @@ bool LuaTranslation::Next() {
     return false;
   }
   auto r = lua_->resume<an<Candidate>>(f_);
-  if (!r) {
+  if (!r.ok()) {
+    LuaErr e = r.get_err();
+    if (e.e != "")
+      printf("LuaTranslation err(%d): %s\n", e.status, e.e.c_str());
     set_exhausted(true);
     return false;
   } else {
-    c_ = *r;
+    c_ = r.get();
     return true;
   }
 }
@@ -88,10 +91,12 @@ LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
   auto r = lua_->call<bool, an<LuaObj>, Segmentation &,
                       an<LuaObj>>(func_, *segmentation, env_);
-  if (!r)
+  if (!r.ok()) {
+    auto e = r.get_err();
+    printf("LuaSegmentor err(%d): %s\n", e.status, e.e.c_str());
     return true;
-  else
-    return *r;
+  } else
+    return r.get();
 }
 
 //--- LuaProcessor
@@ -103,10 +108,12 @@ LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
   auto r = lua_->call<int, an<LuaObj>, const KeyEvent&,
                       an<LuaObj>>(func_, key_event, env_);
-  if (!r)
+  if (!r.ok()) {
+    auto e = r.get_err();
+    printf("LuaProcessor err(%d): %s\n", e.status, e.e.c_str());
     return kNoop;
-  else
-    switch (*r) {
+  } else
+    switch (r.get()) {
     case 0: return kRejected;
     case 1: return kAccepted;
     default: return kNoop;

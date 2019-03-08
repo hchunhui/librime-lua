@@ -14,6 +14,23 @@
 
 using namespace rime;
 
+template<typename T>
+struct LuaType<optional<T>> {
+  static void pushdata(lua_State *L, optional<T> o) {
+    if (o)
+      LuaType<T>::pushdata(L, *o);
+    else
+      lua_pushnil(L);
+  }
+
+  static optional<T> todata(lua_State *L, int i) {
+    if (lua_type(L, i) == LUA_TNIL)
+      return {};
+    else
+      return LuaType<T>::todata(L, i);
+  }
+};
+
 //--- wrappers for Segment
 namespace SegmentReg {
   typedef Segment T;

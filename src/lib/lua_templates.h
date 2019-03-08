@@ -180,24 +180,6 @@ struct LuaType<lua_CFunction> {
   }
 };
 
-// Optional
-template<typename T>
-struct LuaType<boost::optional<T>> {
-  static void pushdata(lua_State *L, boost::optional<T> o) {
-    if (o)
-      LuaType<T>::pushdata(L, *o);
-    else
-      lua_pushnil(L);
-  }
-
-  static boost::optional<T> todata(lua_State *L, int i) {
-    if (lua_type(L, i) == LUA_TNIL)
-      return {};
-    else
-      return LuaType<T>::todata(L, i);
-  }
-};
-
 // Bool
 template<>
 struct LuaType<bool> {
@@ -356,26 +338,29 @@ static void pushdataX(lua_State *L, T &o, Targs ... oargs) {
 }
 
 template <typename O>
-struct LuaChecker {
-  static int runner(lua_State *L) {
-    LuaType<O>::todata(L, 1);
-    return 0;
-  }
-
-  static bool is_safe(lua_State *L) {
-    lua_pushcfunction(L, runner);
-    lua_pushvalue(L, -2);
-    int status = lua_pcall(L, 1, 0, 0);
-
-    if (status != LUA_OK) {
-      const char *e = lua_tostring(L, -1);
-      printf("return type(err=%d): %s\n", status, e);
-      lua_pop(L, 1);
-      return false;
+static LuaResult<O> todata_safe(lua_State *L, int i) {
+  struct X {
+    static int runner(lua_State *L) {
+      O *po = (O *) lua_touserdata(L, 2);
+      *po = LuaType<O>::todata(L, 1);
+      return 0;
     }
-    return true;
+  };
+
+  O o;
+  lua_pushvalue(L, i);
+  lua_pushcfunction(L, X::runner);
+  lua_insert(L, -2);
+  lua_pushlightuserdata(L, &o);
+  int status = lua_pcall(L, 2, 0, 0);
+
+  if (status != LUA_OK) {
+    std::string e = lua_tostring(L, -1);
+    lua_pop(L, 1);
+    return LuaResult<O>::Err({status, e});
   }
-};
+  return LuaResult<O>::Ok(o);
+}
 
 // --- Lua call/resume
 template <typename ... I>
@@ -385,51 +370,40 @@ std::shared_ptr<LuaObj> Lua::newthread(I ... input) {
 }
 
 template <typename O>
-boost::optional<O> Lua::resume(std::shared_ptr<LuaObj> f) {
+LuaResult<O> Lua::resume(std::shared_ptr<LuaObj> f) {
   LuaObj::pushdata(L_, f);
   lua_State *C = lua_tothread(L_, -1);
   lua_pop(L_, 1);
 
   int status = xlua_resume(C, 0);
   if (status == LUA_YIELD) {
-    if (LuaChecker<O>::is_safe(C)) {
-      O c = LuaType<O>::todata(C, -1);
-      lua_pop(C, 1);
-      return c;
-    } else {
-      lua_pop(C, 1);
-      return {};
-    }
+    auto r = todata_safe<O>(C, -1);
+    lua_pop(C, 1);
+    return r;
   } else {
     if (status != LUA_OK) {
-      const char *e = lua_tostring(C, -1);
-      printf("resume(err=%d): %s\n", status, e);
+      std::string e = lua_tostring(C, -1);
       lua_pop(C, 1);
+      return LuaResult<O>::Err({status, e});
     }
-    return {};
+    return LuaResult<O>::Err({status, ""});
   }
 }
 
 template <typename O, typename ... I>
-boost::optional<O> Lua::call(I ... input) {
+LuaResult<O> Lua::call(I ... input) {
   pushdataX<I ...>(L_, input ...);
 
   int status = lua_pcall(L_, sizeof...(input) - 1, 1, 0);
   if (status != LUA_OK) {
-    const char *e = lua_tostring(L_, -1);
-    printf("call(err=%d): %s\n", status, e);
+    std::string e = lua_tostring(L_, -1);
     lua_pop(L_, 1);
-    return {};
+    return LuaResult<O>::Err({status, e});
   }
 
-  if (LuaChecker<O>::is_safe(L_)) {
-    O r = LuaType<O>::todata(L_, -1);
-    lua_pop(L_, 1);
-    return r;
-  } else {
-    lua_pop(L_, 1);
-    return {};
-  }
+  auto r = todata_safe<O>(L_, -1);
+  lua_pop(L_, 1);
+  return r;
 }
 
 // --- LuaWrapper
