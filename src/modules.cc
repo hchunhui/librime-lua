@@ -7,12 +7,22 @@
 void types_init(lua_State *L);
 
 static void lua_init(lua_State *L) {
-  auto file = std::string(RimeGetUserDataDir()) + "/rime.lua";
+  const char *user_dir = RimeGetUserDataDir();
   types_init(L);
-  int status = luaL_dofile(L, file.c_str());
-  if (status != LUA_OK) {
+  lua_getglobal(L, "package");
+  lua_pushfstring(L, "%s%slua%s?.lua;%s%slua%s?%sinit.lua;",
+                  user_dir, LUA_DIRSEP, LUA_DIRSEP,
+                  user_dir, LUA_DIRSEP, LUA_DIRSEP, LUA_DIRSEP);
+  lua_getfield(L, -2, "path");
+  lua_concat(L, 2);
+  lua_setfield(L, -2, "path");
+  lua_pop(L, 1);
+
+  auto file = std::string(user_dir) + "/rime.lua";
+  if (luaL_dofile(L, file.c_str())) {
     const char *e = lua_tostring(L, -1);
-    LOG(INFO) << "lua_init error(" << status << "): " << e;
+    LOG(INFO) << "rime.lua error: " << e;
+    lua_pop(L, 1);
   }
 }
 
