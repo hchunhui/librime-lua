@@ -388,6 +388,7 @@ namespace EngineReg {
   };
 
   static const luaL_Reg methods[] = {
+    { "commit_text", WRAPMEM(T::CommitText) },
     { NULL, NULL },
   };
 
