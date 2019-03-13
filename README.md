@@ -1,5 +1,7 @@
 # librime-lua: Extending [RIME](https://rime.im) with Lua scripts
 
+[![Build status](https://ci.appveyor.com/api/projects/status/github/hchunhui/librime-lua?svg=true)](https://ci.appveyor.com/project/hchunhui/librime-lua)
+
 Features
 ===
  - Supports extending RIME processors, segmentors, translators and filters
@@ -10,7 +12,7 @@ Usage
 ===
 0. Build librime-lua:
 
-    - Windows Prebuilt (merged build): https://ci.appveyor.com/api/buildjobs/c3bm0vgcg9ed36hu/artifacts/rime.zip
+    - Windows Prebuilt (merged build): [1.4.0 backport](https://github.com/hchunhui/librime-lua/releases)
 
 1. Create `PATH_TO_RIME_USER_DATA_DIR/rime.lua`:
 
@@ -62,7 +64,7 @@ Usage
 
 Build
 ===
-librime-lua has two build mode: merged and separated.
+librime-lua is a RIME plugin. It has two build mode: merged and separated.
 Now the former mode is recommended for compatibility.
 
 The former mode merges the plugin code into one librime library.
@@ -73,6 +75,9 @@ The latter mode generates a new librime-lua shared library.
 The library is used to dynamically loaded and configured by RIME frontends.
 To use the plugin, some modification is required to existing RIME frontends.
 In addition, separated build is not supported on Windows platform now.
+
+For more information on RIME plugins,
+see [here](https://github.com/rime/librime/tree/master/sample).
 
 Build dependencies
 ---
