@@ -24,10 +24,10 @@ init:
   - git --version
   - cmake --version
   - git config --global core.autocrlf true
+  - git clone https://github.com/rime/librime.git --depth=1 --recurse-submodules \projects\librime
 
 install:
   - cd \projects
-  - git clone https://github.com/rime/librime.git --depth=1
   - move librime-lua librime\plugins
   - mkdir librime-lua
   - git clone https://github.com/hchunhui/librime-lua.git -b thirdparty --depth=1 thirdparty
