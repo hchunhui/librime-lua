@@ -1,6 +1,7 @@
 if(MSVC)
     include_directories(${RIME_SOURCE_DIR}/thirdparty/src/lua5.3)
     aux_source_directory(${RIME_SOURCE_DIR}/thirdparty/src/lua5.3 LUA_SRC)
+    add_definitions(-DLUA_BUILD_AS_DLL -DLUA_COMPAT_5_2)
 else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LUA REQUIRED luajit)
