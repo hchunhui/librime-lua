@@ -82,7 +82,7 @@ see [here](https://github.com/rime/librime/tree/master/sample).
 Build dependencies
 ---
   - librime-master (>1.4.0)
-  - LuaJIT 2 / Lua 5.2 / Lua 5.3
+  - LuaJIT 2 / Lua 5.1 / Lua 5.2 / Lua 5.3
 
 Merged Build
 ---

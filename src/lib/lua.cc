@@ -177,8 +177,6 @@ namespace LuaImpl {
     return lua_yield(L, lua_gettop(L));
   }
 
-  extern "C" void xluaopen_utf8(lua_State *);
-
   static const char makeclosurekey = 'k';
   static const char luakey = 'k';
 

@@ -32,6 +32,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+#include "lua-compat.h"
 
 #if LUA_VERSION_NUM <= 502
 #include <assert.h>

@@ -10,16 +10,8 @@ extern "C" {
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#include "lua-compat.h"
 }
-
-#if LUA_VERSION_NUM >= 502
-#define xlua_resume(L, a) lua_resume(L, NULL, a)
-#define LUA_UNPACK "table.unpack"
-#else
-#define xlua_resume lua_resume
-#define lua_rawlen lua_objlen
-#define LUA_UNPACK "unpack"
-#endif
 
 //--- LuaType
 // Generic case (includes pointers)
