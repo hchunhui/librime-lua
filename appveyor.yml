@@ -27,11 +27,10 @@ init:
   - git clone https://github.com/rime/librime.git --depth=1 --recurse-submodules \projects\librime
 
 install:
+  - git clone https://github.com/hchunhui/librime-lua.git -b thirdparty --depth=1 thirdparty
   - cd \projects
   - move librime-lua librime\plugins
   - mkdir librime-lua
-  - git clone https://github.com/hchunhui/librime-lua.git -b thirdparty --depth=1 thirdparty
-  - move thirdparty\lua5.3 librime\thirdparty\src\
   - cd librime
   - .\appveyor.install.bat
 
