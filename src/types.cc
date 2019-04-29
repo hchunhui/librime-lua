@@ -395,12 +395,12 @@ namespace EngineReg {
   static const luaL_Reg vars_get[] = {
     { "schema", WRAPMEM(T::schema) },
     { "context", WRAPMEM(T::context) },
-    { "active_context", WRAPMEM(T::active_context) },
+    { "active_engine", WRAPMEM(T::active_engine) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
-    { "active_context", WRAPMEM(T::set_active_context) },
+    { "active_engine", WRAPMEM(T::set_active_engine) },
     { NULL, NULL },
   };
 }
