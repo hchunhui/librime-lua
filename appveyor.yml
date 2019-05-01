@@ -11,6 +11,7 @@ clone_folder: C:\projects\librime-lua
 environment:
   BOOST_ROOT: C:\Libraries\libboost
   CL: /Zc:threadSafeInit-
+  RIME_DIR: C:\projects\librime
 
 cache:
   - C:\projects\librime\thirdparty.cached -> appveyor.yml
@@ -24,32 +25,26 @@ init:
   - git --version
   - cmake --version
   - git config --global core.autocrlf true
-  - git clone https://github.com/rime/librime.git --depth=1 --recurse-submodules \projects\librime
+  - git clone https://github.com/rime/librime.git --depth=1 --recurse-submodules %RIME_DIR%
 
 install:
-  - git clone https://github.com/hchunhui/librime-lua.git -b thirdparty --depth=1 thirdparty
-  - cd \projects
-  - move librime-lua librime\plugins
-  - mkdir librime-lua
-  - cd librime
-  - .\appveyor.install.bat
+  - .\appveyor.rime-install.bat
 
 build_script:
-  - cd C:\projects\librime
+  - cd %RIME_DIR%
   - .\build.bat test
 
 after_build:
-  - cd C:\projects\librime
-  - 7z a rime.zip build\bin build\lib build\include thirdparty\data\opencc
-  - move rime.zip ..\librime-lua
+  - cd %RIME_DIR%
+  - 7z a ..\librime-lua\rime.zip build\bin build\lib build\include thirdparty\data\opencc
   - dir build /s
 
 before_test:
-  - cd C:\projects\librime
+  - cd %RIME_DIR%
   - copy /y build\lib\Release\rime.dll build\test\Release
 
 test_script:
-  - cd C:\projects\librime\build\test
+  - cd %RIME_DIR%\build\test
   - .\Release\rime_test.exe
 
 artifacts:
