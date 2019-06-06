@@ -4,22 +4,22 @@ pull_requests:
   do_not_increment_build_number: true
 
 version: '{branch} build {build}'
-image: Visual Studio 2015
+image: Visual Studio 2017
 
 clone_folder: C:\projects\librime-lua
 
 environment:
-  BOOST_ROOT: C:\Libraries\libboost
+  BOOST_ROOT: C:\Libraries\boost_1_69_0
   CL: /Zc:threadSafeInit-
   RIME_DIR: C:\projects\librime
 
 cache:
   - C:\projects\librime\thirdparty.cached -> appveyor.yml
   - C:\projects\librime\thirdparty\bin -> appveyor.yml
-  - C:\projects\librime\thirdparty\data -> appveyor.yml
   - C:\projects\librime\thirdparty\include -> appveyor.yml
   - C:\projects\librime\thirdparty\lib -> appveyor.yml
-  - C:\Libraries\libboost -> appveyor.yml
+  - C:\projects\librime\thirdparty\share -> appveyor.yml
+  - C:\Libraries\boost_1_69_0\stage -> appveyor.yml
 
 init:
   - git --version
@@ -36,12 +36,12 @@ build_script:
 
 after_build:
   - cd %RIME_DIR%
-  - 7z a ..\librime-lua\rime.zip build\bin build\lib build\include thirdparty\data\opencc
-  - dir build /s
+  - 7z a ..\librime-lua\rime.zip dist thirdparty\bin thirdparty\share
+  - dir dist /s
 
 before_test:
   - cd %RIME_DIR%
-  - copy /y build\lib\Release\rime.dll build\test\Release
+  - copy /y dist\lib\rime.dll build\test
 
 test_script:
   - cd %RIME_DIR%\build\test
