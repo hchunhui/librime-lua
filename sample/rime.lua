@@ -1,158 +1,69 @@
--- Usage:
---  engine:
---    ...
---    translators:
---      ...
---      - lua_translator@lua_function3
---      - lua_translator@lua_function4
---      ...
---    filters:
---      ...
---      - lua_filter@lua_function1
---      - lua_filter@lua_function2
---      ...
+--[[
+librime-lua 样例
 
---- date/time translator
-function date_translator(input, seg)
-   if (input == "/date") then
-      -- Candidate(type, start, end, text, comment)
-      yield(Candidate("date", seg.start, seg._end, os.date("%Y年%m月%d日"), " 日期"))
-   end
-end
+调用方法：
+在配方文件中作如下修改：
+```
+  engine:
+    ...
+    translators:
+      ...
+      - lua_translator@lua_function3
+      - lua_translator@lua_function4
+      ...
+    filters:
+      ...
+      - lua_filter@lua_function1
+      - lua_filter@lua_function2
+      ...
+```
 
-function time_translator(input, seg)
-   if (input == "/time") then
-      yield(Candidate("time", seg.start, seg._end, os.date("%H:%M:%S"), " 时间"))
-   end
-end
+其中各 `lua_function` 为在本文件所定义变量名。
+--]]
 
+--[[
+本文件的后面是若干个例子，按照由简单到复杂的顺序示例了 librime-lua 的用法。
+每个例子都被组织在 `lua` 目录下的单独文件中，打开对应文件可看到实现和注解。
 
---- charset filter
-charset = {
-   ["CJK"] = { first = 0x4E00, last = 0x9FFF },
-   ["ExtA"] = { first = 0x3400, last = 0x4DBF },
-   ["ExtB"] = { first = 0x20000, last = 0x2A6DF },
-   ["ExtC"] = { first = 0x2A700, last = 0x2B73F },
-   ["ExtD"] = { first = 0x2B740, last = 0x2B81F },
-   ["ExtE"] = { first = 0x2B820, last = 0x2CEAF },
-   ["ExtF"] = { first = 0x2CEB0, last = 0x2EBEF },
-   ["Compat"] = { first = 0x2F800, last = 0x2FA1F } }
+各例可使用 `require` 引入。
+如：
+```
+  foo = require("bar")
+```
+可认为是载入 `lua/bar.lua` 中的例子，并起名为 `foo`。
+配方文件中的引用方法为：`...@foo`。
 
-function exists(single_filter, text)
-  for i in utf8.codes(text) do
-     local c = utf8.codepoint(text, i)
-     if (not single_filter(c)) then
-	return false
-     end
-  end
-  return true
-end
-
-function is_charset(s)
-   return function (c)
-      return c >= charset[s].first and c <= charset[s].last
-   end
-end
-
-function is_cjk_ext(c)
-   return is_charset("ExtA")(c) or is_charset("ExtB")(c) or
-      is_charset("ExtC")(c) or is_charset("ExtD")(c) or
-      is_charset("ExtE")(c) or is_charset("ExtF")(c) or
-      is_charset("Compat")(c)
-end
-
-function charset_filter(input)
-   for cand in input:iter() do
-      if (not exists(is_cjk_ext, cand.text))
-      then
-	 yield(cand)
-      end
-   end
-end
+--]]
 
 
---- charset comment filter
-function charset_comment_filter(input)
-   for cand in input:iter() do
-      for s, r in pairs(charset) do
-	 if (exists(is_charset(s), cand.text)) then
-	    cand:get_genuine().comment = cand.comment .. " " .. s
-	    break
-	 end
-      end
-      yield(cand)
-   end
-end
+-- I. translators:
+
+-- date_translator: 将 `date` 翻译为当前日期
+-- 详见 `lua/date.lua`:
+date_translator = require("date")
+
+-- time_translator: 将 `time` 翻译为当前时间
+-- 详见 `lua/time.lua`
+time_translator = require("time")
+
+-- number_translator: 将 `/` + 阿拉伯数字 翻译为大小写汉字
+-- 详见 `lua/number.lua`
+number_translator = require("number")
 
 
---- single_char_filter
-function single_char_filter(input)
-   local l = {}
-   for cand in input:iter() do
-      if (utf8.len(cand.text) == 1) then
-	 yield(cand)
-      else
-	 table.insert(l, cand)
-      end
-   end
-   for i, cand in ipairs(l) do
-      yield(cand)
-   end
-end
+-- II. filters:
 
+-- charset_filter: 滤除含 CJK 扩展汉字的候选项
+-- charset_comment_filter: 为候选项加上其所属字符集的注释
+-- 详见 `lua/charset.lua`
+local charset = require("charset")
+charset_filter = charset.filter
+charset_comment_filter = charset.comment_filter
 
---- reverse_lookup_filter
-pydb = ReverseDb("build/terra_pinyin.reverse.bin")
+-- single_char_filter: 候选项重排序，使单字优先
+-- 详见 `lua/single_char.lua`
+single_char_filter = require("single_char")
 
-function xform_py(inp)
-   if inp == "" then return "" end
-   inp = string.gsub(inp, "([aeiou])(ng?)([1234])", "%1%3%2")
-   inp = string.gsub(inp, "([aeiou])(r)([1234])", "%1%3%2")
-   inp = string.gsub(inp, "([aeo])([iuo])([1234])", "%1%3%2")
-   inp = string.gsub(inp, "a1", "ā")
-   inp = string.gsub(inp, "a2", "á")
-   inp = string.gsub(inp, "a3", "ǎ")
-   inp = string.gsub(inp, "a4", "à")
-   inp = string.gsub(inp, "e1", "ē")
-   inp = string.gsub(inp, "e2", "é")
-   inp = string.gsub(inp, "e3", "ě")
-   inp = string.gsub(inp, "e4", "è")
-   inp = string.gsub(inp, "o1", "ō")
-   inp = string.gsub(inp, "o2", "ó")
-   inp = string.gsub(inp, "o3", "ǒ")
-   inp = string.gsub(inp, "o4", "ò")
-   inp = string.gsub(inp, "i1", "ī")
-   inp = string.gsub(inp, "i2", "í")
-   inp = string.gsub(inp, "i3", "ǐ")
-   inp = string.gsub(inp, "i4", "ì")
-   inp = string.gsub(inp, "u1", "ū")
-   inp = string.gsub(inp, "u2", "ú")
-   inp = string.gsub(inp, "u3", "ǔ")
-   inp = string.gsub(inp, "u4", "ù")
-   inp = string.gsub(inp, "v1", "ǖ")
-   inp = string.gsub(inp, "v2", "ǘ")
-   inp = string.gsub(inp, "v3", "ǚ")
-   inp = string.gsub(inp, "v4", "ǜ")
-   inp = string.gsub(inp, "([nljqxy])v", "%1ü")
-   inp = string.gsub(inp, "eh[0-5]?", "ê")
-   return "(" .. inp .. ")"
-end
-
-function reverse_lookup_filter(input)
-   for cand in input:iter() do
-      cand:get_genuine().comment = cand.comment .. " " .. xform_py(pydb:lookup(cand.text))
-      yield(cand)
-   end
-end
-
-
---- composition
-function myfilter(input)
-   local input2 = Translation(charset_comment_filter, input)
-   reverse_lookup_filter(input2)
-end
-
-function mytranslator(input, seg)
-   date_translator(input, seg)
-   time_translator(input, seg)
-end
+-- reverse_lookup_filter: 依地球拼音为候选项加上带调拼音的注释
+-- 详见 `lua/reverse.lua`
+reverse_lookup_filter = require("reverse")
