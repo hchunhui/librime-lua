@@ -10,10 +10,6 @@ Features
 
 Usage
 ===
-0. Build librime-lua:
-
-    - Windows Prebuilt (merged build): [1.4.0 backport](https://github.com/hchunhui/librime-lua/releases)
-
 1. Create `PATH_TO_RIME_USER_DATA_DIR/rime.lua`:
 
     ```
@@ -64,50 +60,57 @@ Usage
 
 Build
 ===
-librime-lua is a RIME plugin. It has two build mode: merged and separated.
-Now the former mode is recommended for compatibility.
-
-The former mode merges the plugin code into one librime library.
-To use the plugin, no modification to existing RIME frontends is required.
-Just replace the librime library with the merged build.
-
-The latter mode generates a new librime-lua shared library.
-The library is used to dynamically loaded and configured by RIME frontends.
-To use the plugin, some modification is required to existing RIME frontends.
-In addition, separated build is not supported on Windows platform now.
-
-For more information on RIME plugins,
-see [here](https://github.com/rime/librime/tree/master/sample).
 
 Build dependencies
 ---
-  - librime-master (>1.4.0)
+  - librime >= 1.5.0
   - LuaJIT 2 / Lua 5.1 / Lua 5.2 / Lua 5.3
 
-Merged Build
+Prebuilt versions
 ---
-```
-# Place the source in the plugins directory of librime
-mv librime-lua PATH_TO_RIME_SOURCE/plugins
+  - Windows
+    - [1.4.0 backport](https://github.com/hchunhui/librime-lua/releases)
+    - [master](https://ci.appveyor.com/project/hchunhui/librime-lua/build/artifacts)
 
-# Build & install librime
-make
-sudo make install
-```
-
-Separated Build
+Instructions
 ---
-```
-# Place the source in the plugins directory of librime
-mv librime-lua PATH_TO_RIME_SOURCE/plugins
+1. Prepare source code
 
-# Configure librime
-mkdir -p build
-cd build
-cmake path_to_rime -DBUILD_MERGED_PLUGINS=OFF
+   Move the source to the `plugins` directory of librime:
+   ```
+   mv librime-lua $PATH_TO_RIME_SOURCE/plugins/lua
+   ```
 
-# Make librime-lua
-make rime-lua
-```
+   Or you can use the `install-plugins.sh` script to automatically fetch librime-lua:
+   ```
+   cd $PATH_TO_RIME_SOURCE
+   bash install-plugins.sh hchunhui/librime-lua
+   ```
 
-The shared library `lib/librime-lua.so` is used to load dynamically.
+2. Install dependencies
+
+   Install development files of Lua:
+   ```
+   # For Debian/Ubuntu:
+   sudo apt install liblua5.3-dev   # or libluajit-5.1-dev
+   ```
+   The build system will use `pkg-config` to search Lua.
+
+   The build system also supports building Lua from source in the `thirdparty` directory.
+   The `thirdparty` directory can be downloaded using the following commands:
+   ```
+   cd $PATH_TO_RIME_SOURCE/plugins/lua
+   git clone https://github.com/hchunhui/librime-lua.git -b thirdparty --depth=1 thirdparty
+   ```
+
+3. Build
+
+   Follow the librime's build instructions.
+   ```
+   # On Linux, merged build
+   make merged-plugins
+   sudo make install
+   ```
+
+   For more information on RIME plugins,
+   see [here](https://github.com/rime/librime/tree/master/sample).
