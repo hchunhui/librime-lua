@@ -5,6 +5,7 @@
 #include <typeinfo>
 #include <vector>
 #include <set>
+#include <cstring>
 
 extern "C" {
 #include <lua.h>
@@ -75,14 +76,19 @@ struct LuaType {
 
   static T &todata(lua_State *L, int i) {
     typedef typename std::remove_const<T>::type U;
-    T *o = (T *) luaL_testudata(L, i, name());
-    if (o)
-      return *o;
 
-    if (std::is_const<T>::value) {
-      T *o = (T *) luaL_testudata(L, i, LuaType<U>::name());
-      if (o)
+    if (lua_getmetatable(L, i)) {
+      lua_getfield(L, -1, "name");
+      const char *tname = luaL_checkstring(L, -1);
+      void *_p = lua_touserdata(L, i);
+      if (strcmp(tname, name()) == 0 ||
+          strcmp(tname, LuaType<U>::name()) == 0) {
+        auto o = (T *) _p;
+        lua_pop(L, 2);
         return *o;
+      }
+
+      lua_pop(L, 2);
     }
 
     const char *msg = lua_pushfstring(L, "%s expected", name());
@@ -106,44 +112,40 @@ struct LuaType<T &> {
 
   static T &todata(lua_State *L, int i) {
     typedef typename std::remove_const<T>::type U;
-    T **po = (T **) luaL_testudata(L, i, name());
-    if (po)
-      return **po;
 
-    if (std::is_const<T>::value) {
-      T **po = (T **) luaL_testudata(L, i, LuaType<U &>::name());
-      if (po)
+    if (lua_getmetatable(L, i)) {
+      lua_getfield(L, -1, "name");
+      const char *tname = luaL_checkstring(L, -1);
+      void *_p = lua_touserdata(L, i);
+      if (strcmp(tname, name()) == 0 ||
+          strcmp(tname, LuaType<U &>::name()) == 0) {
+        auto po = (T **) _p;
+        lua_pop(L, 2);
         return **po;
-    }
+      }
 
-    auto ao = (std::shared_ptr<T> *) luaL_testudata(L, i, LuaType<std::shared_ptr<T>>::name());
-    if (ao)
-      return *(*ao).get();
-
-    if (std::is_const<T>::value) {
-      auto ao = (std::shared_ptr<T> *) luaL_testudata(L, i, LuaType<std::shared_ptr<U>>::name());
-      if (ao)
+      if (strcmp(tname, LuaType<std::shared_ptr<T>>::name()) == 0 ||
+          strcmp(tname, LuaType<std::shared_ptr<U>>::name()) == 0) {
+        auto ao = (std::shared_ptr<T> *) _p;
+        lua_pop(L, 2);
         return *(*ao).get();
-    }
+      }
 
-    T **p = (T **) luaL_testudata(L, i, LuaType<T *>::name());
-    if (p)
-      return **p;
-
-    if (std::is_const<T>::value) {
-      T **p = (T **) luaL_testudata(L, i, LuaType<U *>::name());
-      if (p)
+      if (strcmp(tname, LuaType<T *>::name()) == 0 ||
+          strcmp(tname, LuaType<U *>::name()) == 0) {
+        auto p = (T **) _p;
+        lua_pop(L, 2);
         return **p;
-    }
+      }
 
-    T *o = (T *) luaL_testudata(L, i, LuaType<T>::name());
-    if (o)
-      return *o;
-
-    if (std::is_const<T>::value) {
-      T *o = (T *) luaL_testudata(L, i, LuaType<U>::name());
-      if (o)
+      if (strcmp(tname, LuaType<T>::name()) == 0 ||
+          strcmp(tname, LuaType<U>::name()) == 0) {
+        auto o = (T *) _p;
+        lua_pop(L, 2);
         return *o;
+      }
+
+      lua_pop(L, 2);
     }
 
     const char *msg = lua_pushfstring(L, "%s expected", name());

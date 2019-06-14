@@ -6,7 +6,6 @@
 #define luaL_newlib(L, l) (lua_newtable((L)),luaL_setfuncs((L), (l), 0))
 
 void luaL_setmetatable (lua_State *L, const char *tname);
-void *luaL_testudata (lua_State *L, int i, const char *tname);
 void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);
 #endif
 

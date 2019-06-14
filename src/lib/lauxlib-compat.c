@@ -33,22 +33,6 @@ void luaL_setmetatable (lua_State *L, const char *tname) {
   lua_setmetatable(L, -2);
 }
 
-void *luaL_testudata (lua_State *L, int i, const char *tname) {
-  void *p = lua_touserdata(L, i);
-  luaL_checkstack(L, 2, "not enough stack slots");
-  if (p == NULL || !lua_getmetatable(L, i))
-    return NULL;
-  else {
-    int res = 0;
-    luaL_getmetatable(L, tname);
-    res = lua_rawequal(L, -1, -2);
-    lua_pop(L, 2);
-    if (!res)
-      p = NULL;
-  }
-  return p;
-}
-
 void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
   luaL_checkstack(L, nup+1, "too many upvalues");
   for (; l->name != NULL; l++) {  /* fill the table with given functions */

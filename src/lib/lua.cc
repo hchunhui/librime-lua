@@ -272,6 +272,8 @@ void export_type(lua_State *L,
   }
 
   luaL_newmetatable(L, name);
+  lua_pushstring(L, name);
+  lua_setfield(L, -2, "name");
   if (gc) {
     lua_pushcfunction(L, gc);
     lua_setfield(L, -2, "__gc");
