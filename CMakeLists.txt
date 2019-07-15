@@ -19,6 +19,15 @@ else()
     set_property(SOURCE ${LUA_SRC} PROPERTY COMPILE_DEFINITIONS LUA_BUILD_AS_DLL)
   else()
     set_property(SOURCE ${LUA_SRC} PROPERTY COMPILE_DEFINITIONS LUA_USE_POSIX;LUA_USE_DLOPEN)
+    execute_process(
+      COMMAND ${CMAKE_C_COMPILER} -print-multiarch
+      OUTPUT_VARIABLE multiarch
+      ERROR_QUIET)
+    if(multiarch)
+      string(REGEX REPLACE "[\r\n]" "" multiarch ${multiarch})
+      add_definitions(-DLUA_MULTIARCH=\"${multiarch}\")
+      message(STATUS "with multiarch: ${multiarch}")
+    endif()
   endif()
 endif()
 
