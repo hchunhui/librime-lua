@@ -564,7 +564,7 @@ namespace SchemaReg {
 
   static const luaL_Reg vars_set[] = {
     { "config", WRAPMEM(T::set_config) },
-    { "select_keys", WRAPMEM(T::select_keys) },
+    { "select_keys", WRAPMEM(T::set_select_keys) },
     { NULL, NULL },
   };
 }
