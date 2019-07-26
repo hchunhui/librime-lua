@@ -112,7 +112,7 @@ namespace CandidateReg {
     if (dynamic_cast<ShadowCandidate *>(&c))
       return "Shadow";
     if (dynamic_cast<UniquifiedCandidate *>(&c))
-      return "uniquified";
+      return "Uniquified";
     return "Other";
   }
 
