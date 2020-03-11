@@ -36,6 +36,7 @@ local function xform_py(inp)
    inp = string.gsub(inp, "v4", "ǜ")
    inp = string.gsub(inp, "([nljqxy])v", "%1ü")
    inp = string.gsub(inp, "eh[0-5]?", "ê")
+   inp = string.gsub(inp, "([a-z]+)[0-5]", "%1")
    return "(" .. inp .. ")"
 end
 
