@@ -43,6 +43,9 @@ public:
   template <typename O, typename ... I>
   LuaResult<O> call(I ... input);
 
+  template <typename ... I>
+  LuaResult<void> call(I ... input);
+
   void to_state(std::function<void (lua_State *)> f);
 
   static Lua *from_state(lua_State *L);

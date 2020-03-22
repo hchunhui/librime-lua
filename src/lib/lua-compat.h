@@ -11,11 +11,9 @@ void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);
 
 #if LUA_VERSION_NUM >= 502
 #define xlua_resume(L, a) lua_resume(L, NULL, a)
-#define LUA_UNPACK "table.unpack"
 #else
 #define xlua_resume lua_resume
 #define lua_rawlen lua_objlen
-#define LUA_UNPACK "unpack"
 #endif
 
 void xluaopen_utf8(lua_State *);

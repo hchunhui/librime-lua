@@ -400,6 +400,20 @@ LuaResult<O> Lua::call(I ... input) {
   return r;
 }
 
+template <typename ... I>
+LuaResult<void> Lua::call(I ... input) {
+  pushdataX<I ...>(L_, input ...);
+
+  int status = lua_pcall(L_, sizeof...(input) - 1, 1, 0);
+  if (status != LUA_OK) {
+    std::string e = lua_tostring(L_, -1);
+    lua_pop(L_, 1);
+    return LuaResult<void>::Err({status, e});
+  }
+
+  return LuaResult<void>::Ok();
+}
+
 // --- LuaWrapper
 // WRAP(f): wraps function f
 // WRAPMEM(C::f): wraps member function C::f

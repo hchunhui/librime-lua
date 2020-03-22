@@ -187,9 +187,10 @@ namespace LuaImpl {
     export_set(L);
 
     lua_pushlightuserdata(L, (void *)&makeclosurekey);
-    luaL_dostring(L, "return function (f, ...)\n"
+    luaL_dostring(L, "table.unpack = table.unpack or unpack\n"
+                  "return function (f, ...)\n"
                   "local args = {...}\n"
-                  "return (function () return f(" LUA_UNPACK "(args)) end)\n"
+                  "return (function () return f(table.unpack(args)) end)\n"
                   "end\n");
     lua_settable(L, LUA_REGISTRYINDEX);
 
