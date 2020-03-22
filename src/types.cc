@@ -463,6 +463,13 @@ namespace ContextReg {
     { "composition", WRAP(get_composition) },
     { "input", WRAPMEM(T::input) },
     { "caret_pos", WRAPMEM(T::caret_pos) },
+    { "commit_notifier", WRAPMEM(T::commit_notifier) },
+    { "select_notifier", WRAPMEM(T::select_notifier) },
+    { "update_notifier", WRAPMEM(T::update_notifier) },
+    { "delete_notifier", WRAPMEM(T::delete_notifier) },
+    { "option_update_notifier", WRAPMEM(T::option_update_notifier) },
+    { "property_update_notifier", WRAPMEM(T::property_update_notifier) },
+    { "unhandled_key_notifier", WRAPMEM(T::unhandled_key_notifier) },
     //{ "commit_history", WRAP(get_commit_history) },
     { NULL, NULL },
   };
@@ -650,6 +657,119 @@ namespace ConfigReg {
   };
 }
 
+template<typename T, typename ... I>
+int raw_connect(lua_State *L) {
+  Lua *lua = Lua::from_state(L);
+  T & t = LuaType<T &>::todata(L, 1);
+  an<LuaObj> o = LuaObj::todata(L, 2);
+
+  typedef boost::signals2::scoped_connection sc;
+  void *u = lua_newuserdata(L, sizeof(sc));
+  new(u) sc(
+    t.connect([lua, o](I... i) {
+                auto r = lua->call<an<LuaObj>, Context *>(o, i...);
+                if (!r.ok()) {
+                  auto e = r.get_err();
+                  LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+                }
+              }));
+  luaL_getmetatable(L, "__connection");
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 1);
+    luaL_newmetatable(L, "__connection");
+    lua_pushstring(L, "__gc");
+    lua_pushcfunction(L, LuaType<sc>::gc);
+    lua_settable(L, -3);
+  }
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
+namespace NotifierReg {
+  typedef Context::Notifier T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "connect", raw_connect<T, Context *>},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace OptionUpdateNotifierReg {
+  typedef Context::OptionUpdateNotifier T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "connect", raw_connect<T, Context *, const string&>},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace PropertyUpdateNotifierReg {
+  typedef Context::PropertyUpdateNotifier T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "connect", raw_connect<T, Context *, const string&>},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace KeyEventNotifierReg {
+  typedef Context::KeyEventNotifier T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "connect", raw_connect<T, Context *, const KeyEvent&>},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -690,4 +810,8 @@ void types_init(lua_State *L) {
   EXPORT(CompositionReg, L);
   EXPORT(SchemaReg, L);
   EXPORT(ConfigReg, L);
+  EXPORT(NotifierReg, L);
+  EXPORT(OptionUpdateNotifierReg, L);
+  EXPORT(PropertyUpdateNotifierReg, L);
+  EXPORT(KeyEventNotifierReg, L);
 }
