@@ -658,32 +658,43 @@ namespace ConfigReg {
 }
 
 template<typename T, typename ... I>
-int raw_connect(lua_State *L) {
+static int raw_connect(lua_State *L) {
   Lua *lua = Lua::from_state(L);
   T & t = LuaType<T &>::todata(L, 1);
   an<LuaObj> o = LuaObj::todata(L, 2);
 
-  typedef boost::signals2::scoped_connection sc;
-  void *u = lua_newuserdata(L, sizeof(sc));
-  new(u) sc(
-    t.connect([lua, o](I... i) {
-                auto r = lua->call<an<LuaObj>, Context *>(o, i...);
-                if (!r.ok()) {
-                  auto e = r.get_err();
-                  LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-                }
-              }));
-  luaL_getmetatable(L, LuaType<sc>::name());
-  if (lua_isnil(L, -1)) {
-    lua_pop(L, 1);
-    luaL_newmetatable(L, LuaType<sc>::name());
-    lua_pushstring(L, "__gc");
-    lua_pushcfunction(L, LuaType<sc>::gc);
-    lua_settable(L, -3);
-  }
-  lua_setmetatable(L, -2);
+  auto c = t.connect
+    ([lua, o](I... i) {
+       auto r = lua->call<an<LuaObj>, Context *>(o, i...);
+       if (!r.ok()) {
+         auto e = r.get_err();
+         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+       }
+     });
 
+  LuaType<boost::signals2::connection>::pushdata(L, c);
   return 1;
+}
+
+namespace ConnectionReg {
+  typedef boost::signals2::connection T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "disconnect", WRAPMEM(T::disconnect)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
 }
 
 namespace NotifierReg {
@@ -814,4 +825,5 @@ void types_init(lua_State *L) {
   EXPORT(OptionUpdateNotifierReg, L);
   EXPORT(PropertyUpdateNotifierReg, L);
   EXPORT(KeyEventNotifierReg, L);
+  EXPORT(ConnectionReg, L);
 }
