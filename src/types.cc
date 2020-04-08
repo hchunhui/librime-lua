@@ -673,10 +673,10 @@ int raw_connect(lua_State *L) {
                   LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
                 }
               }));
-  luaL_getmetatable(L, "__connection");
+  luaL_getmetatable(L, LuaType<sc>::name());
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);
-    luaL_newmetatable(L, "__connection");
+    luaL_newmetatable(L, LuaType<sc>::name());
     lua_pushstring(L, "__gc");
     lua_pushcfunction(L, LuaType<sc>::gc);
     lua_settable(L, -3);
