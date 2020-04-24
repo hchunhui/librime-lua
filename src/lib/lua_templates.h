@@ -401,10 +401,10 @@ LuaResult<O> Lua::call(I ... input) {
 }
 
 template <typename ... I>
-LuaResult<void> Lua::call(I ... input) {
+LuaResult<void> Lua::void_call(I ... input) {
   pushdataX<I ...>(L_, input ...);
 
-  int status = lua_pcall(L_, sizeof...(input) - 1, 1, 0);
+  int status = lua_pcall(L_, sizeof...(input) - 1, 0, 0);
   if (status != LUA_OK) {
     std::string e = lua_tostring(L_, -1);
     lua_pop(L_, 1);

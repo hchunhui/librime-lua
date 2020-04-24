@@ -44,7 +44,7 @@ public:
   LuaResult<O> call(I ... input);
 
   template <typename ... I>
-  LuaResult<void> call(I ... input);
+  LuaResult<void> void_call(I ... input);
 
   void to_state(std::function<void (lua_State *)> f);
 

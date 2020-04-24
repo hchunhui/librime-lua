@@ -73,8 +73,13 @@ an<Translation> LuaFilter::Apply(
 }
 
 LuaFilter::~LuaFilter() {
-  if (fini_)
-    lua_->call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+  if (fini_) {
+    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << "LuaFilter::~LuaFilter error(" << e.status << "): " << e.e;
+    }
+  }
 }
 
 //--- LuaTranslator
@@ -95,8 +100,13 @@ an<Translation> LuaTranslator::Query(const string& input,
 }
 
 LuaTranslator::~LuaTranslator() {
-  if (fini_)
-    lua_->call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+  if (fini_) {
+    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << "LuaTranslator::~LuaTranslator error(" << e.status << "): " << e.e;
+    }
+  }
 }
 
 //--- LuaSegmentor
@@ -117,8 +127,13 @@ bool LuaSegmentor::Proceed(Segmentation* segmentation) {
 }
 
 LuaSegmentor::~LuaSegmentor() {
-  if (fini_)
-    lua_->call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+  if (fini_) {
+    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << "LuaSegmentor::~LuaSegmentor error(" << e.status << "): " << e.e;
+    }
+  }
 }
 
 //--- LuaProcessor
@@ -143,8 +158,13 @@ ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
 }
 
 LuaProcessor::~LuaProcessor() {
-  if (fini_)
-    lua_->call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+  if (fini_) {
+    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << "LuaProcessor::~LuaProcessor error(" << e.status << "): " << e.e;
+    }
+  }
 }
 
 }  // namespace rime

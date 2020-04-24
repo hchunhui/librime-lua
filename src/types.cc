@@ -665,7 +665,7 @@ static int raw_connect(lua_State *L) {
 
   auto c = t.connect
     ([lua, o](I... i) {
-       auto r = lua->call<an<LuaObj>, Context *>(o, i...);
+       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
        if (!r.ok()) {
          auto e = r.get_err();
          LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
