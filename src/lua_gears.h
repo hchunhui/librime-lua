@@ -33,6 +33,7 @@ private:
 class LuaFilter : public Filter, TagMatching {
 public:
   explicit LuaFilter(const Ticket& ticket, Lua* lua);
+  virtual ~LuaFilter();
 
   virtual an<Translation> Apply(an<Translation> translation,
                                 CandidateList* candidates);
@@ -45,11 +46,13 @@ private:
   Lua *lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
+  an<LuaObj> fini_;
 };
 
 class LuaTranslator : public Translator {
 public:
   explicit LuaTranslator(const Ticket& ticket, Lua* lua);
+  virtual ~LuaTranslator();
 
   virtual an<Translation> Query(const string& input,
                                 const Segment& segment);
@@ -58,11 +61,13 @@ private:
   Lua *lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
+  an<LuaObj> fini_;
 };
 
 class LuaSegmentor : public Segmentor {
 public:
   explicit LuaSegmentor(const Ticket& ticket, Lua *lua);
+  virtual ~LuaSegmentor();
 
   virtual bool Proceed(Segmentation* Segmentation);
 
@@ -70,11 +75,13 @@ private:
   Lua *lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
+  an<LuaObj> fini_;
 };
 
 class LuaProcessor : public Processor {
 public:
   LuaProcessor(const Ticket& ticket, Lua *lua);
+  virtual ~LuaProcessor();
 
   virtual ProcessResult ProcessKeyEvent(const KeyEvent& key_event);
 
@@ -82,6 +89,7 @@ private:
   Lua *lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
+  an<LuaObj> fini_;
 };
 
 template<typename T>

@@ -23,7 +23,7 @@ bool LuaTranslation::Next() {
 
 //---
 static void raw_init(lua_State *L, const Ticket &t,
-                     an<LuaObj> *env, an<LuaObj> *func) {
+                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini) {
   lua_newtable(L);
   Engine *e = t.engine;
   LuaType<Engine *>::pushdata(L, e);
@@ -45,6 +45,13 @@ static void raw_init(lua_State *L, const Ticket &t,
       }
     }
     lua_pop(L, 1);
+
+    lua_getfield(L, -1, "fini");
+    if (lua_type(L, -1) == LUA_TFUNCTION) {
+      *fini = LuaObj::todata(L, -1);
+    }
+    lua_pop(L, 1);
+
     lua_getfield(L, -1, "func");
   }
 
@@ -55,7 +62,7 @@ static void raw_init(lua_State *L, const Ticket &t,
 //--- LuaFilter
 LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
   : Filter(ticket), TagMatching(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
 }
 
 an<Translation> LuaFilter::Apply(
@@ -65,10 +72,15 @@ an<Translation> LuaFilter::Apply(
   return New<LuaTranslation>(lua_, f);
 }
 
+LuaFilter::~LuaFilter() {
+  if (fini_)
+    lua_->call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+}
+
 //--- LuaTranslator
 LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
   : Translator(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
 }
 
 an<Translation> LuaTranslator::Query(const string& input,
@@ -82,10 +94,15 @@ an<Translation> LuaTranslator::Query(const string& input,
     return t;
 }
 
+LuaTranslator::~LuaTranslator() {
+  if (fini_)
+    lua_->call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+}
+
 //--- LuaSegmentor
 LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
   : Segmentor(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
 }
 
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
@@ -99,10 +116,15 @@ bool LuaSegmentor::Proceed(Segmentation* segmentation) {
     return r.get();
 }
 
+LuaSegmentor::~LuaSegmentor() {
+  if (fini_)
+    lua_->call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+}
+
 //--- LuaProcessor
 LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
   : Processor(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
 }
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
@@ -118,6 +140,11 @@ ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
     case 1: return kAccepted;
     default: return kNoop;
     }
+}
+
+LuaProcessor::~LuaProcessor() {
+  if (fini_)
+    lua_->call<an<LuaObj>, an<LuaObj>>(fini_, env_);
 }
 
 }  // namespace rime
