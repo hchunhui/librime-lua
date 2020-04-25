@@ -781,6 +781,33 @@ namespace KeyEventNotifierReg {
   };
 }
 
+namespace LogReg {
+  void info(const string &s) {
+    LOG(INFO) << s;
+  }
+
+  void warning(const string &s) {
+    LOG(WARNING) << s;
+  }
+
+  void error(const string &s) {
+    LOG(ERROR) << s;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "info", WRAP(info) },
+    { "warning", WRAP(warning) },
+    { "error", WRAP(error) },
+    { NULL, NULL },
+  };
+
+  void init(lua_State *L) {
+    lua_createtable(L, 0, 0);
+    luaL_setfuncs(L, funcs, 0);
+    lua_setglobal(L, "log");
+  }
+}
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -826,4 +853,5 @@ void types_init(lua_State *L) {
   EXPORT(PropertyUpdateNotifierReg, L);
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
+  LogReg::init(L);
 }
