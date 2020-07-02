@@ -64,7 +64,7 @@ Build
 Build dependencies
 ---
   - librime >= 1.5.0
-  - LuaJIT 2 / Lua 5.1 / Lua 5.2 / Lua 5.3
+  - LuaJIT 2 / Lua 5.1 / Lua 5.2 / Lua 5.3 / Lua 5.4
 
 Prebuilt versions
 ---
