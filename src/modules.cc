@@ -8,20 +8,37 @@ void types_init(lua_State *L);
 
 static void lua_init(lua_State *L) {
   const char *user_dir = RimeGetUserDataDir();
+  const char *shared_dir = RimeGetSharedDataDir();
   types_init(L);
   lua_getglobal(L, "package");
-  lua_pushfstring(L, "%s%slua%s?.lua;%s%slua%s?%sinit.lua;",
+  lua_pushfstring(L, "%s%slua%s?.lua;"
+                  "%s%slua%s?%sinit.lua;"
+                  "%s%slua%s?.lua;"
+                  "%s%slua%s?%sinit.lua;",
                   user_dir, LUA_DIRSEP, LUA_DIRSEP,
-                  user_dir, LUA_DIRSEP, LUA_DIRSEP, LUA_DIRSEP);
+                  user_dir, LUA_DIRSEP, LUA_DIRSEP, LUA_DIRSEP,
+                  shared_dir, LUA_DIRSEP, LUA_DIRSEP,
+                  shared_dir, LUA_DIRSEP, LUA_DIRSEP, LUA_DIRSEP);
   lua_getfield(L, -2, "path");
   lua_concat(L, 2);
   lua_setfield(L, -2, "path");
   lua_pop(L, 1);
 
-  auto file = std::string(user_dir) + "/rime.lua";
-  if (luaL_dofile(L, file.c_str())) {
-    const char *e = lua_tostring(L, -1);
-    LOG(INFO) << "rime.lua error: " << e;
+  const auto user_file = std::string(user_dir) + "/rime.lua";
+  const auto shared_file = std::string(shared_dir) + "/rime.lua";
+
+  // use the rime.lua in user_dir first
+  if (luaL_dofile(L, user_file.c_str())) {
+    const char *e1 = lua_tostring(L, -1);
+    // if error, then use the rime.lua in shared_dir
+    if (luaL_dofile(L, shared_file.c_str())) {
+      const char *e2 = lua_tostring(L, -1);
+      LOG(ERROR) << "rime.lua error: " << e1;
+      LOG(ERROR) << "rime.lua error: " << e2;
+      LOG(ERROR) << "rime.lua should be either in rime user data "
+                    "directory or in rime shared data directory";
+      lua_pop(L, 1);
+    }
     lua_pop(L, 1);
   }
 }
