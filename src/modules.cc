@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <rime/common.h>
 #include <rime/registry.h>
 #include <rime_api.h>
@@ -6,9 +7,19 @@
 
 void types_init(lua_State *L);
 
+static bool file_exists(const char *fname) noexcept {
+    FILE * const fp = fopen(fname, "r");
+    if (fp) {
+        fclose(fp);
+        return true;
+    }
+    return false;
+}
+
 static void lua_init(lua_State *L) {
   const char *user_dir = RimeGetUserDataDir();
   const char *shared_dir = RimeGetSharedDataDir();
+
   types_init(L);
   lua_getglobal(L, "package");
   lua_pushfstring(L, "%s%slua%s?.lua;"
@@ -24,22 +35,25 @@ static void lua_init(lua_State *L) {
   lua_setfield(L, -2, "path");
   lua_pop(L, 1);
 
-  const auto user_file = std::string(user_dir) + "/rime.lua";
-  const auto shared_file = std::string(shared_dir) + "/rime.lua";
+  const auto user_file = std::string(user_dir) + LUA_DIRSEP "rime.lua";
+  const auto shared_file = std::string(shared_dir) + LUA_DIRSEP "rime.lua";
 
-  // use the rime.lua in user_dir first
-  if (luaL_dofile(L, user_file.c_str())) {
-    const char *e1 = lua_tostring(L, -1);
-    // if error, then use the rime.lua in shared_dir
-    if (luaL_dofile(L, shared_file.c_str())) {
-      const char *e2 = lua_tostring(L, -1);
-      LOG(ERROR) << "rime.lua error: " << e1;
-      LOG(ERROR) << "rime.lua error: " << e2;
-      LOG(ERROR) << "rime.lua should be either in rime user data "
-                    "directory or in rime shared data directory";
+  if (file_exists(user_file.c_str())) {
+    if (luaL_dofile(L, user_file.c_str())) {
+      const char *e = lua_tostring(L, -1);
+      LOG(ERROR) << "rime.lua error: " << e;
       lua_pop(L, 1);
     }
-    lua_pop(L, 1);
+  } else if (file_exists(shared_file.c_str())) {
+    if (luaL_dofile(L, shared_file.c_str())) {
+      const char *e = lua_tostring(L, -1);
+      LOG(ERROR) << "rime.lua error: " << e;
+      lua_pop(L, 1);
+    }
+  } else {
+    LOG(ERROR) << "rime.lua error: rime.lua should be either in the "
+                  "rime user data directory or in the rime shared "
+                  "data directory";
   }
 }
 
