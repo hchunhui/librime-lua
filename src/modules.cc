@@ -38,6 +38,8 @@ static void lua_init(lua_State *L) {
   const auto user_file = std::string(user_dir) + LUA_DIRSEP "rime.lua";
   const auto shared_file = std::string(shared_dir) + LUA_DIRSEP "rime.lua";
 
+  // use the user_file first
+  // use the shared_file if the user_file doesn't exist
   if (file_exists(user_file.c_str())) {
     if (luaL_dofile(L, user_file.c_str())) {
       const char *e = lua_tostring(L, -1);
@@ -51,9 +53,9 @@ static void lua_init(lua_State *L) {
       lua_pop(L, 1);
     }
   } else {
-    LOG(ERROR) << "rime.lua error: rime.lua should be either in the "
-                  "rime user data directory or in the rime shared "
-                  "data directory";
+    LOG(INFO) << "rime.lua info: rime.lua should be either in the "
+                 "rime user data directory or in the rime shared "
+                 "data directory";
   }
 }
 
