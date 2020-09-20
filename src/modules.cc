@@ -17,8 +17,8 @@ static bool file_exists(const char *fname) noexcept {
 }
 
 static void lua_init(lua_State *L) {
-  const char *user_dir = RimeGetUserDataDir();
-  const char *shared_dir = RimeGetSharedDataDir();
+  auto user_dir = std::string(RimeGetUserDataDir());
+  auto shared_dir = std::string(RimeGetSharedDataDir());
 
   types_init(L);
   lua_getglobal(L, "package");
@@ -35,8 +35,8 @@ static void lua_init(lua_State *L) {
   lua_setfield(L, -2, "path");
   lua_pop(L, 1);
 
-  const auto user_file = std::string(user_dir) + LUA_DIRSEP "rime.lua";
-  const auto shared_file = std::string(shared_dir) + LUA_DIRSEP "rime.lua";
+  const auto user_file = user_dir + LUA_DIRSEP "rime.lua";
+  const auto shared_file = shared_dir + LUA_DIRSEP "rime.lua";
 
   // use the user_file first
   // use the shared_file if the user_file doesn't exist
