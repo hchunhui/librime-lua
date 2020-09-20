@@ -17,8 +17,8 @@ static bool file_exists(const char *fname) noexcept {
 }
 
 static void lua_init(lua_State *L) {
-  auto user_dir = std::string(RimeGetUserDataDir());
-  auto shared_dir = std::string(RimeGetSharedDataDir());
+  const auto user_dir = std::string(RimeGetUserDataDir());
+  const auto shared_dir = std::string(RimeGetSharedDataDir());
 
   types_init(L);
   lua_getglobal(L, "package");
