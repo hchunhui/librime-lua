@@ -26,10 +26,10 @@ static void lua_init(lua_State *L) {
                   "%s%slua%s?%sinit.lua;"
                   "%s%slua%s?.lua;"
                   "%s%slua%s?%sinit.lua;",
-                  user_dir, LUA_DIRSEP, LUA_DIRSEP,
-                  user_dir, LUA_DIRSEP, LUA_DIRSEP, LUA_DIRSEP,
-                  shared_dir, LUA_DIRSEP, LUA_DIRSEP,
-                  shared_dir, LUA_DIRSEP, LUA_DIRSEP, LUA_DIRSEP);
+                  user_dir.c_str(), LUA_DIRSEP, LUA_DIRSEP,
+                  user_dir.c_str(), LUA_DIRSEP, LUA_DIRSEP, LUA_DIRSEP,
+                  shared_dir.c_str(), LUA_DIRSEP, LUA_DIRSEP,
+                  shared_dir.c_str(), LUA_DIRSEP, LUA_DIRSEP, LUA_DIRSEP);
   lua_getfield(L, -2, "path");
   lua_concat(L, 2);
   lua_setfield(L, -2, "path");
