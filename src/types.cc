@@ -819,9 +819,9 @@ namespace LogReg {
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   export_type(L, LuaType<const ns::T &>::name(), NULL,             \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<ns::T>>::name(), NULL,                 \
+  export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<const ns::T>>::name(), NULL,           \
+  export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   export_type(L, LuaType<ns::T *>::name(), NULL,                   \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
