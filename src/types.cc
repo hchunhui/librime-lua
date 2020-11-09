@@ -9,6 +9,7 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
+#include <rime/gear/memory.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 
@@ -808,6 +809,61 @@ namespace LogReg {
   }
 }
 
+namespace MemoryReg {
+  class LuaMemory : public Memory {
+   public:
+    using Memory::Memory;
+    virtual bool Memorize(const CommitEntry &commit_entry) { return true; }
+  };
+  typedef LuaMemory T;
+  an<T> make(const Ticket &t) {
+    Ticket *translatorTicket = new Ticket();
+    translatorTicket->engine = t.engine;
+    translatorTicket->name_space = "translator";
+    translatorTicket->schema = t.schema;
+    translatorTicket->klass = "lua_translator";
+    an<T> memoli = New<LuaMemory>(*translatorTicket);
+    return memoli;
+  }
+
+  static const luaL_Reg funcs[] = {
+      {"Memory", WRAP(make)},
+      {NULL, NULL},
+  };
+
+  static const luaL_Reg methods[] = {
+      {NULL, NULL},
+  };
+
+  static const luaL_Reg vars_get[] = {
+      {NULL, NULL},
+  };
+
+  static const luaL_Reg vars_set[] = {
+      {NULL, NULL},
+  };
+}  // namespace MemoryReg
+
+namespace TicketReg {
+  typedef Ticket T;
+
+  static const luaL_Reg funcs[] = {
+      {NULL, NULL},
+  };
+
+  static const luaL_Reg methods[] = {
+      {NULL, NULL},
+  };
+
+  static const luaL_Reg vars_get[] = {
+      {NULL, NULL},
+  };
+
+  static const luaL_Reg vars_set[] = {
+      {NULL, NULL},
+  };
+};  // namespace TicketReg
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -853,5 +909,7 @@ void types_init(lua_State *L) {
   EXPORT(PropertyUpdateNotifierReg, L);
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
+  EXPORT(MemoryReg,L);
+  EXPORT(TicketReg,L);
   LogReg::init(L);
 }

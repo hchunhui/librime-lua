@@ -30,6 +30,8 @@ static void raw_init(lua_State *L, const Ticket &t,
   lua_setfield(L, -2, "engine");
   LuaType<const string &>::pushdata(L, t.name_space);
   lua_setfield(L, -2, "name_space");
+  LuaType<const Ticket &>::pushdata(L, t);
+  lua_setfield(L, -2, "ticket");
   *env = LuaObj::todata(L, -1);
   lua_pop(L, 1);
 
