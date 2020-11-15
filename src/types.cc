@@ -10,6 +10,8 @@
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
 #include <rime/gear/memory.h>
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 
@@ -810,38 +812,118 @@ namespace LogReg {
 }
 
 namespace MemoryReg {
-  class LuaMemory : public Memory {
-   public:
-    using Memory::Memory;
-    virtual bool Memorize(const CommitEntry &commit_entry) { return true; }
-  };
-  typedef LuaMemory T;
-  an<T> make(const Ticket &t) {
-    Ticket *translatorTicket = new Ticket();
-    translatorTicket->engine = t.engine;
-    translatorTicket->name_space = "translator";
-    translatorTicket->schema = t.schema;
-    translatorTicket->klass = "lua_translator";
-    an<T> memoli = New<LuaMemory>(*translatorTicket);
-    return memoli;
-  }
+class LuaMemory : public Memory {
+ public:
+  using Memory::Memory;
+  virtual bool Memorize(const CommitEntry &commit_entry) { return true; }
+  DictEntryIterator iter;
+  UserDictEntryIterator uter;
+};
+typedef LuaMemory T;
 
-  static const luaL_Reg funcs[] = {
-      {"Memory", WRAP(make)},
-      {NULL, NULL},
-  };
+an<T> make(const Ticket &t) {
+  Ticket *translatorTicket = new Ticket();
+  translatorTicket->engine = t.engine;
+  translatorTicket->name_space = "translator";
+  translatorTicket->schema = t.schema;
+  translatorTicket->klass = "lua_translator";
+  an<T> memoli = New<LuaMemory>(*translatorTicket);
+  return memoli;
+}
 
-  static const luaL_Reg methods[] = {
-      {NULL, NULL},
-  };
+bool dictLookup(T &memory, const string &input) {
+  return memory.dict()->LookupWords(&memory.iter, input, false) > 0;
+}
+bool dictExpandLookup(T &memory, const string &input) {
+  return memory.dict()->LookupWords(&memory.iter, input, true) > 0;
+}
+bool dictResultExhausted(T &memory) { return memory.iter.exhausted(); }
+bool nextDictResult(T &memory) { return memory.iter.Next(); }
 
-  static const luaL_Reg vars_get[] = {
-      {NULL, NULL},
-  };
+bool userLookup(T &memory, const string &input) {
+  return memory.user_dict()->LookupWords(&memory.uter, input, false) > 0;
+}
+bool userExpandLookup(T &memory, const string &input) {
+  return memory.user_dict()->LookupWords(&memory.uter, input, true) > 0;
+}
+bool userResultExhausted(T &memory) { return memory.uter.Next(); }
+bool nextUserResult(T &memory) { return memory.uter.Next(); }
 
-  static const luaL_Reg vars_set[] = {
-      {NULL, NULL},
-  };
+string getDictResultCode(T &memory) {
+  return memory.iter.Peek()->code.ToString();
+}
+string getDictResultText(T &memory) { return memory.iter.Peek()->text; }
+double getDictResultWeight(T &memory) { return memory.iter.Peek()->weight; }
+string getDictResultRemainingCode(T &memory) {
+  return memory.iter.Peek()->comment;
+}  // might exist when using expandLookup
+int getDictResultCommitCount(T &memory) {
+  return memory.iter.Peek()->commit_count;
+}
+string getDictResultCustomCode(T &memory) {
+  return memory.iter.Peek()->custom_code;
+}
+string getDictResultPreedit(T &memory) { return memory.iter.Peek()->preedit; }
+
+string getUserResultCode(T &memory) {
+  return memory.uter.Peek()->code.ToString();
+}
+string getUserResultText(T &memory) { return memory.uter.Peek()->text; }
+double getUserResultWeight(T &memory) { return memory.uter.Peek()->weight; }
+string getUserResultRemainingCode(T &memory) {
+  return memory.uter.Peek()->comment;
+}  // might exist when using expandLookup
+int getUserResultCommitCount(T &memory) {
+  return memory.uter.Peek()->commit_count;
+}
+string getUserResultCustomCode(T &memory) {
+  return memory.uter.Peek()->custom_code;
+}
+string getUserResultPreedit(T &memory) { return memory.uter.Peek()->preedit; }
+
+void clearDictResult(T &memory) { memory.iter = DictEntryIterator();}
+void clearUserResult(T &memory) { memory.uter = UserDictEntryIterator(); }
+
+static const luaL_Reg funcs[] = {
+    {"Memory", WRAP(make)},
+    {NULL, NULL},
+};
+
+static const luaL_Reg methods[] = {
+    {"dictLookup", WRAP(dictLookup)},
+    {"dictExpandLookup", WRAP(dictExpandLookup)},
+    {"dictResultExhausted", WRAP(dictResultExhausted)},
+    {"nextDictResult", WRAP(nextDictResult)},
+    {"userLookup", WRAP(userLookup)},
+    {"userExpandLookup", WRAP(userExpandLookup)},
+    {"userResultExhausted", WRAP(userResultExhausted)},
+    {"nextUserResult", WRAP(nextUserResult)},
+    {"getDictResultCode", WRAP(getDictResultCode)},
+    {"getDictResultText", WRAP(getDictResultText)},
+    {"getDictResultWeight", WRAP(getDictResultWeight)},
+    {"getDictResultRemainingCode", WRAP(getDictResultRemainingCode)},
+    {"getDictResultCommitCount", WRAP(getDictResultCommitCount)},
+    {"getDictResultCustomCode", WRAP(getDictResultCustomCode)},
+    {"getDictResultPreedit", WRAP(getDictResultPreedit)},
+    {"getUserResultCode", WRAP(getUserResultCode)},
+    {"getUserResultText", WRAP(getUserResultText)},
+    {"getUserResultWeight", WRAP(getUserResultWeight)},
+    {"getUserResultRemainingCode", WRAP(getUserResultRemainingCode)},
+    {"getUserResultCommitCount", WRAP(getUserResultCommitCount)},
+    {"getUserResultCustomCode", WRAP(getUserResultCustomCode)},
+    {"getUserResultPreedit", WRAP(getUserResultPreedit)},
+    {"clearDictResult", WRAP(clearDictResult)},
+    {"clearUserResult", WRAP(clearUserResult)},
+    {NULL, NULL},
+};
+
+static const luaL_Reg vars_get[] = {
+    {NULL, NULL},
+};
+
+static const luaL_Reg vars_set[] = {
+    {NULL, NULL},
+};
 }  // namespace MemoryReg
 
 namespace TicketReg {
