@@ -812,12 +812,20 @@ namespace LogReg {
 }
 
 namespace MemoryReg {
+  using SyllableId = int32_t; // copy from rime/vocabulary.h
+
   class LuaMemory : public Memory {
   public:
     using Memory::Memory;
     virtual bool Memorize(const CommitEntry& commit_entry) { return true; }
     DictEntryIterator iter;
     UserDictEntryIterator uter;
+    void clearDict() {
+      iter = DictEntryIterator();
+    }
+    void clearUser() {
+      uter = UserDictEntryIterator();
+    }
   };
   typedef LuaMemory T;
 
@@ -832,25 +840,29 @@ namespace MemoryReg {
   }
 
   bool dictLookup(T& memory, const string& input) {
+    memory.clearDict();
     return memory.dict()->LookupWords(&memory.iter, input, false) > 0;
   }
   bool dictExpandLookup(T& memory, const string& input) {
+    memory.clearDict();
     return memory.dict()->LookupWords(&memory.iter, input, true) > 0;
   }
   bool dictResultExhausted(T& memory) { return memory.iter.exhausted(); }
   bool nextDictResult(T& memory) { return memory.iter.Next(); }
 
   bool userLookup(T& memory, const string& input) {
+    memory.clearUser();
     return memory.user_dict()->LookupWords(&memory.uter, input, false) > 0;
   }
   bool userExpandLookup(T& memory, const string& input) {
+    memory.clearUser();
     return memory.user_dict()->LookupWords(&memory.uter, input, true) > 0;
   }
-  bool userResultExhausted(T& memory) { return memory.uter.Next(); }
+  bool userResultExhausted(T& memory) { return memory.uter.exhausted(); }
   bool nextUserResult(T& memory) { return memory.uter.Next(); }
 
-  string getDictResultCode(T& memory) {
-    return memory.iter.Peek()->code.ToString();
+  vector<SyllableId> getDictResultCode(T& memory) {
+    return memory.iter.Peek()->code;
   }
   string getDictResultText(T& memory) { return memory.iter.Peek()->text; }
   double getDictResultWeight(T& memory) { return memory.iter.Peek()->weight; }
@@ -865,8 +877,8 @@ namespace MemoryReg {
   }
   string getDictResultPreedit(T& memory) { return memory.iter.Peek()->preedit; }
 
-  string getUserResultCode(T& memory) {
-    return memory.uter.Peek()->code.ToString();
+  std::vector<SyllableId> getUserResultCode(T& memory) {
+    return memory.uter.Peek()->code;
   }
   string getUserResultText(T& memory) { return memory.uter.Peek()->text; }
   double getUserResultWeight(T& memory) { return memory.uter.Peek()->weight; }
@@ -881,8 +893,20 @@ namespace MemoryReg {
   }
   string getUserResultPreedit(T& memory) { return memory.uter.Peek()->preedit; }
 
-  void clearDictResult(T& memory) { memory.iter = DictEntryIterator(); }
-  void clearUserResult(T& memory) { memory.uter = UserDictEntryIterator(); }
+  void clearDictResult(T& memory) { memory.clearDict(); }
+  void clearUserResult(T& memory) { memory.clearUser(); }
+
+  bool updateToUserdict(T& memory,const int commits,const string& text,const string& custom_code, const std::vector<SyllableId>& code, const string& new_entry_prefix) {
+    DictEntry entry;
+    Code c;
+    for (const SyllableId& id : code) {
+      c.push_back(id);
+    }
+    entry.code = c;
+    entry.custom_code = custom_code;
+    entry.text = text;
+    return memory.user_dict()->UpdateEntry(entry, commits, new_entry_prefix);
+  }
 
   static const luaL_Reg funcs[] = {
       {"Memory", WRAP(make)},
@@ -914,6 +938,7 @@ namespace MemoryReg {
       {"getUserResultPreedit", WRAP(getUserResultPreedit)},
       {"clearDictResult", WRAP(clearDictResult)},
       {"clearUserResult", WRAP(clearUserResult)},
+      {"updateToUserdict", WRAP(updateToUserdict)},
       {NULL, NULL},
   };
 
