@@ -810,7 +810,81 @@ namespace LogReg {
     lua_setglobal(L, "log");
   }
 }
+namespace DictEntryReg {
+  typedef DictEntry T;
+  an<T> make() {
+    return an<T>(new T());
+  }
 
+  static const luaL_Reg funcs[] = {
+    {"DictEntry",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"text",WRAPMEM_GET(T::text)},
+    {"comment",WRAPMEM_GET(T::comment)},
+    {"preedit",WRAPMEM_GET(T::preedit)},
+    {"weight",WRAPMEM_GET(T::weight)},
+    {"commit_count", WRAPMEM_GET(T::commit_count)},
+    {"custom_code",WRAPMEM_GET(T::custom_code)},
+    {"remaining_code_length",WRAPMEM_GET(T::remaining_code_length)},
+    {"code",WRAPMEM_GET(T::code)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"text",WRAPMEM_SET(T::text)},
+    {"comment",WRAPMEM_SET(T::comment)},
+    {"preedit",WRAPMEM_SET(T::preedit)},
+    {"weight",WRAPMEM_SET(T::weight)},
+    {"commit_count", WRAPMEM_SET(T::commit_count)},
+    {"custom_code",WRAPMEM_SET(T::custom_code)},
+    {"remaining_code_length",WRAPMEM_SET(T::remaining_code_length)},
+    {"code",WRAPMEM_SET(T::code)},
+    { NULL, NULL },
+  };
+}
+namespace CodeReg {
+
+  typedef Code T;
+  using SyllableId = int32_t; // copy from rime/vocabulary.h
+
+  an<T> make() {
+    return an<T>(new Code());
+  }
+  
+  void pushCode(T& code,const SyllableId inputCode) {
+    code.push_back(inputCode);
+  }
+
+  string printCode(T& code) {
+    return code.ToString();
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Code", WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"push",WRAP(pushCode)},
+    {"print",WRAP(printCode)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 namespace MemoryReg {
   using SyllableId = int32_t; // copy from rime/vocabulary.h
 
@@ -839,72 +913,23 @@ namespace MemoryReg {
     return memoli;
   }
 
-  bool dictLookup(T& memory, const string& input) {
+  bool dictLookup(T& memory, const string& input,const bool isExpand) {
     memory.clearDict();
-    return memory.dict()->LookupWords(&memory.iter, input, false) > 0;
+    return memory.dict()->LookupWords(&memory.iter, input, isExpand) > 0;
   }
-  bool dictExpandLookup(T& memory, const string& input) {
-    memory.clearDict();
-    return memory.dict()->LookupWords(&memory.iter, input, true) > 0;
-  }
-  bool dictResultExhausted(T& memory) { return memory.iter.exhausted(); }
-  bool nextDictResult(T& memory) { return memory.iter.Next(); }
+  bool dictExhausted(T& memory) { return memory.iter.exhausted(); }
+  bool dictNext(T& memory) { return memory.iter.Next(); }
+  DictEntry dictPeek(T& memory) {return *memory.iter.Peek();}
 
-  bool userLookup(T& memory, const string& input) {
+  bool userLookup(T& memory, const string& input, const bool isExpand) {
     memory.clearUser();
-    return memory.user_dict()->LookupWords(&memory.uter, input, false) > 0;
+    return memory.user_dict()->LookupWords(&memory.uter, input, isExpand) > 0;
   }
-  bool userExpandLookup(T& memory, const string& input) {
-    memory.clearUser();
-    return memory.user_dict()->LookupWords(&memory.uter, input, true) > 0;
-  }
-  bool userResultExhausted(T& memory) { return memory.uter.exhausted(); }
-  bool nextUserResult(T& memory) { return memory.uter.Next(); }
+  bool userExhausted(T& memory) { return memory.uter.exhausted(); }
+  bool userNext(T& memory) { return memory.uter.Next(); }
+  DictEntry userPeek(T& memory) { return *memory.uter.Peek(); }
 
-  vector<SyllableId> getDictResultCode(T& memory) {
-    return memory.iter.Peek()->code;
-  }
-  string getDictResultText(T& memory) { return memory.iter.Peek()->text; }
-  double getDictResultWeight(T& memory) { return memory.iter.Peek()->weight; }
-  string getDictResultRemainingCode(T& memory) {
-    return memory.iter.Peek()->comment;
-  }  // might exist when using expandLookup
-  int getDictResultCommitCount(T& memory) {
-    return memory.iter.Peek()->commit_count;
-  }
-  string getDictResultCustomCode(T& memory) {
-    return memory.iter.Peek()->custom_code;
-  }
-  string getDictResultPreedit(T& memory) { return memory.iter.Peek()->preedit; }
-
-  std::vector<SyllableId> getUserResultCode(T& memory) {
-    return memory.uter.Peek()->code;
-  }
-  string getUserResultText(T& memory) { return memory.uter.Peek()->text; }
-  double getUserResultWeight(T& memory) { return memory.uter.Peek()->weight; }
-  string getUserResultRemainingCode(T& memory) {
-    return memory.uter.Peek()->comment;
-  }  // might exist when using expandLookup
-  int getUserResultCommitCount(T& memory) {
-    return memory.uter.Peek()->commit_count;
-  }
-  string getUserResultCustomCode(T& memory) {
-    return memory.uter.Peek()->custom_code;
-  }
-  string getUserResultPreedit(T& memory) { return memory.uter.Peek()->preedit; }
-
-  void clearDictResult(T& memory) { memory.clearDict(); }
-  void clearUserResult(T& memory) { memory.clearUser(); }
-
-  bool updateToUserdict(T& memory,const int commits,const string& text,const string& custom_code, const std::vector<SyllableId>& code, const string& new_entry_prefix) {
-    DictEntry entry;
-    Code c;
-    for (const SyllableId& id : code) {
-      c.push_back(id);
-    }
-    entry.code = c;
-    entry.custom_code = custom_code;
-    entry.text = text;
+  bool updateToUserdict(T& memory,const DictEntry& entry, const int commits,const string& new_entry_prefix) {
     return memory.user_dict()->UpdateEntry(entry, commits, new_entry_prefix);
   }
 
@@ -915,30 +940,14 @@ namespace MemoryReg {
 
   static const luaL_Reg methods[] = {
       {"dictLookup", WRAP(dictLookup)},
-      {"dictExpandLookup", WRAP(dictExpandLookup)},
-      {"dictResultExhausted", WRAP(dictResultExhausted)},
-      {"nextDictResult", WRAP(nextDictResult)},
+      {"dictResultExhausted", WRAP(dictExhausted)},
+      {"nextDictResult", WRAP(dictNext)},
+      {"dictPeek",WRAP(dictPeek)},
       {"userLookup", WRAP(userLookup)},
-      {"userExpandLookup", WRAP(userExpandLookup)},
-      {"userResultExhausted", WRAP(userResultExhausted)},
-      {"nextUserResult", WRAP(nextUserResult)},
-      {"getDictResultCode", WRAP(getDictResultCode)},
-      {"getDictResultText", WRAP(getDictResultText)},
-      {"getDictResultWeight", WRAP(getDictResultWeight)},
-      {"getDictResultRemainingCode", WRAP(getDictResultRemainingCode)},
-      {"getDictResultCommitCount", WRAP(getDictResultCommitCount)},
-      {"getDictResultCustomCode", WRAP(getDictResultCustomCode)},
-      {"getDictResultPreedit", WRAP(getDictResultPreedit)},
-      {"getUserResultCode", WRAP(getUserResultCode)},
-      {"getUserResultText", WRAP(getUserResultText)},
-      {"getUserResultWeight", WRAP(getUserResultWeight)},
-      {"getUserResultRemainingCode", WRAP(getUserResultRemainingCode)},
-      {"getUserResultCommitCount", WRAP(getUserResultCommitCount)},
-      {"getUserResultCustomCode", WRAP(getUserResultCustomCode)},
-      {"getUserResultPreedit", WRAP(getUserResultPreedit)},
-      {"clearDictResult", WRAP(clearDictResult)},
-      {"clearUserResult", WRAP(clearUserResult)},
-      {"updateToUserdict", WRAP(updateToUserdict)},
+      {"userResultExhausted", WRAP(userExhausted)},
+      {"nextUserResult", WRAP(userNext)},
+      {"userPeek",WRAP(userPeek)},
+      {"memorize", WRAP(updateToUserdict)},
       {NULL, NULL},
   };
 
@@ -1018,5 +1027,7 @@ void types_init(lua_State *L) {
   EXPORT(ConnectionReg, L);
   EXPORT(MemoryReg,L);
   EXPORT(TicketReg,L);
+  EXPORT(DictEntryReg,L);
+  EXPORT(CodeReg,L);
   LogReg::init(L);
 }
