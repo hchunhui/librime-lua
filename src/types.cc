@@ -852,13 +852,12 @@ namespace DictEntryReg {
 namespace CodeReg {
 
   typedef Code T;
-  using SyllableId = int32_t; // copy from rime/vocabulary.h
 
   an<T> make() {
     return an<T>(new Code());
   }
   
-  void pushCode(T& code,const SyllableId inputCode) {
+  void pushCode(T& code,const rime::SyllableId inputCode) {
     code.push_back(inputCode);
   }
 
@@ -886,8 +885,6 @@ namespace CodeReg {
   };
 }
 namespace MemoryReg {
-  using SyllableId = int32_t; // copy from rime/vocabulary.h
-
   class LuaMemory : public Memory {
   public:
     using Memory::Memory;
@@ -903,11 +900,11 @@ namespace MemoryReg {
   };
   typedef LuaMemory T;
 
-  an<T> make(const Ticket& t) {
+  an<T> make(Engine* engine,Schema* schema) {
     Ticket* translatorTicket = new Ticket();
-    translatorTicket->engine = t.engine;
+    translatorTicket->engine = engine;
     translatorTicket->name_space = "translator";
-    translatorTicket->schema = t.schema;
+    translatorTicket->schema = schema;
     translatorTicket->klass = "lua_translator";
     an<T> memoli = New<LuaMemory>(*translatorTicket);
     return memoli;
@@ -917,20 +914,43 @@ namespace MemoryReg {
     memory.clearDict();
     return memory.dict()->LookupWords(&memory.iter, input, isExpand) > 0;
   }
-  bool dictExhausted(T& memory) { return memory.iter.exhausted(); }
-  bool dictNext(T& memory) { return memory.iter.Next(); }
-  DictEntry dictPeek(T& memory) {return *memory.iter.Peek();}
+
+  optional<an<DictEntry>> dictNext(T& memory) { 
+    if (memory.iter.exhausted()) {
+      return {};
+    }
+    an<DictEntry> ret = memory.iter.Peek();
+    memory.iter.Next();
+    return ret; 
+  }
 
   bool userLookup(T& memory, const string& input, const bool isExpand) {
     memory.clearUser();
     return memory.user_dict()->LookupWords(&memory.uter, input, isExpand) > 0;
   }
-  bool userExhausted(T& memory) { return memory.uter.exhausted(); }
-  bool userNext(T& memory) { return memory.uter.Next(); }
-  DictEntry userPeek(T& memory) { return *memory.uter.Peek(); }
+  optional<an<DictEntry>> userNext(T& memory) {
+    if (memory.uter.exhausted()) {
+      return {};
+    }
+    an<DictEntry> ret = memory.uter.Peek();
+    memory.uter.Next();
+    return ret;
+  }
 
   bool updateToUserdict(T& memory,const DictEntry& entry, const int commits,const string& new_entry_prefix) {
     return memory.user_dict()->UpdateEntry(entry, commits, new_entry_prefix);
+  }
+
+  int raw_iter_user(lua_State* L) {
+    lua_pushcfunction(L, WRAP(userNext));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+
+  int raw_iter_dict(lua_State* L) {
+    lua_pushcfunction(L, WRAP(dictNext));
+    lua_pushvalue(L, 1);
+    return 2;
   }
 
   static const luaL_Reg funcs[] = {
@@ -940,13 +960,9 @@ namespace MemoryReg {
 
   static const luaL_Reg methods[] = {
       {"dictLookup", WRAP(dictLookup)},
-      {"dictResultExhausted", WRAP(dictExhausted)},
-      {"nextDictResult", WRAP(dictNext)},
-      {"dictPeek",WRAP(dictPeek)},
       {"userLookup", WRAP(userLookup)},
-      {"userResultExhausted", WRAP(userExhausted)},
-      {"nextUserResult", WRAP(userNext)},
-      {"userPeek",WRAP(userPeek)},
+      {"iter_dict", raw_iter_dict},
+      {"iter_user", raw_iter_user},
       {"memorize", WRAP(updateToUserdict)},
       {NULL, NULL},
   };
