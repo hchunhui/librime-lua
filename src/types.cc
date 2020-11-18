@@ -810,6 +810,34 @@ namespace LogReg {
     lua_setglobal(L, "log");
   }
 }
+namespace CommitEntryReg {
+  typedef CommitEntry T;
+  an<T> make() {
+    return an<T>(new T());
+  }
+
+  vector<const rime::DictEntry*> get(T& ce) {
+    return ce.elements;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"CommitEntry",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"get",WRAP(get)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 namespace DictEntryReg {
   typedef DictEntry T;
   an<T> make() {
@@ -856,8 +884,8 @@ namespace CodeReg {
   an<T> make() {
     return an<T>(new Code());
   }
-  
-  void pushCode(T& code,const rime::SyllableId inputCode) {
+
+  void pushCode(T& code, const rime::SyllableId inputCode) {
     code.push_back(inputCode);
   }
 
@@ -888,7 +916,31 @@ namespace MemoryReg {
   class LuaMemory : public Memory {
   public:
     using Memory::Memory;
-    virtual bool Memorize(const CommitEntry& commit_entry) { return true; }
+    virtual bool Memorize(const CommitEntry& commit_entry) {
+      if (!this->currentState) return false;
+      lua_State* L = this->currentState;
+      lua_rawgeti(L, LUA_REGISTRYINDEX, this->luaCallRef);
+      LuaType<CommitEntry>::pushdata(L, static_cast<CommitEntry>(commit_entry));
+      int ret = lua_pcall(L, 1, 0, 0);
+      if (ret) {
+        // didn't figure out how to handle and pass error msg to lua.
+        switch (ret)
+        {
+        case LUA_ERRRUN:
+          LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRRUN");
+          break;
+        case LUA_ERRMEM:
+          LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRMEM");
+          break;
+        case LUA_ERRERR:
+          LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRERR");
+          break;
+        }
+      }
+      return true;
+    }
+    int luaCallRef = LUA_REFNIL;
+    lua_State* currentState = nullptr;
     DictEntryIterator iter;
     UserDictEntryIterator uter;
     void clearDict() {
@@ -900,7 +952,7 @@ namespace MemoryReg {
   };
   typedef LuaMemory T;
 
-  an<T> make(Engine* engine,Schema* schema) {
+  an<T> make(Engine* engine, Schema* schema) {
     Ticket* translatorTicket = new Ticket();
     translatorTicket->engine = engine;
     translatorTicket->name_space = "translator";
@@ -910,18 +962,18 @@ namespace MemoryReg {
     return memoli;
   }
 
-  bool dictLookup(T& memory, const string& input,const bool isExpand) {
+  bool dictLookup(T& memory, const string& input, const bool isExpand) {
     memory.clearDict();
     return memory.dict()->LookupWords(&memory.iter, input, isExpand) > 0;
   }
 
-  optional<an<DictEntry>> dictNext(T& memory) { 
+  optional<an<DictEntry>> dictNext(T& memory) {
     if (memory.iter.exhausted()) {
       return {};
     }
     an<DictEntry> ret = memory.iter.Peek();
     memory.iter.Next();
-    return ret; 
+    return ret;
   }
 
   bool userLookup(T& memory, const string& input, const bool isExpand) {
@@ -937,7 +989,7 @@ namespace MemoryReg {
     return ret;
   }
 
-  bool updateToUserdict(T& memory,const DictEntry& entry, const int commits,const string& new_entry_prefix) {
+  bool updateToUserdict(T& memory, const DictEntry& entry, const int commits, const string& new_entry_prefix) {
     return memory.user_dict()->UpdateEntry(entry, commits, new_entry_prefix);
   }
 
@@ -953,6 +1005,25 @@ namespace MemoryReg {
     return 2;
   }
 
+  int memorize(lua_State* L) {
+    // object itself & passed function
+    if (lua_gettop(L) == 2)
+    {
+      if (!lua_isfunction(L, -1)) {
+        const char* msg = lua_pushfstring(L, "%s expected, pass function please", lua_typename(L, lua_type(L, -1)));
+        luaL_argerror(L, 2, msg);
+      }
+      else {
+        an<T> memory = LuaType<an<T>>::todata(L, 1);
+        luaL_unref(L, LUA_REGISTRYINDEX, memory->luaCallRef);
+        memory->luaCallRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        memory->currentState = L;
+        lua_settop(L, 0);
+      }
+    }
+    return 0;
+  }
+
   static const luaL_Reg funcs[] = {
       {"Memory", WRAP(make)},
       {NULL, NULL},
@@ -963,7 +1034,7 @@ namespace MemoryReg {
       {"userLookup", WRAP(userLookup)},
       {"iter_dict", raw_iter_dict},
       {"iter_user", raw_iter_user},
-      {"memorize", WRAP(updateToUserdict)},
+      {"memorize", memorize},
       {NULL, NULL},
   };
 
@@ -1045,5 +1116,6 @@ void types_init(lua_State *L) {
   EXPORT(TicketReg,L);
   EXPORT(DictEntryReg,L);
   EXPORT(CodeReg,L);
+  EXPORT(CommitEntryReg,L);
   LogReg::init(L);
 }
