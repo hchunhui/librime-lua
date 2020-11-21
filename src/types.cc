@@ -554,8 +554,12 @@ namespace CompositionReg {
 
 namespace SchemaReg {
   typedef Schema T;
+  T* make(string schema_id) {
+    return new T(schema_id);
+  }
 
   static const luaL_Reg funcs[] = {
+    {"Schema",WRAP(make)},
     { NULL, NULL },
   };
 
@@ -916,29 +920,7 @@ namespace MemoryReg {
   class LuaMemory : public Memory {
   public:
     using Memory::Memory;
-    virtual bool Memorize(const CommitEntry& commit_entry) {
-      if (!this->currentState) return false;
-      lua_State* L = this->currentState;
-      lua_rawgeti(L, LUA_REGISTRYINDEX, this->luaCallRef);
-      LuaType<CommitEntry>::pushdata(L, static_cast<CommitEntry>(commit_entry));
-      int ret = lua_pcall(L, 1, 0, 0);
-      if (ret) {
-        // didn't figure out how to handle and pass error msg to lua.
-        switch (ret)
-        {
-        case LUA_ERRRUN:
-          LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRRUN");
-          break;
-        case LUA_ERRMEM:
-          LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRMEM");
-          break;
-        case LUA_ERRERR:
-          LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRERR");
-          break;
-        }
-      }
-      return true;
-    }
+    virtual bool Memorize(const CommitEntry&);
     int luaCallRef = LUA_REFNIL;
     lua_State* currentState = nullptr;
     DictEntryIterator iter;
@@ -952,21 +934,60 @@ namespace MemoryReg {
   };
   typedef LuaMemory T;
 
-  an<T> make(Engine* engine, Schema* schema) {
-    Ticket* translatorTicket = new Ticket();
-    translatorTicket->engine = engine;
-    translatorTicket->name_space = "translator";
-    translatorTicket->schema = schema;
-    translatorTicket->klass = "lua_translator";
-    an<T> memoli = New<LuaMemory>(*translatorTicket);
-    return memoli;
+   bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
+    if (!this->currentState) return false;
+    lua_State* L = this->currentState;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, this->luaCallRef);
+    LuaType<CommitEntry>::pushdata(L, static_cast<CommitEntry>(commit_entry));
+    int ret = lua_pcall(L, 1, 0, 0);
+    if (ret) {
+      // didn't figure out how to handle and pass error msg to lua.
+      switch (ret)
+      {
+      case LUA_ERRRUN:
+        LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRRUN");
+        break;
+      case LUA_ERRMEM:
+        LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRMEM");
+        break;
+      case LUA_ERRERR:
+        LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRERR");
+        break;
+      }
+    }
+    return true;
   }
 
+  an<T> make(Engine* engine, Schema* schema) {
+    Ticket translatorTicket;
+    translatorTicket.engine = engine;
+    translatorTicket.name_space = "translator";
+    translatorTicket.schema = schema;
+    translatorTicket.klass = "lua_translator";
+    an<T> memoli = New<T>(translatorTicket);
+    return memoli;
+  }
+  Dictionary* getDict(T& memory) {
+    return memory.dict();
+  }
   bool dictLookup(T& memory, const string& input, const bool isExpand) {
     memory.clearDict();
     return memory.dict()->LookupWords(&memory.iter, input, isExpand) > 0;
   }
 
+  an<T> customMake(Engine* engine,string schema_id, string ns) {
+    Ticket ticket;
+    ticket.engine = engine;
+    if (ns == "") {
+      ticket.name_space = "translator";
+    } else {
+      ticket.name_space = ns;
+    }
+    Schema schema = Schema(schema_id);
+    ticket.schema = &schema;
+    ticket.klass = "lua_translator";
+    return New<T>(ticket);
+  }
   optional<an<DictEntry>> dictNext(T& memory) {
     if (memory.iter.exhausted()) {
       return {};
@@ -1012,8 +1033,7 @@ namespace MemoryReg {
       if (!lua_isfunction(L, -1)) {
         const char* msg = lua_pushfstring(L, "%s expected, pass function please", lua_typename(L, lua_type(L, -1)));
         luaL_argerror(L, 2, msg);
-      }
-      else {
+      } else {
         an<T> memory = LuaType<an<T>>::todata(L, 1);
         luaL_unref(L, LUA_REGISTRYINDEX, memory->luaCallRef);
         memory->luaCallRef = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -1026,6 +1046,7 @@ namespace MemoryReg {
 
   static const luaL_Reg funcs[] = {
       {"Memory", WRAP(make)},
+      {"CustomMemory",WRAP(customMake)},
       {NULL, NULL},
   };
 
@@ -1035,6 +1056,7 @@ namespace MemoryReg {
       {"iter_dict", raw_iter_dict},
       {"iter_user", raw_iter_user},
       {"memorize", memorize},
+      {"dict",WRAP(getDict)},
       {NULL, NULL},
   };
 
@@ -1046,27 +1068,6 @@ namespace MemoryReg {
       {NULL, NULL},
   };
 }  // namespace MemoryReg
-
-namespace TicketReg {
-  typedef Ticket T;
-
-  static const luaL_Reg funcs[] = {
-      {NULL, NULL},
-  };
-
-  static const luaL_Reg methods[] = {
-      {NULL, NULL},
-  };
-
-  static const luaL_Reg vars_get[] = {
-      {NULL, NULL},
-  };
-
-  static const luaL_Reg vars_set[] = {
-      {NULL, NULL},
-  };
-};  // namespace TicketReg
-
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -1113,7 +1114,6 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(MemoryReg,L);
-  EXPORT(TicketReg,L);
   EXPORT(DictEntryReg,L);
   EXPORT(CodeReg,L);
   EXPORT(CommitEntryReg,L);
