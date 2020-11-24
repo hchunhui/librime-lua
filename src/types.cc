@@ -967,9 +967,7 @@ namespace MemoryReg {
     an<T> memoli = New<T>(translatorTicket);
     return memoli;
   }
-  Dictionary* getDict(T& memory) {
-    return memory.dict();
-  }
+
   bool dictLookup(T& memory, const string& input, const bool isExpand) {
     memory.clearDict();
     return memory.dict()->LookupWords(&memory.iter, input, isExpand) > 0;
@@ -1056,7 +1054,7 @@ namespace MemoryReg {
       {"iter_dict", raw_iter_dict},
       {"iter_user", raw_iter_user},
       {"memorize", memorize},
-      {"dict",WRAP(getDict)},
+      {"updateUserdict", WRAP(updateToUserdict)},
       {NULL, NULL},
   };
 
