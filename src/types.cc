@@ -816,16 +816,12 @@ namespace LogReg {
 }
 namespace CommitEntryReg {
   typedef CommitEntry T;
-  an<T> make() {
-    return an<T>(new T());
-  }
 
   vector<const rime::DictEntry*> get(T& ce) {
     return ce.elements;
   }
 
   static const luaL_Reg funcs[] = {
-    {"CommitEntry",WRAP(make)},
     { NULL, NULL },
   };
 
