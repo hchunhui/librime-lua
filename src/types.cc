@@ -1044,12 +1044,18 @@ namespace MemoryReg {
       {NULL, NULL},
   };
 
+  std::vector<string> decode(T& memory, Code& code) {
+    std::vector<string> res;
+    memory.dict()->Decode(code,&res);
+    return res;
+  }
   static const luaL_Reg methods[] = {
       {"dictLookup", WRAP(dictLookup)},
       {"userLookup", WRAP(userLookup)},
       {"iter_dict", raw_iter_dict},
       {"iter_user", raw_iter_user},
       {"memorize", memorize},
+      {"decode", WRAP(decode)},
       {"updateUserdict", WRAP(updateToUserdict)},
       {NULL, NULL},
   };
