@@ -67,3 +67,6 @@ single_char_filter = require("single_char")
 -- reverse_lookup_filter: 依地球拼音为候选项加上带调拼音的注释
 -- 详见 `lua/reverse.lua`
 reverse_lookup_filter = require("reverse")
+
+--use wildcard to search code
+expand_translator = require("expand_translator")
