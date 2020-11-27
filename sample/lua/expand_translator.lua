@@ -17,6 +17,7 @@ speller:
   alphabet: zyxwvutsrqponmlkjihgfedcba*
 ]]
 
+local thisEnv = nil
 
 local function memoryCallback(commit)
 	-- because librime-lua currently using simple Candidate, Cannot callback this function.
@@ -24,11 +25,13 @@ local function memoryCallback(commit)
 	for i,dictentry in ipairs(commit:get())
 	do
 		print(dictentry.text .. " " .. dictentry.weight .. " " .. dictentry.comment .. "")
+		thisEnv.mem:updateUserdict(dictentry,0,"") -- do nothing to userdict
+		-- thisEnv.mem:updateUserdict(dictentry,1,"") -- update entry to userdict
+		-- thisEnv.mem:updateUserdict(dictentry,1,"") -- delete entry to userdict
 	end
-	
 end
 local function init(env)
-   env.mem =  Memory(env.engine,env.engine.schema)
+   env.mem = Memory(env.engine,env.engine.schema)
    env.mem:memorize(memoryCallback)
    -- or use
 	 -- env.mem = CustomMemory(env.engine,"cangjie5.schema","translator")
@@ -38,6 +41,7 @@ local function init(env)
    -- or try get config like this
    -- schema = Schema("cangjie5") -- schema_id
    -- config = schema.config
+   thisEnv = env
    print("expand_translator Initilized!")
 end
 
@@ -52,8 +56,12 @@ local function translate(inp,seg,env)
 			local codetail = string.match(dictentry.comment,tail .. '$') or ''
 			if tail ~= nil and codetail == tail then	
 				local code = env.mem:decode(dictentry.code)
-				code = table.concat(code, ",")
-				yield(Candidate("expand_translator", seg.start, seg._end, dictentry.text, code))
+				codeComment = table.concat(code, ",")
+				local ph = Phrase(env.mem,"expand_translator", seg.start, seg._end, dictentry)
+				ph.comment = codeComment
+				yield(ph:toCandidate())
+				-- you can also use Candidate Simply, but it cannot be recognized by memorize, memorize callback won't be called
+				-- yield(Candidate("type",seg.start,seg.end,dictentry.text, codeComment	))
 			end
 		end
 	end

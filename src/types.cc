@@ -1050,13 +1050,13 @@ namespace MemoryReg {
     return res;
   }
   static const luaL_Reg methods[] = {
-      {"dictLookup", WRAP(dictLookup)},
-      {"userLookup", WRAP(userLookup)},
-      {"iter_dict", raw_iter_dict},
-      {"iter_user", raw_iter_user},
-      {"memorize", memorize},
-      {"decode", WRAP(decode)},
-      {"updateUserdict", WRAP(updateToUserdict)},
+      { "dictLookup", WRAP(dictLookup)},
+      { "userLookup", WRAP(userLookup)},
+      { "memorize", memorize},
+      { "decode", WRAP(decode)},
+      { "iter_dict", raw_iter_dict},
+      { "iter_user", raw_iter_user},
+      { "updateUserdict", WRAP(updateToUserdict)},
       {NULL, NULL},
   };
 
@@ -1068,6 +1068,77 @@ namespace MemoryReg {
       {NULL, NULL},
   };
 }  // namespace MemoryReg
+
+//--- wrappers for Phrase
+namespace PhraseReg {
+  typedef Phrase T;
+
+  string dynamic_type(T& c) {
+    if (dynamic_cast<Phrase*>(&c))
+      return "Phrase";
+    if (dynamic_cast<SimpleCandidate*>(&c))
+      return "Simple";
+    if (dynamic_cast<ShadowCandidate*>(&c))
+      return "Shadow";
+    if (dynamic_cast<UniquifiedCandidate*>(&c))
+      return "Uniquified";
+    return "Other";
+  }
+
+  an<T> make(MemoryReg::LuaMemory& memory, 
+    const string& type,
+    size_t start,
+    size_t end,
+    const an<DictEntry>& entry)
+  {
+    return New<Phrase>(memory.language(),type, start,end, entry);
+  }
+  an<Candidate> toCandidate(T& phrase) {
+    return As<Candidate>(New<Phrase>(std::move(phrase)));
+  }
+  static const luaL_Reg funcs[] = {
+    { "Phrase", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "get_dynamic_type", WRAP(dynamic_type) },
+    { "get_genuine", WRAP(T::GetGenuineCandidate) },
+    { "get_genuines", WRAP(T::GetGenuineCandidates) },
+    { "toCandidate", WRAP(toCandidate)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "language", WRAPMEM(T::language)},
+    { "type", WRAPMEM(T::type) },
+    { "start", WRAPMEM(T::start) },
+    { "_end", WRAPMEM(T::end) }, // end is keyword in Lua...
+    { "quality", WRAPMEM(T::quality) },
+    { "text", WRAPMEM(T::text) },
+    { "comment", WRAPMEM(T::comment) },
+    { "preedit", WRAPMEM(T::preedit) },
+    { "weight", WRAPMEM(T::weight)},
+    { "code", WRAPMEM(T::code)},
+    { "entry", WRAPMEM(T::entry)},
+    //span
+    //language doesn't wrap yet, so Wrap it later
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "type", WRAPMEM(T::set_type) },
+    { "start", WRAPMEM(T::set_start) },
+    { "_end", WRAPMEM(T::set_end) },
+    { "quality", WRAPMEM(T::set_quality) },
+    { "comment", WRAPMEM(T::set_comment) },
+    { "preedit", WRAPMEM(T::set_preedit) },
+    { "weight", WRAPMEM(T::set_weight)},
+    // set_syllabifier
+    { NULL, NULL },
+  };
+}// Phrase
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -1117,5 +1188,6 @@ void types_init(lua_State *L) {
   EXPORT(DictEntryReg,L);
   EXPORT(CodeReg,L);
   EXPORT(CommitEntryReg,L);
+  EXPORT(PhraseReg,L);
   LogReg::init(L);
 }
