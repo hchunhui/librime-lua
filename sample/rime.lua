@@ -70,3 +70,8 @@ reverse_lookup_filter = require("reverse")
 
 --use wildcard to search code
 expand_translator = require("expand_translator")
+
+local associate_component = require("associate_component")
+associate_processor = associate_component.processor
+associate_translator = associate_component.translator
+associate_segmentor = associate_component.segmentor
