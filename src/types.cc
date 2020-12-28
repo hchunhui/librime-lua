@@ -319,8 +319,13 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
+    
+  an<T> make() {
+    return New<T>();
+  }
 
   static const luaL_Reg funcs[] = {
+    { "Menu", WRAP(make) },
     { NULL, NULL },
   };
 
@@ -516,6 +521,10 @@ namespace PreeditReg {
 namespace CompositionReg {
   typedef Composition T;
 
+  an<Segmentation> toSegmentation(T &t) {
+    return an<Segmentation>(dynamic_cast<Segmentation*>(&t));
+  }
+  
   Segment &back(T &t) {
     return t.back();
   }
@@ -540,6 +549,7 @@ namespace CompositionReg {
     // XXX
     { "has_finished_composition", WRAPMEM(T::HasFinishedComposition) },
     { "get_prompt", WRAPMEM(T::GetPrompt) },
+    { "toSegmentation" , WRAP(toSegmentation) },
     { NULL, NULL },
   };
 
@@ -964,9 +974,10 @@ namespace MemoryReg {
     return memoli;
   }
 
-  bool dictLookup(T& memory, const string& input, const bool isExpand) {
+  bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
     memory.clearDict();
-    return memory.dict()->LookupWords(&memory.iter, input, isExpand) > 0;
+    limit = limit == 0 ? 0xffffffffffffffff : limit;
+    return memory.dict()->LookupWords(&memory.iter, input, isExpand, limit) > 0;
   }
 
   an<T> customMake(Engine* engine,string schema_id, string ns) {
@@ -1137,7 +1148,38 @@ namespace PhraseReg {
     // set_syllabifier
     { NULL, NULL },
   };
-}// Phrase
+}// Phrase work with Translator
+
+namespace KeySequenceReg {
+  typedef KeySequence T;
+
+  an<T> make() {
+    return New<T>();
+  }
+
+  vector<KeyEvent> toKeyEvent(T& t) {
+    return t;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "KeySequence", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "parse", WRAPMEM(T::Parse) },
+    { "toKeyEvent", WRAP(toKeyEvent) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}// KeySequence a vector of Keyevent
 
 //--- Lua
 #define EXPORT(ns, L) \
@@ -1184,10 +1226,11 @@ void types_init(lua_State *L) {
   EXPORT(PropertyUpdateNotifierReg, L);
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
-  EXPORT(MemoryReg,L);
-  EXPORT(DictEntryReg,L);
-  EXPORT(CodeReg,L);
-  EXPORT(CommitEntryReg,L);
-  EXPORT(PhraseReg,L);
+  EXPORT(MemoryReg, L);
+  EXPORT(DictEntryReg, L);
+  EXPORT(CodeReg, L);
+  EXPORT(CommitEntryReg, L);
+  EXPORT(PhraseReg, L);
+  EXPORT(KeySequenceReg, L);
   LogReg::init(L);
 }
