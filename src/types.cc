@@ -385,26 +385,26 @@ namespace EngineReg {
   typedef Engine T;
 
   bool process_key( T &t, string  repr) {
-	KeyEvent key;
-    if (!key.Parse(repr)) return False;
-	std::thread mThread( [&]() {t.ProcessKey(key); } );
-	mThread.join();
-	return True;
+    KeyEvent key;
+    if (!key.Parse(repr)) {
+	    LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
+	    return False;
+    }
+    std::thread mThread( [&]() {t.ProcessKey(key); } );
+    mThread.join();
+    return True;
   }
 
   bool process_keys( T &t, string key_sequence){
-	  KeySequence keys;
-	  if (!keys.Parse(key_sequence) ) {
-		  LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
-		  return False;
-	  }
-	  std::thread mThread( 
-		  [&]() {
-			  for (const KeyEvent& key : keys)  t.ProcessKey(key);
-		  }
-	  );
-	  mThread.join();
-	  return True;
+    KeySequence keys;
+    if (!keys.Parse(key_sequence) ) {
+	    LOG(ERROR) << "error parsing input: '" << key_sequence << "'";	  
+	    return False;
+    }
+    std::thread mThread( 
+	    [&]() {  for (const KeyEvent& key : keys)  t.ProcessKey(key);  }  );
+     mThread.join();
+     return True;
   }
 
 
@@ -413,8 +413,8 @@ namespace EngineReg {
   };
 
   static const luaL_Reg methods[] = {
-	{ "process_key", WRAP(process_key) },
-	{ "process_keys", WRAP(process_keys) },
+    { "process_key", WRAP(process_key) },
+    { "process_keys", WRAP(process_keys) },
     { "commit_text", WRAPMEM(T::CommitText) },
     { NULL, NULL },
   };
@@ -836,20 +836,20 @@ namespace LogReg {
 }
 
 namespace RimeApiReg{
-	string shared_dir() { return string( RimeGetSharedDataDir() ); }  
+    string shared_dir() { return string( RimeGetSharedDataDir() ); }  
     string user_dir() 	{ return string( RimeGetUserDataDir() );  }
-	string sync_dir() 	{ return string( RimeGetSyncDir() ); }
-	static const luaL_Reg funcs[]= {
+    string sync_dir() 	{ return string( RimeGetSyncDir() ); }
+    static const luaL_Reg funcs[]= {
 		{"shared_dir", WRAP(shared_dir)}, // RIME_API const char* RimeGetSharedDataDir();
 		{"user_dir",  WRAP(user_dir) }, //RIME_API const char* RimeGetUserDataDir();
 		{"sync_dir",  WRAP(sync_dir) },  //RIME_API const char* RimeGetSyncDir();
 		{ NULL, NULL },
-	};
-	void init(lua_State *L) {
-		lua_createtable(L,0,0);
-		luaL_setfuncs(L, funcs, 0);
-		lua_setglobal(L, "rime_api");
-	}
+     };
+     void init(lua_State *L) {
+     	lua_createtable(L,0,0);
+	luaL_setfuncs(L, funcs, 0);
+	lua_setglobal(L, "rime_api");
+      }
 }
 
 //--- Lua
