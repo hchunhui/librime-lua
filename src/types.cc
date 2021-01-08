@@ -384,10 +384,10 @@ namespace KeyEventReg {
 namespace EngineReg {
   typedef Engine T;
 
-  bool process_key( T &t, string  repr) {
+  bool process_key( T &t, string  repr ) {
     KeyEvent key;
     if (!key.Parse(repr)) {
-	    LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
+	    LOG(ERROR) << "error parsing input: '" << repr << "'";
 	    return False;
     }
     std::thread mThread( [&]() {t.ProcessKey(key); } );
