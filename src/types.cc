@@ -396,6 +396,9 @@ namespace EngineReg {
   };
 
   static const luaL_Reg methods[] = {
+    { "process_key", WRAPMEM(T::ProcessKey) },
+    { "apply_schema", WRAPMEM(T::ApplySchema) },
+    { "compose", WRAPMEM(T::Compose)},
     { "commit_text", WRAPMEM(T::CommitText) },
     { NULL, NULL },
   };
@@ -1061,13 +1064,13 @@ namespace MemoryReg {
     return res;
   }
   static const luaL_Reg methods[] = {
-      { "dictLookup", WRAP(dictLookup)},
-      { "userLookup", WRAP(userLookup)},
+      { "dict_lookup", WRAP(dictLookup)},
+      { "user_lookup", WRAP(userLookup)},
       { "memorize", memorize},
       { "decode", WRAP(decode)},
       { "iter_dict", raw_iter_dict},
       { "iter_user", raw_iter_user},
-      { "updateUserdict", WRAP(updateToUserdict)},
+      { "update_userdict", WRAP(updateToUserdict)},
       {NULL, NULL},
   };
 
@@ -1105,7 +1108,7 @@ namespace PhraseReg {
     return New<Phrase>(memory.language(),type, start,end, entry);
   }
   an<Candidate> toCandidate(T& phrase) {
-    return As<Candidate>(New<Phrase>(std::move(phrase)));
+    return an<Candidate>(dynamic_cast<Phrase*>(&phrase));
   }
   static const luaL_Reg funcs[] = {
     { "Phrase", WRAP(make) },

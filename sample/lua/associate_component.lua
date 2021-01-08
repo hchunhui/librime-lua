@@ -107,7 +107,7 @@ local function translator()
 		env = rimeEnv 
 		if startAssociate and recorded ~= "" then
 			cnt = 0
-			dict:dictLookup(recorded,true, resultLimit)
+			dict:dict_lookup(recorded,true, resultLimit)
 			for entry in dict:iter_dict()
 			do
 				cand = string.sub(entry.text,string.len(recorded))

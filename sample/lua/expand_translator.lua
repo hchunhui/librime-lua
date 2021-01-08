@@ -25,9 +25,9 @@ local function memoryCallback(commit)
 	for i,dictentry in ipairs(commit:get())
 	do
 		print(dictentry.text .. " " .. dictentry.weight .. " " .. dictentry.comment .. "")
-		thisEnv.mem:updateUserdict(dictentry,0,"") -- do nothing to userdict
-		-- thisEnv.mem:updateUserdict(dictentry,1,"") -- update entry to userdict
-		-- thisEnv.mem:updateUserdict(dictentry,1,"") -- delete entry to userdict
+		thisEnv.mem:update_userdict(dictentry,0,"") -- do nothing to userdict
+		-- thisEnv.mem:update_userdict(dictentry,1,"") -- update entry to userdict
+		-- thisEnv.mem:update_userdict(dictentry,1,"") -- delete entry to userdict
 	end
 end
 local function init(env)
@@ -50,7 +50,7 @@ local function translate(inp,seg,env)
 	if string.match(inp,env.wildcard) then
 		local tail = string.match(inp,  '[^'.. env.wildcard .. ']+$') or ''
 		inp = string.match(inp, '^[^' ..env.wildcard .. ']+')
-		env.mem:dictLookup(inp,true)  -- expand_search
+		env.mem:dict_lookup(inp,true)  -- expand_search
 		for dictentry in env.mem:iter_dict()
 		do
 			local codetail = string.match(dictentry.comment,tail .. '$') or ''
