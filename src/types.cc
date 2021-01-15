@@ -43,7 +43,7 @@ namespace SegmentReg {
     switch (t.status) {
       case T::kVoid: return "kVoid";
       case T::kGuess: return "kGuess";
-              CASE t::KsElected: return "kSelected";
+	  case T::kSelected: return "kSelected";
       case T::kConfirmed: return "kConfirmed";
     }
     return "";
