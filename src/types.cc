@@ -14,7 +14,6 @@
 #include "lib/lua_templates.h"
 
 using namespace rime;
-
 template<typename T>
 struct LuaType<optional<T>> {
   static void pushdata(lua_State *L, optional<T> o) {
@@ -42,10 +41,10 @@ namespace SegmentReg {
 
   string get_status(const T &t) {
     switch (t.status) {
-    case T::kVoid: return "kVoid";
-    case T::kGuess: return "kGuess";
-    case T::kSelected: return "kSelected";
-    case T::kConfirmed: return "kConfirmed";
+      case T::kVoid: return "kVoid";
+      case T::kGuess: return "kGuess";
+              CASE t::KsElected: return "kSelected";
+      case T::kConfirmed: return "kConfirmed";
     }
     return "";
   }
@@ -137,8 +136,8 @@ namespace CandidateReg {
   }
 
   an<T> make(const string type,
-                    size_t start, size_t end,
-                    const string text, const string comment)
+      size_t start, size_t end,
+      const string text, const string comment)
   {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
@@ -352,8 +351,13 @@ namespace KeyEventReg {
   int modifier(const T &t) {
     return t.modifier();
   }
+  an<T> make(const string &key_repr)
+  {
+    return New<T>(key_repr);
+  }
 
   static const luaL_Reg funcs[] = {
+    {"KeyEvent",WRAP(make)},
     { NULL, NULL },
   };
 
@@ -387,8 +391,8 @@ namespace EngineReg {
   bool process_key( T &t, string  repr ) {
     KeyEvent key;
     if (!key.Parse(repr)) {
-	    LOG(ERROR) << "error parsing input: '" << repr << "'";
-	    return False;
+      LOG(ERROR) << "error parsing input: '" << repr << "'";
+      return False;
     }
     std::thread mThread( [&]() {t.ProcessKey(key); } );
     mThread.join();
@@ -398,13 +402,13 @@ namespace EngineReg {
   bool process_keys( T &t, string key_sequence){
     KeySequence keys;
     if (!keys.Parse(key_sequence) ) {
-	    LOG(ERROR) << "error parsing input: '" << key_sequence << "'";	  
-	    return False;
+      LOG(ERROR) << "error parsing input: '" << key_sequence << "'";  
+      return False;
     }
     std::thread mThread( 
-	    [&]() {  for (const KeyEvent& key : keys)  t.ProcessKey(key);  }  );
-     mThread.join();
-     return True;
+        [&]() {  for (const KeyEvent& key : keys)  t.ProcessKey(key);  }  );
+    mThread.join();
+    return True;
   }
 
 
@@ -692,11 +696,11 @@ static int raw_connect(lua_State *L) {
 
   auto c = t.connect
     ([lua, o](I... i) {
-       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
+     auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
+     if (!r.ok()) {
+     auto e = r.get_err();
+     LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+     }
      });
 
   LuaType<boost::signals2::connection>::pushdata(L, c);
@@ -836,47 +840,47 @@ namespace LogReg {
 }
 
 namespace RimeApiReg{
-    string shared_dir() { return string( RimeGetSharedDataDir() ); }  
-    string user_dir() 	{ return string( RimeGetUserDataDir() );  }
-    string sync_dir() 	{ return string( RimeGetSyncDir() ); }
-    static const luaL_Reg funcs[]= {
-		{"shared_dir", WRAP(shared_dir)}, // RIME_API const char* RimeGetSharedDataDir();
-		{"user_dir",  WRAP(user_dir) }, //RIME_API const char* RimeGetUserDataDir();
-		{"sync_dir",  WRAP(sync_dir) },  //RIME_API const char* RimeGetSyncDir();
-		{ NULL, NULL },
-     };
-     void init(lua_State *L) {
-     	lua_createtable(L,0,0);
-	luaL_setfuncs(L, funcs, 0);
-	lua_setglobal(L, "rime_api");
-      }
+  string shared_dir() { return string( RimeGetSharedDataDir() ); }  
+  string user_dir()   { return string( RimeGetUserDataDir() );  }
+  string sync_dir()   { return string( RimeGetSyncDir() ); }
+  static const luaL_Reg funcs[]= {
+    {"shared_dir", WRAP(shared_dir)}, // RIME_API const char* RimeGetSharedDataDir();
+    {"user_dir",  WRAP(user_dir) }, //RIME_API const char* RimeGetUserDataDir();
+    {"sync_dir",  WRAP(sync_dir) },  //RIME_API const char* RimeGetSyncDir();
+    { NULL, NULL },
+  };
+  void init(lua_State *L) {
+    lua_createtable(L,0,0);
+    luaL_setfuncs(L, funcs, 0);
+    lua_setglobal(L, "rime_api");
+  }
 }
 
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
-  export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T &>::name(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T &>::name(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T *>::name(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T *>::name(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,     \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T &>::name(), NULL,           \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T &>::name(), NULL,       \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T *>::name(), NULL,           \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T *>::name(), NULL,       \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 
 void export_type(lua_State *L,
-                 const char *name, lua_CFunction gc,
-                 const luaL_Reg *funcs, const luaL_Reg *methods,
-                 const luaL_Reg *vars_get, const luaL_Reg *vars_set);
+    const char *name, lua_CFunction gc,
+    const luaL_Reg *funcs, const luaL_Reg *methods,
+    const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
