@@ -989,7 +989,10 @@ namespace MemoryReg {
   bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
     memory.clearDict();
     limit = limit == 0 ? 0xffffffffffffffff : limit;
-    return memory.dict()->LookupWords(&memory.iter, input, isExpand, limit) > 0;
+    if (auto dict = memory.dict())
+      return dict->LookupWords(&memory.iter, input, isExpand, limit) > 0;
+    else
+      return false;
   }
 
   optional<an<DictEntry>> dictNext(T& memory) {
@@ -1003,8 +1006,12 @@ namespace MemoryReg {
 
   bool userLookup(T& memory, const string& input, const bool isExpand) {
     memory.clearUser();
-    return memory.user_dict()->LookupWords(&memory.uter, input, isExpand) > 0;
+    if (auto dict = memory.user_dict())
+      return dict->LookupWords(&memory.uter, input, isExpand) > 0;
+    else
+      return false;
   }
+
   optional<an<DictEntry>> userNext(T& memory) {
     if (memory.uter.exhausted()) {
       return {};
@@ -1015,7 +1022,10 @@ namespace MemoryReg {
   }
 
   bool updateToUserdict(T& memory, const DictEntry& entry, const int commits, const string& new_entry_prefix) {
-    return memory.user_dict()->UpdateEntry(entry, commits, new_entry_prefix);
+    if (auto dict = memory.user_dict())
+      return dict->UpdateEntry(entry, commits, new_entry_prefix);
+    else
+      return false;
   }
 
   int raw_iter_user(lua_State* L) {
@@ -1037,7 +1047,8 @@ namespace MemoryReg {
 
   std::vector<string> decode(T& memory, Code& code) {
     std::vector<string> res;
-    memory.dict()->Decode(code,&res);
+    if (auto dict = memory.dict())
+      dict->Decode(code,&res);
     return res;
   }
   static const luaL_Reg methods[] = {
