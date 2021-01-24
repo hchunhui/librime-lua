@@ -1107,9 +1107,11 @@ namespace PhraseReg {
   {
     return New<Phrase>(memory.language(),type, start,end, entry);
   }
-  an<Candidate> toCandidate(T& phrase) {
-    return an<Candidate>(dynamic_cast<Phrase*>(&phrase));
+
+  an<Candidate> toCandidate(an<T> phrase) {
+    return phrase;
   }
+
   static const luaL_Reg funcs[] = {
     { "Phrase", WRAP(make) },
     { NULL, NULL },
