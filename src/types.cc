@@ -1087,18 +1087,6 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  string dynamic_type(T& c) {
-    if (dynamic_cast<Phrase*>(&c))
-      return "Phrase";
-    if (dynamic_cast<SimpleCandidate*>(&c))
-      return "Simple";
-    if (dynamic_cast<ShadowCandidate*>(&c))
-      return "Shadow";
-    if (dynamic_cast<UniquifiedCandidate*>(&c))
-      return "Uniquified";
-    return "Other";
-  }
-
   an<T> make(MemoryReg::LuaMemory& memory, 
     const string& type,
     size_t start,
@@ -1118,9 +1106,6 @@ namespace PhraseReg {
   };
 
   static const luaL_Reg methods[] = {
-    { "get_dynamic_type", WRAP(dynamic_type) },
-    { "get_genuine", WRAP(T::GetGenuineCandidate) },
-    { "get_genuines", WRAP(T::GetGenuineCandidates) },
     { "toCandidate", WRAP(toCandidate)},
     { NULL, NULL },
   };
