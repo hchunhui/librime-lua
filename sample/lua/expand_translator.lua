@@ -17,32 +17,30 @@ speller:
   alphabet: zyxwvutsrqponmlkjihgfedcba*
 ]]
 
-local thisEnv = nil
-
-local function memoryCallback(commit)
-	-- because librime-lua currently using simple Candidate, Cannot callback this function.
-	print("following committed!")
+local function memoryCallback(memory, commit)
 	for i,dictentry in ipairs(commit:get())
 	do
-		print(dictentry.text .. " " .. dictentry.weight .. " " .. dictentry.comment .. "")
-		thisEnv.mem:update_userdict(dictentry,0,"") -- do nothing to userdict
-		-- thisEnv.mem:update_userdict(dictentry,1,"") -- update entry to userdict
-		-- thisEnv.mem:update_userdict(dictentry,1,"") -- delete entry to userdict
+		log.info(dictentry.text .. " " .. dictentry.weight .. " " .. dictentry.comment .. "")
+		memory:update_userdict(dictentry,0,"") -- do nothing to userdict
+		-- memory:update_userdict(dictentry,1,"") -- update entry to userdict
+		-- memory:update_userdict(dictentry,1,"") -- delete entry to userdict
 	end
+	return true
 end
+
 local function init(env)
-   env.mem = Memory(env.engine,env.engine.schema)
-   env.mem:memorize(memoryCallback)
-   -- or use
-	 -- env.mem = CustomMemory(env.engine,"cangjie5.schema","translator")
+  env.mem = Memory(env.engine,env.engine.schema)
+  env.mem:memorize(function(commit) memoryCallback(env.mem, commit) end)
+  -- or use
+  -- schema = Schema("cangjie5") -- schema_id
+  -- env.mem = Memory(env.engine, schema, "translator")
    config = env.engine.schema.config
    namespace = 'expand_translator'
    env.wildcard = config:get_string(namespace .. '/wildcard')
    -- or try get config like this
    -- schema = Schema("cangjie5") -- schema_id
    -- config = schema.config
-   thisEnv = env
-   print("expand_translator Initilized!")
+   log.info("expand_translator Initilized!")
 end
 
 
@@ -50,7 +48,7 @@ local function translate(inp,seg,env)
 	if string.match(inp,env.wildcard) then
 		local tail = string.match(inp,  '[^'.. env.wildcard .. ']+$') or ''
 		inp = string.match(inp, '^[^' ..env.wildcard .. ']+')
-		env.mem:dict_lookup(inp,true)  -- expand_search
+		env.mem:dict_lookup(inp,true, 100)  -- expand_search
 		for dictentry in env.mem:iter_dict()
 		do
 			local codetail = string.match(dictentry.comment,tail .. '$') or ''
@@ -67,4 +65,4 @@ local function translate(inp,seg,env)
 	end
 end	
 
-return {init = init, func = translate}	
+return {init = init, func = translate}
