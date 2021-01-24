@@ -927,13 +927,22 @@ namespace CodeReg {
 }
 namespace MemoryReg {
   class LuaMemory : public Memory {
+    an<LuaObj> memorize_callback;
+    Lua *lua_;
   public:
     using Memory::Memory;
-    virtual bool Memorize(const CommitEntry&);
-    int luaCallRef = LUA_REFNIL;
-    lua_State* currentState = nullptr;
     DictEntryIterator iter;
     UserDictEntryIterator uter;
+
+    LuaMemory(Lua *lua, const Ticket& ticket)
+      : lua_(lua), Memory(ticket) {}
+
+    virtual bool Memorize(const CommitEntry&);
+
+    void memorize(an<LuaObj> func) {
+      memorize_callback = func;
+    }
+
     void clearDict() {
       iter = DictEntryIterator();
     }
@@ -943,38 +952,38 @@ namespace MemoryReg {
   };
   typedef LuaMemory T;
 
-   bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
-    if (!this->currentState) return false;
-    lua_State* L = this->currentState;
-    lua_rawgeti(L, LUA_REGISTRYINDEX, this->luaCallRef);
-    LuaType<CommitEntry>::pushdata(L, static_cast<CommitEntry>(commit_entry));
-    int ret = lua_pcall(L, 1, 0, 0);
-    if (ret) {
-      // didn't figure out how to handle and pass error msg to lua.
-      switch (ret)
-      {
-      case LUA_ERRRUN:
-        LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRRUN");
-        break;
-      case LUA_ERRMEM:
-        LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRMEM");
-        break;
-      case LUA_ERRERR:
-        LOG(ERROR) << (L, "[Memory:Memorize]:LUA_ERRERR");
-        break;
-      }
-    }
-    return true;
+  bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
+    if (!memorize_callback)
+      return false;
+
+    auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
+      return false;
+    } else
+      return r.get();
   }
 
-  an<T> make(Engine* engine, Schema* schema) {
+  // XXX: Currently the WRAP macro is not generic enough,
+  // so that we need a raw function to get the lua state / parse variable args.
+  int raw_make(lua_State *L) {
+    int n = lua_gettop(L);
+    Lua *lua = Lua::from_state(L);
+    Engine *engine = LuaType<Engine *>::todata(L, 1);
+    Schema *schema = LuaType<Schema *>::todata(L, 2);
+    string ns = "translator";
+    if (n == 3)
+      ns = LuaType<string>::todata(L, 3);
+
     Ticket translatorTicket;
     translatorTicket.engine = engine;
-    translatorTicket.name_space = "translator";
+    translatorTicket.name_space = ns;
     translatorTicket.schema = schema;
     translatorTicket.klass = "lua_translator";
-    an<T> memoli = New<T>(translatorTicket);
-    return memoli;
+    an<T> memoli = New<T>(lua, translatorTicket);
+    LuaType<an<T>>::pushdata(L, memoli);
+    return 1;
   }
 
   bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
@@ -983,19 +992,6 @@ namespace MemoryReg {
     return memory.dict()->LookupWords(&memory.iter, input, isExpand, limit) > 0;
   }
 
-  an<T> customMake(Engine* engine,string schema_id, string ns) {
-    Ticket ticket;
-    ticket.engine = engine;
-    if (ns == "") {
-      ticket.name_space = "translator";
-    } else {
-      ticket.name_space = ns;
-    }
-    Schema schema = Schema(schema_id);
-    ticket.schema = &schema;
-    ticket.klass = "lua_translator";
-    return New<T>(ticket);
-  }
   optional<an<DictEntry>> dictNext(T& memory) {
     if (memory.iter.exhausted()) {
       return {};
@@ -1034,27 +1030,8 @@ namespace MemoryReg {
     return 2;
   }
 
-  int memorize(lua_State* L) {
-    // object itself & passed function
-    if (lua_gettop(L) == 2)
-    {
-      if (!lua_isfunction(L, -1)) {
-        const char* msg = lua_pushfstring(L, "%s expected, pass function please", lua_typename(L, lua_type(L, -1)));
-        luaL_argerror(L, 2, msg);
-      } else {
-        an<T> memory = LuaType<an<T>>::todata(L, 1);
-        luaL_unref(L, LUA_REGISTRYINDEX, memory->luaCallRef);
-        memory->luaCallRef = luaL_ref(L, LUA_REGISTRYINDEX);
-        memory->currentState = L;
-        lua_settop(L, 0);
-      }
-    }
-    return 0;
-  }
-
   static const luaL_Reg funcs[] = {
-      {"Memory", WRAP(make)},
-      {"CustomMemory",WRAP(customMake)},
+      {"Memory", raw_make},
       {NULL, NULL},
   };
 
@@ -1066,7 +1043,7 @@ namespace MemoryReg {
   static const luaL_Reg methods[] = {
       { "dict_lookup", WRAP(dictLookup)},
       { "user_lookup", WRAP(userLookup)},
-      { "memorize", memorize},
+      { "memorize", WRAPMEM(T::memorize)},
       { "decode", WRAP(decode)},
       { "iter_dict", raw_iter_dict},
       { "iter_user", raw_iter_user},
