@@ -808,6 +808,24 @@ namespace LogReg {
   }
 }
 
+namespace RimeApiReg{
+  string get_shared_data_dir() { return string( RimeGetSharedDataDir() ); }  
+  string get_user_data_dir()   { return string( RimeGetUserDataDir() );  }
+  string get_sync_dir()   { return string( RimeGetSyncDir() ); }
+  static const luaL_Reg funcs[]= {
+    {"get_shared_data_dir", WRAP( get_shared_data_dir)}, // RIME_API const char* RimeGetSharedDataDir();
+    {"get_user_data_dir",  WRAP( get_user_data_dir) }, //RIME_API const char* RimeGetUserDataDir();
+    {"get_sync_dir",  WRAP( get_sync_dir) },  //RIME_API const char* RimeGetSyncDir();
+    { NULL, NULL },
+  };
+  void init(lua_State *L) {
+    lua_createtable(L,0,0);
+    luaL_setfuncs(L, funcs, 0);
+    lua_setglobal(L, "rime_api");
+  }
+}
+
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -854,4 +872,5 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   LogReg::init(L);
+  RimeApiReg::init(L);
 }
