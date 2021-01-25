@@ -283,12 +283,16 @@ namespace SegmentationReg {
     t.Reset(length);
   }
 
+  bool empty(T &t){
+	  return t.empty();
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    { "empty", WRAPMEM(T::empty) },
+    { "empty", WRAP(empty) },
     { "back", WRAP(back) },
     { "pop_back", WRAP(pop_back) },
     { "reset_length", WRAP(reset_length) },
@@ -525,12 +529,16 @@ namespace CompositionReg {
     t.pop_back();
   }
 
+  bool empty(T &t){
+	  return t.empty();
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    { "empty", WRAPMEM(T::empty) },
+    { "empty", WRAP(empty) },
     { "back", WRAP(back) },
     { "pop_back", WRAP(pop_back) },
     { "push_back", WRAP(push_back) },
