@@ -1,4 +1,3 @@
-#include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/segmentation.h>
 #include <rime/menu.h>
@@ -387,12 +386,33 @@ namespace KeyEventReg {
 namespace EngineReg {
   typedef Engine T;
 
+  bool process_key( T &t, string  repr ) {
+    KeyEvent key;
+    if (!key.Parse(repr)) {
+      LOG(ERROR) << "error parsing input: '" << repr << "'";
+      return False;
+    }
+    return t.ProcessKey(key); 
+  }
+
+  bool process_keys( T &t, string key_sequence){
+    KeySequence keys;
+    if (!keys.Parse(key_sequence) ) {
+      LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
+      return False;
+    }
+    for (const KeyEvent& key : keys)  t.ProcessKey(key);  
+    return True;
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     { "commit_text", WRAPMEM(T::CommitText) },
+    { "process_key", WRAP(process_key) },
+    { "process_keys", WRAP(process_keys) },
     { NULL, NULL },
   };
 
