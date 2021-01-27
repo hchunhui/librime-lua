@@ -402,12 +402,14 @@ namespace EngineReg {
       LOG(ERROR) << "error parsing input: '" << repr << "'";
       return False;
     }
-    if ( count_level++ >= max_level ){
+    if ( max_level <= count_level++ ){
       LOG(ERROR) << "process_key over max_level: '"<< max_level << "'";
       count_level=0;
-      return True ;
+      return False;
     }
-    return t.ProcessKey(key); 
+    bool result= t.ProcessKey(key) ;
+    count_level=0 ; 
+    return result; 
   }
 
   bool process_keys( T &t, string key_sequence){
