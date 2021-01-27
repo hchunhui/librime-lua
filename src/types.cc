@@ -40,10 +40,10 @@ namespace SegmentReg {
 
   string get_status(const T &t) {
     switch (t.status) {
-    case T::kVoid: return "kVoid";
-    case T::kGuess: return "kGuess";
-    case T::kSelected: return "kSelected";
-    case T::kConfirmed: return "kConfirmed";
+      case T::kVoid: return "kVoid";
+      case T::kGuess: return "kGuess";
+      case T::kSelected: return "kSelected";
+      case T::kConfirmed: return "kConfirmed";
     }
     return "";
   }
@@ -135,8 +135,8 @@ namespace CandidateReg {
   }
 
   an<T> make(const string type,
-                    size_t start, size_t end,
-                    const string text, const string comment)
+      size_t start, size_t end,
+      const string text, const string comment)
   {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
@@ -283,7 +283,7 @@ namespace SegmentationReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -385,12 +385,27 @@ namespace KeyEventReg {
 
 namespace EngineReg {
   typedef Engine T;
-
+  static int max_level=30;
+  static int count_level=0;
+  int get_count_level(T &t) {
+    return count_level;
+  }
+  int get_max_level(T &t) {
+    return max_level;
+  }
+  void set_max_level(T &t, int num) {
+    max_level=  (num <= 1 ) ? 1 :  num ;
+  }
   bool process_key( T &t, string  repr ) {
     KeyEvent key;
     if (!key.Parse(repr)) {
       LOG(ERROR) << "error parsing input: '" << repr << "'";
       return False;
+    }
+    if ( count_level++ >= max_level ){
+      LOG(ERROR) << "process_key over max_level: '"<< max_level << "'";
+      count_level=0;
+      return True ;
     }
     return t.ProcessKey(key); 
   }
@@ -420,11 +435,14 @@ namespace EngineReg {
     { "schema", WRAPMEM(T::schema) },
     { "context", WRAPMEM(T::context) },
     { "active_engine", WRAPMEM(T::active_engine) },
+    { "max_level", WRAP(get_max_level)},
+    { "count_level", WRAP(get_count_level)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
     { "active_engine", WRAPMEM(T::set_active_engine) },
+    { "max_level", WRAP(set_max_level)},
     { NULL, NULL },
   };
 }
@@ -550,7 +568,7 @@ namespace CompositionReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -693,12 +711,12 @@ static int raw_connect(lua_State *L) {
 
   auto c = t.connect
     ([lua, o](I... i) {
-       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
-     });
+     auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
+     if (!r.ok()) {
+       auto e = r.get_err();
+       LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+     }
+    });
 
   LuaType<boost::signals2::connection>::pushdata(L, c);
   return 1;
@@ -857,28 +875,28 @@ namespace RimeApiReg{
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
-  export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T &>::name(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T &>::name(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<ns::T>>::name(), NULL,                 \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<const ns::T>>::name(), NULL,           \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T *>::name(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T *>::name(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T &>::name(), NULL,                   \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T &>::name(), NULL,             \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<an<ns::T>>::name(), NULL,                 \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<an<const ns::T>>::name(), NULL,           \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T *>::name(), NULL,                   \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T *>::name(), NULL,             \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 
 void export_type(lua_State *L,
-                 const char *name, lua_CFunction gc,
-                 const luaL_Reg *funcs, const luaL_Reg *methods,
-                 const luaL_Reg *vars_get, const luaL_Reg *vars_set);
+    const char *name, lua_CFunction gc,
+    const luaL_Reg *funcs, const luaL_Reg *methods,
+    const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
