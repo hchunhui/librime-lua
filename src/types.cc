@@ -857,7 +857,7 @@ namespace RimeApiReg {
 namespace SwitcherReg {
   typedef Switcher T;
 
-  an<T> make(const Engine *engine) {
+  an<T> make(Engine *engine) {
     return New<T>(engine);
   }
 
