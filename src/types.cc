@@ -384,8 +384,9 @@ namespace KeyEventReg {
 }
 
 namespace EngineReg {
+#define MAX_LEVEL=30
   typedef Engine T;
-  static int max_level=30;
+  static int max_level=MAX_LEVEL;
   static int count_level=0;
   int get_count_level(T &t) {
     return count_level;
@@ -395,7 +396,9 @@ namespace EngineReg {
   }
   void set_max_level(T &t, int num) {
     max_level=  (num <= 1 ) ? 1 :  num ;
+	max_level= (max_level > MAX_LEVEL) ? MAX_LEVEL : max_level;
   }
+  
   bool process_key( T &t, string  repr ) {
     KeyEvent key;
     if (!key.Parse(repr)) {
@@ -403,7 +406,7 @@ namespace EngineReg {
       return False;
     }
     if ( max_level <= count_level++ ){
-      LOG(ERROR) << "process_key over max_level: '"<< max_level << "'";
+      LOG(WARNING) << "process_key over max_level: '"<< max_level << "'";
       count_level=0;
       return False;
     }
