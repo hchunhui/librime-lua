@@ -10,6 +10,7 @@
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
 #include <rime/switcher.h>
+#include <rime/ticket.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 
