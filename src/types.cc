@@ -9,6 +9,7 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
+#include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 
@@ -816,7 +817,7 @@ namespace LogReg {
   }
 }
 
-namespace RimeApiReg{
+namespace RimeApiReg {
   string get_rime_version() {
     RimeApi* rime = rime_get_api();
     return string(rime->get_version());
@@ -852,6 +853,38 @@ namespace RimeApiReg{
   }
 }
 
+namespace SwitcherReg {
+  typedef Switcher T;
+
+  an<T> make(const Engine *engine) {
+    return New<T>(engine);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "Switcher", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "select_next_schema", WRAPMEM(T::SelectNextSchema) },
+    { "refresh_menu", WRAPMEM(T::RefreshMenu) },
+    { "activate", WRAPMEM(T::Activate) },
+    { "deactivate", WRAPMEM(T::Deactivate) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "is_auto_save", WRAPMEM(T::IsAutoSave) },
+    { "attached_engine", WRAPMEM(T::attached_engine) },
+    { "user_config", WRAPMEM(T::user_config) },
+    { "active", WRAPMEM(T::active) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 
 //--- Lua
 #define EXPORT(ns, L) \
