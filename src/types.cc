@@ -384,7 +384,7 @@ namespace KeyEventReg {
 }
 
 namespace EngineReg {
-#define MAX_LEVEL=30
+#define MAX_LEVEL 30
   typedef Engine T;
   static int max_level=MAX_LEVEL;
   static int count_level=0;
