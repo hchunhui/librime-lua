@@ -283,7 +283,7 @@ namespace SegmentationReg {
   }
 
   bool empty(T &t){
-    return t.empty();
+	  return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -570,7 +570,7 @@ namespace CompositionReg {
   }
 
   bool empty(T &t){
-    return t.empty();
+	  return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -857,17 +857,36 @@ namespace LogReg {
 }
 
 namespace RimeApiReg{
-  string get_shared_data_dir() { return string( RimeGetSharedDataDir() ); }  
-  string get_user_data_dir()   { return string( RimeGetUserDataDir() );  }
-  string get_sync_dir()   { return string( RimeGetSyncDir() ); }
+  string get_rime_version() {
+    RimeApi* rime = rime_get_api();
+    return string(rime->get_version());
+  }
+
+  string get_shared_data_dir() {
+    RimeApi* rime = rime_get_api();
+    return string(rime->get_shared_data_dir());
+  }
+
+  string get_user_data_dir() {
+    RimeApi* rime = rime_get_api();
+    return string(rime->get_user_data_dir());
+  }
+
+  string get_sync_dir() {
+    RimeApi* rime = rime_get_api();
+    return string(rime->get_sync_dir());
+  }
+
   static const luaL_Reg funcs[]= {
-    {"get_shared_data_dir", WRAP( get_shared_data_dir)}, // RIME_API const char* RimeGetSharedDataDir();
-    {"get_user_data_dir",  WRAP( get_user_data_dir) }, //RIME_API const char* RimeGetUserDataDir();
-    {"get_sync_dir",  WRAP( get_sync_dir) },  //RIME_API const char* RimeGetSyncDir();
+    { "get_rime_version", WRAP(get_rime_version) },
+    { "get_shared_data_dir", WRAP(get_shared_data_dir) },
+    { "get_user_data_dir",  WRAP(get_user_data_dir) },
+    { "get_sync_dir",  WRAP(get_sync_dir) },
     { NULL, NULL },
   };
+
   void init(lua_State *L) {
-    lua_createtable(L,0,0);
+    lua_createtable(L, 0, 0);
     luaL_setfuncs(L, funcs, 0);
     lua_setglobal(L, "rime_api");
   }
@@ -877,22 +896,22 @@ namespace RimeApiReg{
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
-    export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<ns::T &>::name(), NULL,                   \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<const ns::T &>::name(), NULL,             \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<an<ns::T>>::name(), NULL,                 \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<an<const ns::T>>::name(), NULL,           \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<ns::T *>::name(), NULL,                   \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<const ns::T *>::name(), NULL,             \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<ns::T &>::name(), NULL,                   \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T &>::name(), NULL,             \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<ns::T *>::name(), NULL,                   \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T *>::name(), NULL,             \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 
 void export_type(lua_State *L,
