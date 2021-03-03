@@ -10,7 +10,6 @@
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
 #include <rime/switcher.h>
-#include <rime/ticket.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 
@@ -868,6 +867,7 @@ namespace SwitcherReg {
 
   static const luaL_Reg methods[] = {
     { "select_next_schema", WRAPMEM(T::SelectNextSchema) },
+    { "is_auto_save", WRAPMEM(T::IsAutoSave) },
     { "refresh_menu", WRAPMEM(T::RefreshMenu) },
     { "activate", WRAPMEM(T::Activate) },
     { "deactivate", WRAPMEM(T::Deactivate) },
@@ -875,7 +875,6 @@ namespace SwitcherReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    { "is_auto_save", WRAPMEM(T::IsAutoSave) },
     { "attached_engine", WRAPMEM(T::attached_engine) },
     { "user_config", WRAPMEM(T::user_config) },
     { "active", WRAPMEM(T::active) },
@@ -932,6 +931,7 @@ void types_init(lua_State *L) {
   EXPORT(PropertyUpdateNotifierReg, L);
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
+  EXPORT(SwitcherReg, L);
   LogReg::init(L);
   RimeApiReg::init(L);
 }
