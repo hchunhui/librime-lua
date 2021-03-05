@@ -1,4 +1,3 @@
-#include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/segmentation.h>
 #include <rime/menu.h>
@@ -42,10 +41,10 @@ namespace SegmentReg {
 
   string get_status(const T &t) {
     switch (t.status) {
-    case T::kVoid: return "kVoid";
-    case T::kGuess: return "kGuess";
-    case T::kSelected: return "kSelected";
-    case T::kConfirmed: return "kConfirmed";
+      case T::kVoid: return "kVoid";
+      case T::kGuess: return "kGuess";
+      case T::kSelected: return "kSelected";
+      case T::kConfirmed: return "kConfirmed";
     }
     return "";
   }
@@ -137,8 +136,8 @@ namespace CandidateReg {
   }
 
   an<T> make(const string type,
-                    size_t start, size_t end,
-                    const string text, const string comment)
+      size_t start, size_t end,
+      const string text, const string comment)
   {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
@@ -386,7 +385,46 @@ namespace KeyEventReg {
 }
 
 namespace EngineReg {
+#define MAX_LEVEL 30
   typedef Engine T;
+  static int max_level=MAX_LEVEL;
+  static int count_level=0;
+  int get_count_level(T &t) {
+    return count_level;
+  }
+  int get_max_level(T &t) {
+    return max_level;
+  }
+  void set_max_level(T &t, int num) {
+    max_level=  (num <= 1 ) ? 1 :  num ;
+	max_level= (max_level > MAX_LEVEL) ? MAX_LEVEL : max_level;
+  }
+  
+  bool process_key( T &t, string  repr ) {
+    KeyEvent key;
+    if (!key.Parse(repr)) {
+      LOG(ERROR) << "error parsing input: '" << repr << "'";
+      return False;
+    }
+    if ( max_level <= count_level++ ){
+      LOG(WARNING) << "process_key over max_level: '"<< max_level << "'";
+      count_level=0;
+      return False;
+    }
+    bool result= t.ProcessKey(key) ;
+    count_level=0 ; 
+    return result; 
+  }
+
+  bool process_keys( T &t, string key_sequence){
+    KeySequence keys;
+    if (!keys.Parse(key_sequence) ) {
+      LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
+      return False;
+    }
+    for (const KeyEvent& key : keys)  t.ProcessKey(key);  
+    return True;
+  }
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -394,6 +432,8 @@ namespace EngineReg {
 
   static const luaL_Reg methods[] = {
     { "commit_text", WRAPMEM(T::CommitText) },
+    { "process_key", WRAP(process_key) },
+    { "process_keys", WRAP(process_keys) },
     { NULL, NULL },
   };
 
@@ -401,11 +441,14 @@ namespace EngineReg {
     { "schema", WRAPMEM(T::schema) },
     { "context", WRAPMEM(T::context) },
     { "active_engine", WRAPMEM(T::active_engine) },
+    { "max_level", WRAP(get_max_level)},
+    { "count_level", WRAP(get_count_level)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
     { "active_engine", WRAPMEM(T::set_active_engine) },
+    { "max_level", WRAP(set_max_level)},
     { NULL, NULL },
   };
 }
@@ -674,12 +717,12 @@ static int raw_connect(lua_State *L) {
 
   auto c = t.connect
     ([lua, o](I... i) {
-       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
-     });
+     auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
+     if (!r.ok()) {
+       auto e = r.get_err();
+       LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+     }
+    });
 
   LuaType<boost::signals2::connection>::pushdata(L, c);
   return 1;
@@ -908,9 +951,9 @@ namespace SwitcherReg {
   } while (0)
 
 void export_type(lua_State *L,
-                 const char *name, lua_CFunction gc,
-                 const luaL_Reg *funcs, const luaL_Reg *methods,
-                 const luaL_Reg *vars_get, const luaL_Reg *vars_set);
+    const char *name, lua_CFunction gc,
+    const luaL_Reg *funcs, const luaL_Reg *methods,
+    const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
