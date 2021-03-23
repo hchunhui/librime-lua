@@ -67,3 +67,9 @@ single_char_filter = require("single_char")
 -- reverse_lookup_filter: 依地球拼音为候选项加上带调拼音的注释
 -- 详见 `lua/reverse.lua`
 reverse_lookup_filter = require("reverse")
+
+-- III. processors:
+
+-- switch_processor: 通过选择自定义的候选项来切换开关（以简繁切换和下一方案为例）
+-- 详见 `lua/switch.lua`
+switch_processor = require("switch")
