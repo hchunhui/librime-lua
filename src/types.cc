@@ -385,46 +385,41 @@ namespace KeyEventReg {
 }
 
 namespace EngineReg {
-#define MAX_LEVEL 1
   typedef Engine T;
-  static int max_level=MAX_LEVEL;
-  static int count_level=0;
-  int get_count_level(T &t) {
-    return count_level;
-  }
-  int get_max_level(T &t) {
-    return max_level;
-  }
-  void set_max_level(T &t, int num) {
-    max_level=  (num <= 1 ) ? 1 :  num ;
-	max_level= (max_level > MAX_LEVEL) ? MAX_LEVEL : max_level;
-  }
-  
-  bool process_key( T &t, string  repr ) {
-    KeyEvent key;
-    if (!key.Parse(repr)) {
-      LOG(ERROR) << "error parsing input: '" << repr << "'";
-      return False;
-    }
-    if ( max_level <= count_level ){  
-      LOG(WARNING) << "process_key over max_level: '"<< max_level << "'";
-      LOG(ERROR) << "process_key over max_level: '"<< max_level << "'";
-      count_level=0;
-      return False;
-    }
-	count_level++;
-    bool result= t.ProcessKey(key) ;
-    count_level=0 ; 
-    return result; 
-  }
 
-  bool process_keys( T &t, string key_sequence){
+  bool process_key( T &t, const KeyEvent &keyevent){ 
+	static unsigned int count_level=0;
+	/*
+    KeyEvent keyevent;
+    if (!keyevent.Parse(key) ) {
+      LOG(ERROR) << "error parsing input: '" << key<< "'";
+      return False;
+    }
+	*/
+	if (count_level >0 ) {
+		count_level=0;
+		return False ;
+	}
+	count_level++;
+    bool res= t.ProcessKey(keyevent) ;
+	count_level=0;
+    return res;
+  }
+  bool process_keys( T &t, const string &key_sequence){ 
+	static unsigned int count_level=0;
+	
     KeySequence keys;
     if (!keys.Parse(key_sequence) ) {
       LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
       return False;
     }
-    for (const KeyEvent& key : keys)  t.ProcessKey(key);  
+	if (count_level >0 ) {
+		count_level=0;
+		return False ;
+	}
+	count_level++;
+    for (const KeyEvent& key : keys)  process_key(t,key) ;
+	count_level=0;
     return True;
   }
 
@@ -434,7 +429,6 @@ namespace EngineReg {
 
   static const luaL_Reg methods[] = {
     { "commit_text", WRAPMEM(T::CommitText) },
-    { "process_key", WRAP(process_key) },
     { "process_keys", WRAP(process_keys) },
     { NULL, NULL },
   };
@@ -443,14 +437,11 @@ namespace EngineReg {
     { "schema", WRAPMEM(T::schema) },
     { "context", WRAPMEM(T::context) },
     { "active_engine", WRAPMEM(T::active_engine) },
-    { "max_level", WRAP(get_max_level)},
-    { "count_level", WRAP(get_count_level)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
     { "active_engine", WRAPMEM(T::set_active_engine) },
-    { "max_level", WRAP(set_max_level)},
     { NULL, NULL },
   };
 }
