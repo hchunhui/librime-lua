@@ -388,12 +388,24 @@ namespace KeyEventReg {
 namespace EngineReg {
   typedef Engine T;
 
+  static void select_schema(Engine* engine, const string& schema) {
+    if (!engine)
+      return;
+    if (schema == ".next") {
+      Switcher switcher(engine);
+      switcher.SelectNextSchema();
+    }
+    else {
+      engine->ApplySchema(new Schema(schema));
+    }
+  }
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     { "commit_text", WRAPMEM(T::CommitText) },
+    { "select_schema", WRAP(select_schema) },
     { NULL, NULL },
   };
 
@@ -859,6 +871,7 @@ namespace SwitcherReg {
   an<T> make(Engine *engine) {
     return New<T>(engine);
   }
+
 
   static const luaL_Reg funcs[] = {
     { "Switcher", WRAP(make) },
