@@ -24,11 +24,11 @@ struct LuaType<optional<T>> {
       lua_pushnil(L);
   }
 
-  static optional<T> todata(lua_State *L, int i) {
+  static optional<T> &todata(lua_State *L, int i, C_State *C) {
     if (lua_type(L, i) == LUA_TNIL)
-      return {};
+      return C->alloc<optional<T>>();
     else
-      return LuaType<T>::todata(L, i);
+      return C->alloc<optional<T>>(LuaType<T>::todata(L, i, C));
   }
 };
 
