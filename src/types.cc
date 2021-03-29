@@ -6,6 +6,21 @@
 #include <rime/schema.h>
 #include <rime/config.h>
 #include <rime/gear/translator_commons.h>
+// test
+#include <rime/gear/echo_translator.h>
+#include <rime/gear/script_translator.h>
+#include <rime/gear/switch_translator.h>
+#include <boost/algorithm/string.hpp>
+#include <boost/range/adaptor/reversed.hpp>
+#include <rime/gear/schema_list_translator.h>
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
+#include <rime/gear/charset_filter.h>
+#include <rime/gear/poet.h>
+#include <rime/gear/table_translator.h>
+#include <rime/gear/translator_commons.h>
+#include <rime/gear/unity_table_encoder.h>
+// 
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
 #include <rime/switcher.h>
@@ -216,6 +231,27 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace TableTranslatorReg {
+  typedef ScriptTranslator T;
+  //typedef ConfigValue T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
     { NULL, NULL },
   };
 
@@ -952,6 +988,7 @@ void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
   EXPORT(CandidateReg, L);
   EXPORT(TranslationReg, L);
+  EXPORT(TableTranslatorReg, L);
   EXPORT(ReverseDbReg, L);
   EXPORT(SegmentationReg, L);
   EXPORT(MenuReg, L);
