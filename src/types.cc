@@ -14,7 +14,7 @@
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
-#include <rime/algo/calculus.h>
+#include <rime/algo/algebra.h>
 using namespace rime;
 
 template<typename T>
@@ -781,6 +781,40 @@ namespace ConfigItemReg {
   };
   
 }
+namespace ProjectionReg{
+  typedef Projection T;
+  an<T> make(){
+    return New<T>();
+  };
+  
+  
+  string apply(T &t, const string &s){
+    string res= s;
+    if (t.Apply(&res))
+      return res;
+    else
+      return "";
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Projection",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"load",WRAPMEM(T::Load)},
+    {"apply",WRAP(apply)},
+    { NULL, NULL },
+  };
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+  
+}
 namespace ConfigReg {
   typedef Config T;
 
@@ -1126,6 +1160,7 @@ void types_init(lua_State *L) {
   EXPORT(ConfigItemReg, L);
   EXPORT(ConfigListReg, L);
   EXPORT(ConfigValueReg, L);
+  EXPORT(ProjectionReg, L);
   EXPORT(NotifierReg, L);
   EXPORT(OptionUpdateNotifierReg, L);
   EXPORT(PropertyUpdateNotifierReg, L);
