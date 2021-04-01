@@ -930,6 +930,10 @@ namespace ConfigReg {
     return t.SetItem(path,item);
   }
 
+  bool set_value(T &t, const string &path,  an<ConfigValue>  value) {
+    return t.SetItem(path, value);
+  }
+
   bool set_list(T &t, const string &path,  an<ConfigList>  value) {
     return t.SetItem(path, value);
   }
@@ -952,26 +956,35 @@ namespace ConfigReg {
     { "is_value", WRAPMEM(T::IsValue) },
     { "is_list", WRAPMEM(T::IsList) },
     { "is_map", WRAPMEM(T::IsMap) },
+
     { "get_bool", WRAP(get_bool) },
     { "get_int", WRAP(get_int) },
     { "get_double", WRAP(get_double) },
     { "get_string", WRAP(get_string) },
-    { "get_list_size", WRAPMEM(T::GetListSize) },
-    { "get_list", WRAPMEM(T::GetList) },
-    { "get_map", WRAPMEM(T::GetMap) },
-    { "get_item", WRAP(get_item) },
+
+    { "set_bool", WRAPMEM(T::SetBool) },
+    { "set_int", WRAPMEM(T::SetInt) },
+    { "set_double", WRAPMEM(T::SetDouble) },
+    { "set_string", WRAP(set_string) }, // redefine overload function 
+
+    { "get_item", WRAP(get_item) }, // redefine overload function 
+    { "set_item", WRAP(set_item) }, // create new function 
+
     //an<ConfigItem> GetItem(const string& path);
     //an<ConfigValue> GetValue(const string& path);
     //RIME_API an<ConfigList> GetList(const string& path);
     //RIME_API an<ConfigMap> GetMap(const string& path);
 
-    { "set_bool", WRAPMEM(T::SetBool) },
-    { "set_int", WRAPMEM(T::SetInt) },
-    { "set_double", WRAPMEM(T::SetDouble) },
-    { "set_string", WRAP(set_string) },
-    { "set_item", WRAP(set_item) },
-    { "set_list", WRAP(set_list) },
-    { "set_map", WRAP(set_map)},
+    { "get_value", WRAPMEM(T::GetValue) },
+    { "get_list", WRAPMEM(T::GetList) },
+    { "get_map", WRAPMEM(T::GetMap) },
+
+    { "set_value", WRAP(set_value) }, // create new function 
+    { "set_list", WRAP(set_list) }, // create new function 
+    { "set_map", WRAP(set_map)}, // create new function 
+
+    { "get_list_size", WRAPMEM(T::GetListSize) },
+
     //RIME_API bool SetItem(const string& path, an<ConfigItem> item);
     { NULL, NULL },
   };
