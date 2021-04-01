@@ -38,7 +38,7 @@ namespace SegmentReg {
 
   T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
-  }
+  };
 
   string get_status(const T &t) {
     switch (t.status) {
@@ -388,12 +388,16 @@ namespace KeyEventReg {
 namespace EngineReg {
   typedef Engine T;
 
+  static void apply_schema(T *engine, Schema &schema){
+    engine->ApplySchema( &schema);
+  }
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     { "commit_text", WRAPMEM(T::CommitText) },
+    { "apply_schema", WRAP(apply_schema) },
     { NULL, NULL },
   };
 
@@ -561,7 +565,12 @@ namespace CompositionReg {
 namespace SchemaReg {
   typedef Schema T;
 
+  an<T> make(const string &schema_id){
+    return New<T>(schema_id ) ;
+  };
+
   static const luaL_Reg funcs[] = {
+    { "Schema", WRAP(make) },
     { NULL, NULL },
   };
 
@@ -859,6 +868,7 @@ namespace SwitcherReg {
   an<T> make(Engine *engine) {
     return New<T>(engine);
   }
+
 
   static const luaL_Reg funcs[] = {
     { "Switcher", WRAP(make) },
