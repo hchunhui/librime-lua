@@ -15,6 +15,8 @@
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 #include <rime/algo/algebra.h>
+#include "component.h"
+
 using namespace rime;
 
 template<typename T>
@@ -41,6 +43,10 @@ namespace SegmentReg {
   T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
   }
+  T clone(const T &t) {
+	 T tmp = t;
+	 return tmp;
+  }
 
   string get_status(const T &t) {
     switch (t.status) {
@@ -62,6 +68,7 @@ namespace SegmentReg {
     else if (r == "kConfirmed")
       t.status = T::kConfirmed;
   }
+  
 
   static const luaL_Reg funcs[] = {
     { "Segment", WRAP(make) },
@@ -70,9 +77,10 @@ namespace SegmentReg {
 
   static const luaL_Reg methods[] = {
     { "clear", WRAPMEM(T::Clear) },
-    { "close", WRAPMEM(T::Close) },
+    { "close", WRAP(clone) },
     { "reopen", WRAPMEM(T::Reopen) },
     { "has_tag", WRAPMEM(T::HasTag) },
+	{ "clone", WRAP(clone)},
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
     { "get_selected_candidate", WRAPMEM(T::GetSelectedCandidate) },
     { NULL, NULL },
@@ -219,6 +227,7 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+	{ "exhausted", WRAPMEM(T::exhausted)},
     { NULL, NULL },
   };
 
@@ -1269,6 +1278,11 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(SwitcherReg, L);
+  EXPORT(TicketReg,L);
+  EXPORT(ComponentReg, L);
+  EXPORT(TranslatorReg, L);
+  EXPORT(UnionTranslationReg, L);
+
   LogReg::init(L);
   RimeApiReg::init(L);
 }
