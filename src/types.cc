@@ -44,10 +44,7 @@ namespace SegmentReg {
   T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
   }
-  T clone(const T &t) {
-	 T tmp = t;
-	 return tmp;
-  }
+
 
   string get_status(const T &t) {
     switch (t.status) {
@@ -78,7 +75,6 @@ namespace SegmentReg {
 
   static const luaL_Reg methods[] = {
     { "clear", WRAPMEM(T::Clear) },
-    { "close", WRAP(clone) },
     { "reopen", WRAPMEM(T::Reopen) },
     { "has_tag", WRAPMEM(T::HasTag) },
 	{ "clone", WRAP(clone)},
