@@ -23,6 +23,8 @@
 
 //#include <rime/translator.h>
 //#include <rime/dict/dictionary.h>
+#include <rime/candidate.h>
+#include <rime/translation.h>
 #include <rime/gear/translator_commons.h>
 
 #include <rime/dict/corrector.h>   // StriptTranslator 
@@ -189,6 +191,12 @@ namespace UnionTranslationReg{
   void  append( T &t, an<S> s) {
 	t += s;
   }
+  bool exhausted(T &t) {
+	  return t.exhausted();
+  }
+  an<S> get_translation(T &t){
+	  return (an<S>)  &t ;
+  }
   optional<an<Candidate>> next(T &t) {
     if (t.exhausted())
       return {};
@@ -197,10 +205,13 @@ namespace UnionTranslationReg{
     t.Next();
     return c;
   }
-  bool exhausted(T &t) {
-	  return t.exhausted();
-  }
 
+
+  int raw_iter(lua_State *L) {
+    lua_pushcfunction(L, WRAP(next));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
 
 
   static const luaL_Reg funcs[] = {
@@ -209,13 +220,194 @@ namespace UnionTranslationReg{
   };
 
   static const luaL_Reg methods[] = {
-	{"iter",WRAP(next)},
+	{"next",WRAP(next)},
+	{"iter",raw_iter},
 	{"append", WRAP(append)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
 	{ "exhausted", WRAP(exhausted)},
+	{ "translation", WRAP(get_translation)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace FifoTranslationReg{
+  typedef FifoTranslation T;
+  typedef Translation S;
+  /*&
+  int raw_make(lua_State *L) {
+    Lua *lua = Lua::from_state(L);
+    int n = lua_gettop(L);
+
+    if (n < 1)
+      return 0;
+
+    auto o = lua->newthreadx(L, n);
+    an<T> r = New<T>();
+    LuaType<an<T>>::pushdata(L, r);
+    return 1;
+  }
+
+  optional<an<Candidate>> next(T &t) {
+    if (t.exhausted())
+      return {};
+
+    auto c = t.Peek();
+    t.Next();
+    return c;
+  }
+  int raw_iter(lua_State *L) {
+    lua_pushcfunction(L, WRAP(next));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+  */
+  an<T> make() {
+    return (an<T>) New <T>();
+  }
+  /*   
+  void  append( T &t, an<Candidate> s) {
+	t += s;
+  }
+  */
+  typedef an<Candidate>  R;
+  //typedef optional<an<Candidate>> R;
+
+  optional<an<Candidate>> next(T &t) {
+    if (t.exhausted())
+      return {};
+
+    auto c = t.Peek();
+    t.Next();
+    return c;
+  }
+
+  int raw_iter(lua_State *L) {
+    lua_pushcfunction(L, WRAP(next));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+/*
+  function< R  ()>  iter(T &t) {
+	  return [ t] { 
+		  return next(t);   
+	  };
+  }  
+  */
+  bool exhausted(T &t) {
+	  return t.exhausted();
+  }
+  an<S> get_translation(T &t){
+	  return (an<S>)  &t ;
+  }
+
+
+
+
+  static const luaL_Reg funcs[] = {
+    {"FifoTranslation",WRAP(make)},  
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+	{"iter",raw_iter},
+	{"append", WRAPMEM(T::Append)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+	{ "exhausted", WRAP(exhausted)},
+	{ "translation", WRAP(get_translation)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace MergedTranslationReg{
+  typedef MergedTranslation T;
+  typedef Translation S;
+  /*&
+  int raw_make(lua_State *L) {
+    Lua *lua = Lua::from_state(L);
+    int n = lua_gettop(L);
+
+    if (n < 1)
+      return 0;
+
+    auto o = lua->newthreadx(L, n);
+    an<T> r = New<T>();
+    LuaType<an<T>>::pushdata(L, r);
+    return 1;
+  }
+
+  optional<an<Candidate>> next(T &t) {
+    if (t.exhausted())
+      return {};
+
+    auto c = t.Peek();
+    t.Next();
+    return c;
+  }
+  int raw_iter(lua_State *L) {
+    lua_pushcfunction(L, WRAP(next));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+  */
+  an<T> make() {
+
+	const CandidateList c;
+	//= New CandidateList;
+    return (an<T>) New <T>(c);
+  }
+  void  append( T &t, an<S> s) {
+	t += s;
+  }
+  bool exhausted(T &t) {
+	  return t.exhausted();
+  }
+  an<S> get_translation(T &t){
+	  return (an<S>)  &t ;
+  }
+  optional<an<Candidate>> next(T &t) {
+    if (t.exhausted())
+      return {};
+
+    auto c = t.Peek();
+    t.Next();
+    return c;
+  }
+
+
+  int raw_iter(lua_State *L) {
+    lua_pushcfunction(L, WRAP(next));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+
+
+  static const luaL_Reg funcs[] = {
+    {"MergedTranslation",WRAP(make)},  
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+	{"next",WRAP(next)},
+	{"iter",raw_iter},
+	{"append", WRAP(append)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+	{ "exhausted", WRAP(exhausted)},
+	{ "translation", WRAP(get_translation)},
     { NULL, NULL },
   };
 

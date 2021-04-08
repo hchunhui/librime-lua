@@ -1283,6 +1283,8 @@ void types_init(lua_State *L) {
   EXPORT(TicketReg,L);
   EXPORT(ComponentReg, L);
   EXPORT(UnionTranslationReg, L);
+  EXPORT(FifoTranslationReg, L);
+  EXPORT(MergedTranslationReg, L);
   //EXPORT(DictionaryReg, L);
   //  lua/src/translator.h"
   EXPORT(MemoryReg, L);
