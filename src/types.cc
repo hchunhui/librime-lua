@@ -77,7 +77,6 @@ namespace SegmentReg {
     { "clear", WRAPMEM(T::Clear) },
     { "reopen", WRAPMEM(T::Reopen) },
     { "has_tag", WRAPMEM(T::HasTag) },
-	{ "clone", WRAP(clone)},
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
     { "get_selected_candidate", WRAPMEM(T::GetSelectedCandidate) },
     { NULL, NULL },
