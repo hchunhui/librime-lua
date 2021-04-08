@@ -323,6 +323,7 @@ namespace FifoTranslationReg{
   static const luaL_Reg vars_get[] = {
 	{ "exhausted", WRAP(exhausted)},
 	{ "translation", WRAP(get_translation)},
+	{ "size", WRAPMEM(T::size)},
     { NULL, NULL },
   };
 
@@ -408,6 +409,7 @@ namespace MergedTranslationReg{
   static const luaL_Reg vars_get[] = {
 	{ "exhausted", WRAP(exhausted)},
 	{ "translation", WRAP(get_translation)},
+	{ "size", WRAPMEM(T::size)},
     { NULL, NULL },
   };
 
