@@ -7,22 +7,6 @@
 
 #ifndef __COMPONENT_H
 #define __COMPONENT_H
-/*
-#include <cctype>
-#include <rime/engine.h>
-#include <rime/filter.h>
-#include <rime/menu.h>
-
-
-
-#include <rime/ticket.h>
-#include <rime/translation.h>
-
-
-*/
-
-//#include <rime/translator.h>
-//#include <rime/dict/dictionary.h>
 #include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/gear/translator_commons.h>
@@ -119,72 +103,10 @@ namespace ComponentReg {
 
 }
 
-
-/*
-namespace TableTranslatorReg {
-	typedef TableTranslator T;
-
-  an<T> make(Engine * e, string ns ){
-	  if ( auto c = Translator::Require("table_translator") ) {
-		  Ticket t= Ticket(e,ns) ; 
-		  return (an<T>)  c->Create(t);
-	  }
-	  return {};
-  }
-  
-
-  static const luaL_Reg funcs[] = {
-  	{"Translator1",WRAP(make)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg methods[] = {
-	{"query",WRAPMEM(T::Query)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_get[] = {
-	{"enable_completion",WRAPMEM(T::enable_completion)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_set[] = {
-	{"enable_completion",WRAPMEM(T::set_enable_completion)},
-    { NULL, NULL },
-  };
-}
-*/
 namespace UnionTranslationReg{
   typedef UnionTranslation T;
   typedef Translation S;
-  /*&
-  int raw_make(lua_State *L) {
-    Lua *lua = Lua::from_state(L);
-    int n = lua_gettop(L);
 
-    if (n < 1)
-      return 0;
-
-    auto o = lua->newthreadx(L, n);
-    an<T> r = New<T>();
-    LuaType<an<T>>::pushdata(L, r);
-    return 1;
-  }
-
-  optional<an<Candidate>> next(T &t) {
-    if (t.exhausted())
-      return {};
-
-    auto c = t.Peek();
-    t.Next();
-    return c;
-  }
-  int raw_iter(lua_State *L) {
-    lua_pushcfunction(L, WRAP(next));
-    lua_pushvalue(L, 1);
-    return 2;
-  }
-  */
   an<T> make() {
     return (an<T>) New <T>();
   }
@@ -239,42 +161,11 @@ namespace UnionTranslationReg{
 namespace FifoTranslationReg{
   typedef FifoTranslation T;
   typedef Translation S;
-  /*&
-  int raw_make(lua_State *L) {
-    Lua *lua = Lua::from_state(L);
-    int n = lua_gettop(L);
 
-    if (n < 1)
-      return 0;
-
-    auto o = lua->newthreadx(L, n);
-    an<T> r = New<T>();
-    LuaType<an<T>>::pushdata(L, r);
-    return 1;
-  }
-
-  optional<an<Candidate>> next(T &t) {
-    if (t.exhausted())
-      return {};
-
-    auto c = t.Peek();
-    t.Next();
-    return c;
-  }
-  int raw_iter(lua_State *L) {
-    lua_pushcfunction(L, WRAP(next));
-    lua_pushvalue(L, 1);
-    return 2;
-  }
-  */
   an<T> make() {
     return (an<T>) New <T>();
   }
-  /*   
-  void  append( T &t, an<Candidate> s) {
-	t += s;
-  }
-  */
+
   typedef an<Candidate>  R;
   //typedef optional<an<Candidate>> R;
 
@@ -292,13 +183,7 @@ namespace FifoTranslationReg{
     lua_pushvalue(L, 1);
     return 2;
   }
-/*
-  function< R  ()>  iter(T &t) {
-	  return [ t] { 
-		  return next(t);   
-	  };
-  }  
-  */
+
   bool exhausted(T &t) {
 	  return t.exhausted();
   }
@@ -334,34 +219,6 @@ namespace FifoTranslationReg{
 namespace MergedTranslationReg{
   typedef MergedTranslation T;
   typedef Translation S;
-  /*&
-  int raw_make(lua_State *L) {
-    Lua *lua = Lua::from_state(L);
-    int n = lua_gettop(L);
-
-    if (n < 1)
-      return 0;
-
-    auto o = lua->newthreadx(L, n);
-    an<T> r = New<T>();
-    LuaType<an<T>>::pushdata(L, r);
-    return 1;
-  }
-
-  optional<an<Candidate>> next(T &t) {
-    if (t.exhausted())
-      return {};
-
-    auto c = t.Peek();
-    t.Next();
-    return c;
-  }
-  int raw_iter(lua_State *L) {
-    lua_pushcfunction(L, WRAP(next));
-    lua_pushvalue(L, 1);
-    return 2;
-  }
-  */
   an<T> make() {
 
 	const CandidateList c;

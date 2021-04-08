@@ -152,13 +152,6 @@ namespace TableTranslatorReg {
   };
 
   static const luaL_Reg vars_set[] = {
-	  /*
-	{"tag",WRAPMEM(T::set_tag)},
-	{"enable_completion",WRAPMEM(T::set_enable_completion)},
-	{"strict_spelling",WRAPMEM(T::set_strict_spelling)},
-	{"initial_quality",WRAPMEM(T::set_initial_quality)},
-	{"contextual_suggestions",WRAPMEM(T::set_contextual_suggestions)},
-	*/
     { NULL, NULL },
   };
 }
@@ -198,9 +191,6 @@ namespace ScriptTranslatorReg {
 
 	// gear/translator_common.h   TranslatorOptions 
   static const luaL_Reg vars_get[] = {
-	//{"translator",WRAP(get_translator)},
-//	{"memory",WRAP(get_memory)},
-//	{"option", WRAP(get_option)},
     { NULL, NULL },
   };
 
