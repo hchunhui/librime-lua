@@ -1285,11 +1285,11 @@ void types_init(lua_State *L) {
   EXPORT(UnionTranslationReg, L);
   //EXPORT(DictionaryReg, L);
   //  lua/src/translator.h"
-  //EXPORT(MemoryReg, L);
-  //EXPORT(TranslatorReg, L);
-  //EXPORT(TranslatorOptionsReg, L);
-  //EXPORT(TableTranslatorReg, L);
-  //EXPORT(ScriptTranslatorReg, L);
+  EXPORT(MemoryReg, L);
+  EXPORT(TranslatorReg, L);
+  EXPORT(TranslatorOptionsReg, L);
+  EXPORT(TableTranslatorReg, L);
+  EXPORT(ScriptTranslatorReg, L);
 
   LogReg::init(L);
   RimeApiReg::init(L);
