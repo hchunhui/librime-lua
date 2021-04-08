@@ -7,37 +7,42 @@
 
 #ifndef __COMPONENT_H
 #define __COMPONENT_H
+/*
 #include <cctype>
-#include <rime/common.h>
-//#include <rime/composition.h>
-//#include <rime/context.h>
 #include <rime/engine.h>
 #include <rime/filter.h>
-#include <rime/dict/dictionary.h>
-//#include <rime/formatter.h>
-//#include <rime/key_event.h>
 #include <rime/menu.h>
-#include <rime/processor.h>
-//#include <rime/schema.h>
-//#include <rime/segmentation.h>
-#include <rime/segmentor.h>
-//#include <rime/switcher.h>
+
+
+
 #include <rime/ticket.h>
 #include <rime/translation.h>
-#include <rime/translator.h>
+
+
+*/
+
+//#include <rime/translator.h>
+//#include <rime/dict/dictionary.h>
+#include <rime/gear/translator_commons.h>
+
+#include <rime/dict/corrector.h>   // StriptTranslator 
+#include <rime/gear/script_translator.h>
 #include <rime/gear/table_translator.h>
+
+#include <rime/gear/unity_table_encoder.h>
 #include <rime/gear/memory.h>
 #include <rime/gear/poet.h>
-#include <rime/gear/translator_commons.h>
-#include <rime/gear/unity_table_encoder.h>
+
+
 
 
 #include <rime/component.h>
 #include <rime_api.h>
 #include <rime/common.h>
+
+
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
-//#include <rime/messenger.h>
 
 using namespace rime;
 
@@ -76,11 +81,14 @@ namespace TicketReg{
 namespace ComponentReg {
 
   typedef Translator T;
+  typedef TableTranslator TT;
+  typedef ScriptTranslator ST;
+
   typedef Processor P;
   typedef Filter F;
   typedef Dictionary D;
   an<T> Translator(const string component_name ,Engine * e, string ns ){
-	  if ( auto c = Translator::Require(component_name) ) {
+	  if ( auto c = T::Require(component_name) ) {
 		  Ticket t= Ticket(e,ns) ; 
 //		  an <T> tran;
 		  return (an<T>)  c->Create(t);
@@ -92,7 +100,6 @@ namespace ComponentReg {
 				  
 
   static const luaL_Reg funcs[] = {
-	{"Translator", WRAP(Translator)},
     { NULL, NULL },
   };
 
@@ -110,30 +117,6 @@ namespace ComponentReg {
 
 }
 
-namespace TranslatorReg {
-	typedef Translator T ;
-
-  
-
-  static const luaL_Reg funcs[] = {
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg methods[] = {
-	{"query",WRAPMEM(T::Query)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_get[] = {
-	//{"enable_completion",WRAPMEM(TableTranslator::enable_completion)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_set[] = {
-	//{"enable_completion",WRAPMEM(TableTranslator::set_enable_completion)},
-    { NULL, NULL },
-  };
-}
 
 /*
 namespace TableTranslatorReg {

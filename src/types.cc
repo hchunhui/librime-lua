@@ -16,6 +16,7 @@
 #include "lib/lua_templates.h"
 #include <rime/algo/algebra.h>
 #include "component.h"
+#include "translator.h"
 
 using namespace rime;
 
@@ -1278,10 +1279,17 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(SwitcherReg, L);
+  // "lua/src/component.h" 
   EXPORT(TicketReg,L);
   EXPORT(ComponentReg, L);
-  EXPORT(TranslatorReg, L);
   EXPORT(UnionTranslationReg, L);
+  //EXPORT(DictionaryReg, L);
+  //  lua/src/translator.h"
+  //EXPORT(MemoryReg, L);
+  //EXPORT(TranslatorReg, L);
+  //EXPORT(TranslatorOptionsReg, L);
+  //EXPORT(TableTranslatorReg, L);
+  //EXPORT(ScriptTranslatorReg, L);
 
   LogReg::init(L);
   RimeApiReg::init(L);
