@@ -36,10 +36,9 @@ local function lua_init(...)
 		local context=engine.context
 		local s= status(context) 
 
-if s.empty then 
-		end 
+		if s.empty then end 
 		if s.always then 
-
+			-- 切換 狀態  井在 translation  加入 option_update_notifier 修改 tran1 tran2 狀態
 			if key:repr() == "F7" then 
 				context:set_option("switch_dict", not context:get_option("switch_dict")) 
 		    end 
@@ -56,15 +55,8 @@ if s.empty then
 		if s.paging then end 
 
 
-		--print( "test keyevent  C+S+k: " .. KeyEvent("Control+Shift+k"):repr() ) 
-		--print(" rime_ver:" .. rime_api.get_rime_version() )
-		--print(" shared_data:" .. rime_api.get_shared_data_dir()) 
-		--print(" user_data:" .. rime_api.get_user_data_dir()) 
 
 		if not context.composition:empty() then 
-		--	print( "check  abc tage from composition" ,context.composition:back():has_tag("abc")) 
-		--	print( "comp.input" , context.composition.input ) 
-		--	print( "comp.trim" , context.composition:trim() ) 
 			
 		end 
 		return Noop  
@@ -72,9 +64,6 @@ if s.empty then
 
 	local function processor_init_func(env)
 		env.key={}
-		env.connect=Notifier(env) -- 提供 7種notifier commit update select delete option_update property_update unhandle_key
-		--env.connect:commit( func)
-		--env.connect:update( func)
 
 	end 
 
@@ -102,14 +91,15 @@ if s.empty then
 		assert(env.tabtr1,env.tabtr1)
 		assert(env.tabtr1,env.tabtr2)
 		
-
+        -- 準備 建立 transltion 
+		--  :iter()  只能處理一次，所以需要將 translation 合併
 		local t1= env.tabtr1.translator:query(""..input,seg)
 		local t2= env.tabtr2:query(""..input,seg)
 		--print_type(t1,"--t1:")
 		--print_type(tt1," Tran :")
 
 		local tran= UnionTranslation()
-		local tran1=FifoTranslation()
+		local tran1=FifoTranslation()  
 		tran1:append(  Candidate("test", seg.start,seg._end, "test", "test") )
 
 
@@ -128,7 +118,7 @@ if s.empty then
 	end 
 	
 	local function translator_init_func(env)
-
+ 		--載入 TableTranslator 
 		-- register 2 translatior   (engine, name_space) 
 		local ticket1= Ticket(env.engine,"cangjie5liu")
 		local ticket2= Ticket(env.engine,"translator")
@@ -138,7 +128,7 @@ if s.empty then
 		env.tabtr2= TableTranslator(ticket2)
 		assert(env.tabtr1,env.tabtr1)
 		assert(env.tabtr1,env.tabtr2)
-		--------------------------------------
+		-------設定 tag "abc"  -------------------------------
 		env.tabtr1.option.tag="abc"
 		env.tabtr2.option.tag="abc"
 		-- using notifier to modify  translator  status 
