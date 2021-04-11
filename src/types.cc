@@ -801,26 +801,21 @@ namespace ConfigItemReg {
     return "";
   }
 
-  V* get_value(T &t){
-    if (t.type() == T::kScalar)
-      return (an<L>)(  &t);
-    else
-      return nullptr ;
+//START_GET_
+//sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
+#define GET_(f_name,from ,rt, k_type) \
+  an<rt> f_name( an<from> t) { \
+	  if (t->type() == from::k_type) \
+	    return std::dynamic_pointer_cast<rt> (t);\
+	  return nullptr;\
   }
 
-  L* get_list(T &t){
-    if (t.type() == T::kList)
-       return (an<L>) &t;
-    else
-      return nullptr ;
-  }
+  GET_( get_value,T,  V, kScalar );
+  GET_( get_list, T,  L, kList );
+  GET_( get_map,  T,  M, kMap );
 
-  M* get_map(T &t){
-    if (t.type() == T::kMap)
-      return (an<M>) &t;
-    else
-      return nullptr ;
-  }
+#undef GET_
+//END_GET_
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
