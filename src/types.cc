@@ -223,7 +223,7 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
-	{ "exhausted", WRAPMEM(T::exhausted)},
+  { "exhausted", WRAPMEM(T::exhausted)},
     { NULL, NULL },
   };
 
@@ -292,7 +292,7 @@ namespace SegmentationReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -538,7 +538,7 @@ namespace CompositionReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -651,7 +651,7 @@ namespace ConfigValueReg {
   }
 
   an<E> element(an<T> t){
-	    return (an<E>) &t ;
+      return (an<E>) t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -664,8 +664,8 @@ namespace ConfigValueReg {
     {"get_int",WRAP(get_int)},
     {"get_double",WRAP(get_double)},
     {"set_bool", WRAPMEM(T::SetBool)},
-	{"set_int", WRAPMEM(T::SetInt)},
-	{"set_double", WRAPMEM(T::SetDouble)},
+  {"set_int", WRAPMEM(T::SetInt)},
+  {"set_double", WRAPMEM(T::SetDouble)},
     {"get_string",WRAP(get_string)},
     {"set_string",WRAP(set_string)},
     { NULL, NULL },
@@ -674,7 +674,7 @@ namespace ConfigValueReg {
   static const luaL_Reg vars_get[] = {
     {"value",WRAP(get_string)},
     {"type",WRAP(type)},
-	{"element",WRAP(element)},
+  {"element",WRAP(element)},
     { NULL, NULL },
   };
 
@@ -702,7 +702,7 @@ namespace ConfigListReg {
   }
 
   an<E> element(an<T> t){
-	    return (an<E>) &t ;
+      return (an<E>) t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -725,7 +725,7 @@ namespace ConfigListReg {
   static const luaL_Reg vars_get[] = {
     {"size", WRAPMEM(T::size)},
     {"type",WRAP(type)},
-	{"element",WRAP(element)},
+  {"element",WRAP(element)},
     { NULL, NULL },
   };
 
@@ -761,7 +761,7 @@ namespace ConfigMapReg {
   }
 
   an<E> element(an<T> t){
-    return (an<E>) &t ;
+    return (an<E>) t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -810,9 +810,9 @@ namespace ConfigItemReg {
 //sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
 #define GET_(f_name,from ,rt, k_type) \
   an<rt> f_name( an<from> t) { \
-	  if (t->type() == from::k_type) \
-	    return std::dynamic_pointer_cast<rt> (t);\
-	  return nullptr;\
+    if (t->type() == from::k_type) \
+      return std::dynamic_pointer_cast<rt> (t);\
+    return nullptr;\
   }
 
   GET_( get_value,T,  V, kScalar );
@@ -835,7 +835,7 @@ namespace ConfigItemReg {
 
   static const luaL_Reg vars_get[] = {
     {"type",WRAP(type)},
-	{"empty",WRAPMEM(T::empty)},
+  {"empty",WRAPMEM(T::empty)},
     { NULL, NULL },
   };
 
