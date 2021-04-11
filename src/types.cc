@@ -538,8 +538,8 @@ namespace PreeditReg {
 namespace CompositionReg {
   typedef Composition T;
 
-  an<Segmentation> toSegmentation(T &t) {
-    return an<Segmentation>(dynamic_cast<Segmentation*>(&t));
+  Segmentation *toSegmentation(T &t) {
+    return dynamic_cast<Segmentation *>(&t);
   }
   
   Segment &back(T &t) {
