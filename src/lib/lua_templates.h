@@ -14,6 +14,39 @@ extern "C" {
 #include "lua-compat.h"
 }
 
+//--- C_State
+// Lua uses setjmp/longjmp to handle Lua exceptions by default,
+// unfortunately the approach may cause memory leakage in C++. It's
+// possible to let Lua use C++ exceptions, but little of freestanding
+// Lua libraries are compiled with C++.
+//
+// To workaround it, the code sequence protected by lua_pcall() should
+// not rely on destructors. Instead the resources should be registered
+// here, so that they can be freed outside the call when exception
+// happens.
+class C_State {
+  struct B {
+    virtual ~B() {};
+  };
+
+  template<typename T>
+  struct I : public B {
+    T value;
+    template<typename... Args>
+    I(Args &&... args)
+      : value(std::forward<Args>(args)...) {}
+  };
+
+  std::vector<std::unique_ptr<B>> list;
+public:
+  template<typename T, typename... Args>
+  T &alloc(Args &&... args) {
+    auto r = new I<T>(std::forward<Args>(args)...);
+    list.emplace_back(r);
+    return r->value;
+  }
+};
+
 //--- LuaType
 // Generic case (includes pointers)
 template<typename T>
@@ -74,7 +107,7 @@ struct LuaType {
     lua_setmetatable(L, -2);
   }
 
-  static T &todata(lua_State *L, int i) {
+  static T &todata(lua_State *L, int i, C_State * = NULL) {
     typedef typename std::remove_const<T>::type U;
 
     if (lua_getmetatable(L, i)) {
@@ -93,7 +126,7 @@ struct LuaType {
 
     const char *msg = lua_pushfstring(L, "%s expected", name());
     luaL_argerror(L, i, msg);
-    return *((T *) NULL);
+    abort(); // unreachable
   }
 };
 
@@ -110,7 +143,7 @@ struct LuaType<T &> {
     luaL_setmetatable(L, name());
   }
 
-  static T &todata(lua_State *L, int i) {
+  static T &todata(lua_State *L, int i, C_State * = NULL) {
     typedef typename std::remove_const<T>::type U;
 
     if (lua_getmetatable(L, i)) {
@@ -150,7 +183,7 @@ struct LuaType<T &> {
 
     const char *msg = lua_pushfstring(L, "%s expected", name());
     luaL_argerror(L, i, msg);
-    return *((T *) NULL);
+    abort(); // unreachable
   }
 };
 
@@ -161,8 +194,8 @@ struct LuaType<std::shared_ptr<LuaObj>> {
     LuaObj::pushdata(L, o);
   }
 
-  static std::shared_ptr<LuaObj> todata(lua_State *L, int i) {
-    return LuaObj::todata(L, i);
+  static std::shared_ptr<LuaObj> &todata(lua_State *L, int i, C_State *C) {
+    return C->alloc<std::shared_ptr<LuaObj>>(LuaObj::todata(L, i));
   }
 };
 
@@ -181,7 +214,7 @@ struct LuaType<bool> {
     lua_pushboolean(L, o);
   }
 
-  static bool todata(lua_State *L, int i) {
+  static bool todata(lua_State *L, int i, C_State * = NULL) {
     return lua_toboolean(L, i);
   }
 };
@@ -193,7 +226,7 @@ struct LuaType<int> {
     lua_pushinteger(L, o);
   }
 
-  static lua_Integer todata(lua_State *L, int i) {
+  static lua_Integer todata(lua_State *L, int i, C_State * = NULL) {
     return luaL_checkinteger(L, i);
   }
 };
@@ -232,7 +265,7 @@ struct LuaType<double> {
     lua_pushnumber(L, o);
   }
 
-  static lua_Number todata(lua_State *L, int i) {
+  static lua_Number todata(lua_State *L, int i, C_State * = NULL) {
     return luaL_checknumber(L, i);
   }
 };
@@ -250,8 +283,8 @@ struct LuaType<std::string> {
     lua_pushstring(L, o.c_str());
   }
 
-  static std::string todata(lua_State *L, int i) {
-    return std::string(luaL_checkstring(L, i));
+  static std::string &todata(lua_State *L, int i, C_State *C) {
+    return C->alloc<std::string>(luaL_checkstring(L, i));
   }
 };
 
@@ -275,12 +308,13 @@ struct LuaType<std::vector<T>> {
       lua_rawseti(L, -2, i + 1);
     }
   }
-  static std::vector<T> todata(lua_State *L, int j) {
-    std::vector<T> o;
+
+  static std::vector<T> &todata(lua_State *L, int j, C_State *C) {
+    auto &o = C->alloc<std::vector<T>>();
     int n = lua_rawlen(L, j);
     for (int i = 0; i < n; i++) {
       lua_rawgeti(L, j, i + 1);
-      o.push_back(LuaType<T>::todata(L, -1));
+      o.push_back(LuaType<T>::todata(L, -1, C));
       lua_pop(L, 1);
     }
     return o;
@@ -299,12 +333,13 @@ struct LuaType<std::set<T>> {
     }
     luaL_setmetatable(L, "__set");
   }
-  static std::set<T> todata(lua_State *L, int j) {
-    std::set<T> o;
+
+  static std::set<T> &todata(lua_State *L, int j, C_State *C) {
+    auto &o = C->alloc<std::set<T>>();
     o.clear();
     lua_pushnil(L);  /* first key */
     while (lua_next(L, j) != 0) {
-      o.insert(LuaType<T>::todata(L, -2));
+      o.insert(LuaType<T>::todata(L, -2, C));
       lua_pop(L, 1);
     }
     return o;
@@ -317,7 +352,7 @@ struct LuaType<const std::vector<T>> : LuaType<std::vector<T>> {};
 template<typename T>
 struct LuaType<const std::vector<T> &> : LuaType<std::vector<T>> {};
 
-// Helper function for push multiple data
+// Helper function for pushing a series of data
 static void pushdataX(lua_State *L) {}
 
 template<typename T>
@@ -336,17 +371,20 @@ static LuaResult<O> todata_safe(lua_State *L, int i) {
   struct X {
     static int runner(lua_State *L) {
       O *po = (O *) lua_touserdata(L, 2);
-      *po = LuaType<O>::todata(L, 1);
+      auto *C = (C_State *) lua_touserdata(L, 3);
+      *po = LuaType<O>::todata(L, 1, C);
       return 0;
     }
   };
 
   O o;
+  C_State C;
   lua_pushvalue(L, i);
   lua_pushcfunction(L, X::runner);
   lua_insert(L, -2);
   lua_pushlightuserdata(L, &o);
-  int status = lua_pcall(L, 2, 0, 0);
+  lua_pushlightuserdata(L, &C);
+  int status = lua_pcall(L, 3, 0, 0);
 
   if (status != LUA_OK) {
     std::string e = lua_tostring(L, -1);
@@ -432,7 +470,7 @@ struct LuaWrapper<S(*)(T...), f> {
     struct aux {
       template<int n, typename Is_void>
       struct ret {
-        static int wrap(lua_State *L, Us... us) {
+        static int wrap(lua_State *L, C_State *, Us... us) {
           R r = f(us...);
           LuaType<R>::pushdata(L, r);
           return 1;
@@ -441,15 +479,15 @@ struct LuaWrapper<S(*)(T...), f> {
 
       template<int n>
       struct ret<n, void> {
-        static int wrap(lua_State *L, Us... us) {
+        static int wrap(lua_State *L, C_State *, Us... us) {
           f(us...);
           return 0;
         }
       };
 
       template<int n>
-      static int wrap(lua_State *L, Us... us) {
-        return ret<n, R>::wrap(L, us...);
+      static int wrap(lua_State *L, C_State *C, Us... us) {
+        return ret<n, R>::wrap(L, C, us...);
       }
     };
   };
@@ -460,19 +498,37 @@ struct LuaWrapper<S(*)(T...), f> {
     template<typename... Us>
     struct aux {
       template <int n>
-      static int wrap(lua_State *L, Us... us) {
-        A t = LuaType<A>::todata(L, n);
+      static int wrap(lua_State *L, C_State *C, Us... us) {
+        A t = LuaType<A>::todata(L, n, C);
         return args<R, As...>::
           template aux<Us..., A &>::
-          template wrap<n + 1>(L, us..., t);
+          template wrap<n + 1>(L, C, us..., t);
       }
     };
   };
 
-  static int wrap(lua_State *L) {
+  static int wrap_helper(lua_State *L) {
+    C_State *C = (C_State *) lua_touserdata(L, 1);
     return args<S, T...>::
       template aux<>::
-      template wrap<1>(L);
+      template wrap<2>(L, C);
+  }
+
+  static int wrap(lua_State *L) {
+    char room[sizeof(C_State)];
+    C_State *C = new (&room) C_State();
+    lua_pushcfunction(L, wrap_helper);
+    lua_insert(L, 1);
+    lua_pushlightuserdata(L, (void *) C);
+    lua_insert(L, 2);
+    int status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
+    if (status != LUA_OK) {
+      C->~C_State();
+      lua_error(L);
+      abort(); // unreachable
+    }
+    C->~C_State();
+    return lua_gettop(L);
   }
 };
 
