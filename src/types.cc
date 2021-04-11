@@ -12,6 +12,7 @@
 #include <rime/gear/memory.h>
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
+#include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 
@@ -26,11 +27,11 @@ struct LuaType<optional<T>> {
       lua_pushnil(L);
   }
 
-  static optional<T> todata(lua_State *L, int i) {
+  static optional<T> &todata(lua_State *L, int i, C_State *C) {
     if (lua_type(L, i) == LUA_TNIL)
-      return {};
+      return C->alloc<optional<T>>();
     else
-      return LuaType<T>::todata(L, i);
+      return C->alloc<optional<T>>(LuaType<T>::todata(L, i, C));
   }
 };
 
@@ -40,7 +41,7 @@ namespace SegmentReg {
 
   T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
-  }
+  };
 
   string get_status(const T &t) {
     switch (t.status) {
@@ -286,12 +287,16 @@ namespace SegmentationReg {
     t.Reset(length);
   }
 
+  bool empty(T &t){
+	  return t.empty();
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    { "empty", WRAPMEM(T::empty) },
+    { "empty", WRAP(empty) },
     { "back", WRAP(back) },
     { "pop_back", WRAP(pop_back) },
     { "reset_length", WRAP(reset_length) },
@@ -359,8 +364,13 @@ namespace KeyEventReg {
   int modifier(const T &t) {
     return t.modifier();
   }
+  
+  an<T> make(const string &key) {
+    return New<T>(key) ;
+  }
 
   static const luaL_Reg funcs[] = {
+    { "KeyEvent", WRAP(make)  },
     { NULL, NULL },
   };
 
@@ -540,12 +550,16 @@ namespace CompositionReg {
     t.pop_back();
   }
 
+  bool empty(T &t){
+	  return t.empty();
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    { "empty", WRAPMEM(T::empty) },
+    { "empty", WRAP(empty) },
     { "back", WRAP(back) },
     { "pop_back", WRAP(pop_back) },
     { "push_back", WRAP(push_back) },
@@ -567,12 +581,13 @@ namespace CompositionReg {
 
 namespace SchemaReg {
   typedef Schema T;
-  T* make(string schema_id) {
-    return new T(schema_id);
-  }
+
+  an<T> make(const string &schema_id){
+    return New<T>(schema_id ) ;
+  };
 
   static const luaL_Reg funcs[] = {
-    {"Schema",WRAP(make)},
+    { "Schema", WRAP(make) },
     { NULL, NULL },
   };
 
@@ -968,13 +983,16 @@ namespace MemoryReg {
   // XXX: Currently the WRAP macro is not generic enough,
   // so that we need a raw function to get the lua state / parse variable args.
   int raw_make(lua_State *L) {
+    // TODO: fix the memory leak
+    C_State C;
+
     int n = lua_gettop(L);
     Lua *lua = Lua::from_state(L);
     Engine *engine = LuaType<Engine *>::todata(L, 1);
     Schema *schema = LuaType<Schema *>::todata(L, 2);
     string ns = "translator";
     if (n == 3)
-      ns = LuaType<string>::todata(L, 3);
+      ns = LuaType<string>::todata(L, 3, &C);
 
     Ticket translatorTicket;
     translatorTicket.engine = engine;
@@ -1159,6 +1177,76 @@ namespace KeySequenceReg {
   };
 }// KeySequence a vector of Keyevent
 
+namespace RimeApiReg {
+  string get_rime_version() {
+    RimeApi* rime = rime_get_api();
+    return string(rime->get_version());
+  }
+
+  string get_shared_data_dir() {
+    RimeApi* rime = rime_get_api();
+    return string(rime->get_shared_data_dir());
+  }
+
+  string get_user_data_dir() {
+    RimeApi* rime = rime_get_api();
+    return string(rime->get_user_data_dir());
+  }
+
+  string get_sync_dir() {
+    RimeApi* rime = rime_get_api();
+    return string(rime->get_sync_dir());
+  }
+
+  static const luaL_Reg funcs[]= {
+    { "get_rime_version", WRAP(get_rime_version) },
+    { "get_shared_data_dir", WRAP(get_shared_data_dir) },
+    { "get_user_data_dir",  WRAP(get_user_data_dir) },
+    { "get_sync_dir",  WRAP(get_sync_dir) },
+    { NULL, NULL },
+  };
+
+  void init(lua_State *L) {
+    lua_createtable(L, 0, 0);
+    luaL_setfuncs(L, funcs, 0);
+    lua_setglobal(L, "rime_api");
+  }
+}
+
+namespace SwitcherReg {
+  typedef Switcher T;
+
+  an<T> make(Engine *engine) {
+    return New<T>(engine);
+  }
+
+
+  static const luaL_Reg funcs[] = {
+    { "Switcher", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "select_next_schema", WRAPMEM(T::SelectNextSchema) },
+    { "is_auto_save", WRAPMEM(T::IsAutoSave) },
+    { "refresh_menu", WRAPMEM(T::RefreshMenu) },
+    { "activate", WRAPMEM(T::Activate) },
+    { "deactivate", WRAPMEM(T::Deactivate) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "attached_engine", WRAPMEM(T::attached_engine) },
+    { "user_config", WRAPMEM(T::user_config) },
+    { "active", WRAPMEM(T::active) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -1210,5 +1298,7 @@ void types_init(lua_State *L) {
   EXPORT(CommitEntryReg, L);
   EXPORT(PhraseReg, L);
   EXPORT(KeySequenceReg, L);
+  EXPORT(SwitcherReg, L);
   LogReg::init(L);
+  RimeApiReg::init(L);
 }

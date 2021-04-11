@@ -75,3 +75,10 @@ local associate_component = require("associate_component")
 associate_processor = associate_component.processor
 associate_translator = associate_component.translator
 associate_segmentor = associate_component.segmentor
+
+
+-- III. processors:
+
+-- switch_processor: 通过选择自定义的候选项来切换开关（以简繁切换和下一方案为例）
+-- 详见 `lua/switch.lua`
+switch_processor = require("switch")
