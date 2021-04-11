@@ -1,8 +1,15 @@
 
+-- local p= Projection() --  new obj
+-- p:load( ConfigList )  -- load from ConfigList 
+-- p:append(string)      -- append from  string
+
+
+
+
 local function init_func(env)
 
 	local config=env.engine.schema.config
-    -- load ConfigList  form  path
+	-- load ConfigList  form  schema path
 	local proedit_fmt_list = conifg:get_list("translastor/preedit_format")
 	-- print value 
 	for i=0,proedit_fmt_list.size do 
@@ -11,16 +18,20 @@ local function init_func(env)
 	--   create Projection obj
 	local p1=Projection()
 	p1:load(proedit_fmt_list)
-    
+
 	--  user create  Projection obj
+	--  create ConfigList obj 
 	local pfl2= ConfigList()
 	-- create ConfigValue    &  ConfigList  ust isnert( index, ConfigValue)  append()
 	local v1= ConfigValue("xlit|abc|xyz|")
 	pfl2:append(v1.element)
 	pfl2:append( ConfigValue("xlit|def|tuv|").element )  -- element referce to (ConfigItem *)  
 	pfl2:insert(1,ConfigValue("xlit|ghi|qrs|").element )
+
+	--   create Projection obj
 	local p2=Projection()
 	p2:load(pfl2)
+	p2:append("xlit|ijk|opq|") 
 	local str1= "abcdefg"
 	--   
 	print(str1 , p1:apply(str1), p2:apply(str1) )
