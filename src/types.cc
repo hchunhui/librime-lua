@@ -14,7 +14,7 @@
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
-#include <rime/algo/algebra.h>
+
 using namespace rime;
 
 template<typename T>
@@ -287,7 +287,7 @@ namespace SegmentationReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -358,7 +358,7 @@ namespace KeyEventReg {
   int modifier(const T &t) {
     return t.modifier();
   }
-  
+
   an<T> make(const string &key) {
     return New<T>(key) ;
   }
@@ -542,7 +542,7 @@ namespace CompositionReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -611,7 +611,7 @@ namespace ConfigValueReg {
   an<T> make(string s){
     return New<T>(s);
   };
-  
+
   optional<bool> get_bool(T &t) {
     bool v;
     if (t.GetBool( &v))
@@ -634,7 +634,6 @@ namespace ConfigValueReg {
       return v;
     else
       return optional<double>{};
-      
   }
 
   optional<string> get_string(T &t) {
@@ -660,7 +659,7 @@ namespace ConfigValueReg {
   }
 
   an<E> element(T &t){
-	    return (an<E>) &t ;
+    return (an<E>) &t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -673,8 +672,8 @@ namespace ConfigValueReg {
     {"get_int",WRAP(get_int)},
     {"get_double",WRAP(get_double)},
     {"set_bool", WRAPMEM(T::SetBool)},
-	{"set_int", WRAPMEM(T::SetInt)},
-	{"set_double", WRAPMEM(T::SetDouble)},
+    {"set_int", WRAPMEM(T::SetInt)},
+    {"set_double", WRAPMEM(T::SetDouble)},
     {"get_string",WRAP(get_string)},
     {"set_string",WRAP(set_string)},
     { NULL, NULL },
@@ -683,7 +682,7 @@ namespace ConfigValueReg {
   static const luaL_Reg vars_get[] = {
     {"value",WRAP(get_string)},
     {"type",WRAP(type)},
-	{"element",WRAP(element)},
+    {"element",WRAP(element)},
     { NULL, NULL },
   };
 
@@ -699,7 +698,7 @@ namespace ConfigListReg {
   an<T> make(){
     return New<T>();
   };
-  
+
   string type(T &t){
     switch (t.type()) {
     case T::kNull: return "kNull";
@@ -711,7 +710,7 @@ namespace ConfigListReg {
   }
 
   an<E> element(T &t){
-	    return (an<E>) &t ;
+    return (an<E>) &t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -734,7 +733,7 @@ namespace ConfigListReg {
   static const luaL_Reg vars_get[] = {
     {"size", WRAPMEM(T::size)},
     {"type",WRAP(type)},
-	{"element",WRAP(element)},
+    {"element",WRAP(element)},
     { NULL, NULL },
   };
 
@@ -819,9 +818,9 @@ namespace ConfigItemReg {
 //sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
 #define GET_(f_name,from ,rt, k_type) \
   an<rt> f_name( an<from> t) { \
-	  if (t->type() == from::k_type) \
-	    return std::dynamic_pointer_cast<rt> (t);\
-	  return nullptr;\
+    if (t->type() == from::k_type) \
+      return std::dynamic_pointer_cast<rt> (t);\
+    return nullptr;\
   }
 
   GET_( get_value,T,  V, kScalar );
@@ -844,14 +843,13 @@ namespace ConfigItemReg {
 
   static const luaL_Reg vars_get[] = {
     {"type",WRAP(type)},
-	{"empty",WRAPMEM(T::empty)},
+    {"empty",WRAPMEM(T::empty)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
     { NULL, NULL },
   };
-  
 }
 
 namespace ProjectionReg{
@@ -859,8 +857,7 @@ namespace ProjectionReg{
   an<T> make(){
     return New<T>();
   }
-  
-  
+
   string apply(T &t, const string &s){
     string res= s;
     if (t.Apply(&res))
@@ -887,7 +884,6 @@ namespace ProjectionReg{
   static const luaL_Reg vars_set[] = {
     { NULL, NULL },
   };
-  
 }
 
 namespace ConfigReg {
@@ -924,7 +920,7 @@ namespace ConfigReg {
     else
       return optional<string>{};
   }
-  
+
   // GetString : overload function
   bool set_string(T &t, const string &path, const string &value) {
     return t.SetString(path, value);
@@ -974,10 +970,10 @@ namespace ConfigReg {
     { "set_bool", WRAPMEM(T::SetBool) },
     { "set_int", WRAPMEM(T::SetInt) },
     { "set_double", WRAPMEM(T::SetDouble) },
-    { "set_string", WRAP(set_string) }, // redefine overload function 
+    { "set_string", WRAP(set_string) }, // redefine overload function
 
-    { "get_item", WRAP(get_item) }, // redefine overload function 
-    { "set_item", WRAP(set_item) }, // create new function 
+    { "get_item", WRAP(get_item) }, // redefine overload function
+    { "set_item", WRAP(set_item) }, // create new function
 
     //an<ConfigItem> GetItem(const string& path);
     //an<ConfigValue> GetValue(const string& path);
@@ -988,9 +984,9 @@ namespace ConfigReg {
     { "get_list", WRAPMEM(T::GetList) },
     { "get_map", WRAPMEM(T::GetMap) },
 
-    { "set_value", WRAP(set_value) }, // create new function 
-    { "set_list", WRAP(set_list) }, // create new function 
-    { "set_map", WRAP(set_map)}, // create new function 
+    { "set_value", WRAP(set_value) }, // create new function
+    { "set_list", WRAP(set_list) }, // create new function
+    { "set_map", WRAP(set_map)}, // create new function
 
     { "get_list_size", WRAPMEM(T::GetListSize) },
 
