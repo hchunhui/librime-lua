@@ -285,7 +285,7 @@ namespace SegmentationReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -356,7 +356,7 @@ namespace KeyEventReg {
   int modifier(const T &t) {
     return t.modifier();
   }
-  
+
   an<T> make(const string &key) {
     return New<T>(key) ;
   }
@@ -540,7 +540,7 @@ namespace CompositionReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
