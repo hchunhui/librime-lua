@@ -401,15 +401,19 @@ namespace KeyEventReg {
 namespace EngineReg {
   typedef Engine T;
 
+  static void apply_schema(T *engine, Schema &schema) {
+    engine->ApplySchema(&schema);
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     { "process_key", WRAPMEM(T::ProcessKey) },
-    { "apply_schema", WRAPMEM(T::ApplySchema) },
     { "compose", WRAPMEM(T::Compose)},
     { "commit_text", WRAPMEM(T::CommitText) },
+    { "apply_schema", WRAP(apply_schema) },
     { NULL, NULL },
   };
 
