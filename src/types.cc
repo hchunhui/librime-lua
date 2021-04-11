@@ -650,7 +650,7 @@ namespace ConfigValueReg {
     return "";
   }
 
-  an<E> element(T &t){
+  an<E> element(an<T> t){
 	    return (an<E>) &t ;
   }
 
@@ -701,7 +701,7 @@ namespace ConfigListReg {
     return "";
   }
 
-  an<E> element(T &t){
+  an<E> element(an<T> t){
 	    return (an<E>) &t ;
   }
 
@@ -760,7 +760,7 @@ namespace ConfigMapReg {
     return count;
   }
 
-  an<E> element(T &t){
+  an<E> element(an<T> t){
     return (an<E>) &t ;
   }
 
