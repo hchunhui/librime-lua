@@ -808,21 +808,21 @@ namespace ConfigItemReg {
 
   V* get_value(T &t){
     if (t.type() == T::kScalar)
-      return (V*)(  &t);
+      return (an<L>)(  &t);
     else
       return nullptr ;
   }
 
   L* get_list(T &t){
     if (t.type() == T::kList)
-       return (L*) &t;
+       return (an<L>) &t;
     else
       return nullptr ;
   }
 
   M* get_map(T &t){
     if (t.type() == T::kMap)
-      return (M*) &t;
+      return (an<M>) &t;
     else
       return nullptr ;
   }
