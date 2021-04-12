@@ -46,10 +46,10 @@ namespace SegmentReg {
 
   string get_status(const T &t) {
     switch (t.status) {
-    case T::kVoid: return "kVoid";
-    case T::kGuess: return "kGuess";
-    case T::kSelected: return "kSelected";
-    case T::kConfirmed: return "kConfirmed";
+      case T::kVoid: return "kVoid";
+      case T::kGuess: return "kGuess";
+      case T::kSelected: return "kSelected";
+      case T::kConfirmed: return "kConfirmed";
     }
     return "";
   }
@@ -64,7 +64,7 @@ namespace SegmentReg {
     else if (r == "kConfirmed")
       t.status = T::kConfirmed;
   }
-  
+
 
   static const luaL_Reg funcs[] = {
     { "Segment", WRAP(make) },
@@ -141,8 +141,8 @@ namespace CandidateReg {
   }
 
   an<T> make(const string type,
-                    size_t start, size_t end,
-                    const string text, const string comment)
+      size_t start, size_t end,
+      const string text, const string comment)
   {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
@@ -221,11 +221,11 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
-  { "exhausted", WRAPMEM(T::exhausted)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    { "exhausted", WRAPMEM(T::exhausted)},
     { NULL, NULL },
   };
 
@@ -600,56 +600,77 @@ namespace ConfigValueReg {
   an<T> make(string s){
     return New<T>(s);
   };
-  
-  optional<bool> get_bool(T &t) {
-    bool v;
-    if (t.GetBool( &v))
-      return v;
-    else
-      return {};
-  }
 
-  optional<int> get_int(T &t) {
-    int v;
-    if (t.GetInt( &v))
-      return v;
-    else
-      return optional<int>{};
-  }
+  //START_GENFUNC_GET_
+  //
+  //sed -n -e'/\/\/START_GENFUNC_GET_/,/\/\/END_GENFUNC_GET_/p' src/types.cc | gcc -E -
+  //#define DOT_( lname, rname ) lname.rname 
+#define GENFUNC_GET_( func_name, obj_func, rt_type ) \
+  optional<rt_type> func_name( T &t){\
+    rt_type v;\
+    if ( t.obj_func( &v ))\
+    return v;\
+    return optional<rt_type>{} ;\
+  };
 
-  optional<double> get_double(T &t) {
-    double v;
-    if (t.GetDouble( &v))
-      return v;
-    else
-      return optional<double>{};
-      
-  }
+  // <optional<rt_type> func_name(T &t) 
+  GENFUNC_GET_( get_bool  , GetBool  , bool );
+  GENFUNC_GET_( get_int   , GetInt   , int );
+  GENFUNC_GET_( get_double, GetDouble, double );
+  GENFUNC_GET_( get_string, GetString, string );
+#undef GENFUNC_GET_
+  //END_GENFUNC_GET_
 
-  optional<string> get_string(T &t) {
-    string v;
-    if (t.GetString( &v))
-      return v;
-    else
-      return optional<string>{};
-  }
+  /*
+     optional<bool> get_bool(T &t) {
+     bool v;
+     if (t.GetBool( &v))
+     return v;
+     else
+     return {};
+     }
 
+     optional<int> get_int(T &t) {
+     int v;
+     if (t.GetInt( &v))
+     return v;
+     else
+     return optional<int>{};
+     }
+
+     optional<double> get_double(T &t) {
+     double v;
+     if (t.GetDouble( &v))
+     return v;
+     else
+     return optional<double>{};
+
+     }
+
+     optional<string> get_string(T &t) {
+     string v;
+     if (t.GetString( &v))
+     return v;
+     else
+     return optional<string>{};
+     }
+     */
   bool set_string(T &t, const string &value) {
     return t.SetString( value);
   }
 
   string type(T &t){
     switch (t.type()) {
-    case T::kNull: return "kNull";
-    case T::kScalar: return "kScalar";
-    case T::kList: return "kList";
-    case T::kMap: return "kMap";
+      case T::kNull: return "kNull";
+      case T::kScalar: return "kScalar";
+      case T::kList: return "kList";
+      case T::kMap: return "kMap";
     }
     return "";
   }
 
   an<E> element(an<T> t){
-      return (an<E>) t ;
+    return (an<E>) t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -662,8 +683,8 @@ namespace ConfigValueReg {
     {"get_int",WRAP(get_int)},
     {"get_double",WRAP(get_double)},
     {"set_bool", WRAPMEM(T::SetBool)},
-  {"set_int", WRAPMEM(T::SetInt)},
-  {"set_double", WRAPMEM(T::SetDouble)},
+    {"set_int", WRAPMEM(T::SetInt)},
+    {"set_double", WRAPMEM(T::SetDouble)},
     {"get_string",WRAP(get_string)},
     {"set_string",WRAP(set_string)},
     { NULL, NULL },
@@ -672,7 +693,7 @@ namespace ConfigValueReg {
   static const luaL_Reg vars_get[] = {
     {"value",WRAP(get_string)},
     {"type",WRAP(type)},
-  {"element",WRAP(element)},
+    {"element",WRAP(element)},
     { NULL, NULL },
   };
 
@@ -688,19 +709,19 @@ namespace ConfigListReg {
   an<T> make(){
     return New<T>();
   };
-  
+
   string type(T &t){
     switch (t.type()) {
-    case T::kNull: return "kNull";
-    case T::kScalar: return "kScalar";
-    case T::kList: return "kList";
-    case T::kMap: return "kMap";
+      case T::kNull: return "kNull";
+      case T::kScalar: return "kScalar";
+      case T::kList: return "kList";
+      case T::kMap: return "kMap";
     }
     return "";
   }
 
   an<E> element(an<T> t){
-      return (an<E>) t ;
+    return (an<E>) t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -723,7 +744,7 @@ namespace ConfigListReg {
   static const luaL_Reg vars_get[] = {
     {"size", WRAPMEM(T::size)},
     {"type",WRAP(type)},
-  {"element",WRAP(element)},
+    {"element",WRAP(element)},
     { NULL, NULL },
   };
 
@@ -743,10 +764,10 @@ namespace ConfigMapReg {
 
   string type(T &t){
     switch (t.type()) {
-    case T::kNull: return "kNull";
-    case T::kScalar: return "kScalar";
-    case T::kList: return "kList";
-    case T::kMap: return "kMap";
+      case T::kNull: return "kNull";
+      case T::kScalar: return "kScalar";
+      case T::kList: return "kList";
+      case T::kMap: return "kMap";
     }
     return "";
   }
@@ -796,20 +817,20 @@ namespace ConfigItemReg {
 
   string type(T &t){
     switch (t.type()) {
-    case T::kNull: return "kNull";
-    case T::kScalar: return "kScalar";
-    case T::kList: return "kList";
-    case T::kMap: return "kMap";
+      case T::kNull: return "kNull";
+      case T::kScalar: return "kScalar";
+      case T::kList: return "kList";
+      case T::kMap: return "kMap";
     }
     return "";
   }
 
-//START_GET_
-//sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
+  //START_GET_
+  //sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
 #define GET_(f_name,from ,rt, k_type) \
   an<rt> f_name( an<from> t) { \
     if (t->type() == from::k_type) \
-      return std::dynamic_pointer_cast<rt> (t);\
+    return std::dynamic_pointer_cast<rt> (t);\
     return nullptr;\
   }
 
@@ -818,7 +839,7 @@ namespace ConfigItemReg {
   GET_( get_map,  T,  M, kMap );
 
 #undef GET_
-//END_GET_
+  //END_GET_
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -833,14 +854,14 @@ namespace ConfigItemReg {
 
   static const luaL_Reg vars_get[] = {
     {"type",WRAP(type)},
-  {"empty",WRAPMEM(T::empty)},
+    {"empty",WRAPMEM(T::empty)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
     { NULL, NULL },
   };
-  
+
 }
 
 namespace ProjectionReg{
@@ -848,8 +869,8 @@ namespace ProjectionReg{
   an<T> make(){
     return New<T>();
   }
-  
-  
+
+
   string apply(T &t, const string &s){
     string res= s;
     if (t.Apply(&res))
@@ -876,70 +897,111 @@ namespace ProjectionReg{
   static const luaL_Reg vars_set[] = {
     { NULL, NULL },
   };
-  
+
 }
 
 namespace ConfigReg {
   typedef Config T;
 
-  optional<bool> get_bool(T &t, const string &path) {
+  //START_GENFUNC_GET_
+  //
+  //sed -n -e'/\/\/START_GENFUNC_GET_/,/\/\/END_GENFUNC_GET_/p' src/types.cc | gcc -E -
+  //#define DOT_( lname, rname ) lname.rname 
+  //
+#define GENFUNC_GET_( func_name, obj_func, rt_type ) \
+  optional<rt_type> func_name( T &t, const string &path ){\
+    rt_type v;\
+    if ( t.obj_func( path, &v ))\
+    return v;\
+    return optional<rt_type>{} ;\
+  };
+
+
+  GENFUNC_GET_( get_bool  , GetBool  , bool );
+  GENFUNC_GET_( get_int   , GetInt   , int );
+  GENFUNC_GET_( get_double, GetDouble, double );
+  GENFUNC_GET_( get_string, GetString, string );
+#undef GENFUNC_GET_
+  //END_GENFUNC_GET_
+
+  /*  
+    optional<bool> get_bool(T &t, const string &path) {
     bool v;
     if (t.GetBool(path, &v))
-      return v;
+    return v;
     else
-      return {};
-  }
-
-  optional<int> get_int(T &t, const string &path) {
+    return optional<bool>{};
+    }
+    optional<int> get_int(T &t, const string &path) {
     int v;
     if (t.GetInt(path, &v))
-      return v;
+    return v;
     else
-      return optional<int>{};
-  }
+    return optional<int>{};
+    }
 
-  optional<double> get_double(T &t, const string &path) {
+    optional<double> get_double(T &t, const string &path) {
     double v;
     if (t.GetDouble(path, &v))
-      return v;
+    return v;
     else
-      return optional<double>{};
-  }
+    return optional<double>{};
+    }
 
-  optional<string> get_string(T &t, const string &path) {
+    optional<string> get_string(T &t, const string &path) {
     string v;
     if (t.GetString(path, &v))
-      return v;
+    return v;
     else
-      return optional<string>{};
-  }
-  
-  // GetString : overload function
-  bool set_string(T &t, const string &path, const string &value) {
-    return t.SetString(path, value);
-  }
+    return optional<string>{};
+    }
+    */
 
   // GetItem SetItem : overload function
   an<ConfigItem> get_item(T &t, const string & path){
     return t.GetItem(path);
   }
 
-  bool set_item(T &t ,const string &path, an<ConfigItem> item){
-    return t.SetItem(path,item);
+  // GetString : overload function
+  bool set_string(T &t, const string &path, const string &value) {
+    return t.SetString(path, value);
   }
 
-  bool set_value(T &t, const string &path,  an<ConfigValue>  value) {
-    return t.SetItem(path, value);
-  }
 
-  bool set_list(T &t, const string &path,  an<ConfigList>  value) {
-    return t.SetItem(path, value);
-  }
 
-  bool set_map(T &t, const string &path, an<ConfigMap> value) {
-    return t.SetItem(path, value);
-  }
+  //START_SET_CONFIG 
+  //
+  //sed  sed -n -e'/\/\/START_SET_/,/\/\/END_SET_/p' src/types.cc | gcc -E -
+#define GENFUNC_SET_( func_name, obj_type ) \
+  bool func_name( T &t, const string &path, obj_type value ){\
+    return t.SetItem(path, value );\
+  };
 
+  // bool func_name(T &t, const string &path, obj_type) 
+  GENFUNC_SET_( set_item, an<ConfigItem> );
+  GENFUNC_SET_( set_value, an<ConfigValue> );
+  GENFUNC_SET_( set_list, an<ConfigList> );
+  GENFUNC_SET_( set_map, an<ConfigMap> );
+#undef GENFUNC_SET_
+
+  //END_SET_
+  /*
+     bool set_item(T &t ,const string &path, an<ConfigItem> item){
+     return t.SetItem(path,item);
+     }
+
+     bool set_value(T &t, const string &path,  an<ConfigValue>  value) {
+     return t.SetItem(path, value);
+     }
+
+     bool set_list(T &t, const string &path,  an<ConfigList>  value) {
+     return t.SetItem(path, value);
+     }
+
+     bool set_map(T &t, const string &path, an<ConfigMap> value) {
+     return t.SetItem(path, value);
+     }
+     */
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -1004,11 +1066,11 @@ static int raw_connect(lua_State *L) {
 
   auto c = t.connect
     ([lua, o](I... i) {
-       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
+     auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
+     if (!r.ok()) {
+     auto e = r.get_err();
+     LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+     }
      });
 
   LuaType<boost::signals2::connection>::pushdata(L, c);
@@ -1219,28 +1281,28 @@ namespace SwitcherReg {
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
-  export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T &>::name(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T &>::name(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T *>::name(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T *>::name(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T &>::name(), NULL,                   \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T &>::name(), NULL,             \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<ns::T *>::name(), NULL,                   \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+    export_type(L, LuaType<const ns::T *>::name(), NULL,             \
+        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 
 void export_type(lua_State *L,
-                 const char *name, lua_CFunction gc,
-                 const luaL_Reg *funcs, const luaL_Reg *methods,
-                 const luaL_Reg *vars_get, const luaL_Reg *vars_set);
+    const char *name, lua_CFunction gc,
+    const luaL_Reg *funcs, const luaL_Reg *methods,
+    const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
