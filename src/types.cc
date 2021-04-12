@@ -16,7 +16,6 @@
 #include "lib/lua_templates.h"
 #include <rime/algo/algebra.h>
 
-#include "config.h"
 using namespace rime;
 
 template<typename T>
@@ -44,6 +43,7 @@ namespace SegmentReg {
     return Segment(start_pos, end_pos);
   }
 
+
   string get_status(const T &t) {
     switch (t.status) {
     case T::kVoid: return "kVoid";
@@ -64,6 +64,7 @@ namespace SegmentReg {
     else if (r == "kConfirmed")
       t.status = T::kConfirmed;
   }
+  
 
   static const luaL_Reg funcs[] = {
     { "Segment", WRAP(make) },
@@ -72,7 +73,6 @@ namespace SegmentReg {
 
   static const luaL_Reg methods[] = {
     { "clear", WRAPMEM(T::Clear) },
-    { "close", WRAPMEM(T::Close) },
     { "reopen", WRAPMEM(T::Reopen) },
     { "has_tag", WRAPMEM(T::HasTag) },
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
@@ -221,6 +221,7 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+  { "exhausted", WRAPMEM(T::exhausted)},
     { NULL, NULL },
   };
 
@@ -289,7 +290,7 @@ namespace SegmentationReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -535,7 +536,7 @@ namespace CompositionReg {
   }
 
   bool empty(T &t){
-	  return t.empty();
+    return t.empty();
   }
 
   static const luaL_Reg funcs[] = {
@@ -589,6 +590,259 @@ namespace SchemaReg {
   };
 }
 
+namespace ConfigValueReg {
+  typedef ConfigValue T;
+  typedef ConfigItem E;
+
+  // an<T> make(){
+  //  return New<T>();
+  // };
+  an<T> make(string s){
+    return New<T>(s);
+  };
+  
+  optional<bool> get_bool(T &t) {
+    bool v;
+    if (t.GetBool( &v))
+      return v;
+    else
+      return {};
+  }
+
+  optional<int> get_int(T &t) {
+    int v;
+    if (t.GetInt( &v))
+      return v;
+    else
+      return optional<int>{};
+  }
+
+  optional<double> get_double(T &t) {
+    double v;
+    if (t.GetDouble( &v))
+      return v;
+    else
+      return optional<double>{};
+      
+  }
+
+  optional<string> get_string(T &t) {
+    string v;
+    if (t.GetString( &v))
+      return v;
+    else
+      return optional<string>{};
+  }
+
+  bool set_string(T &t, const string &value) {
+    return t.SetString( value);
+  }
+
+  string type(T &t){
+    switch (t.type()) {
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
+    }
+    return "";
+  }
+
+  an<E> element(an<T> t){
+      return (an<E>) t ;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"ConfigValue", WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"get_bool",WRAP(get_bool)},
+    {"get_int",WRAP(get_int)},
+    {"get_double",WRAP(get_double)},
+    {"set_bool", WRAPMEM(T::SetBool)},
+  {"set_int", WRAPMEM(T::SetInt)},
+  {"set_double", WRAPMEM(T::SetDouble)},
+    {"get_string",WRAP(get_string)},
+    {"set_string",WRAP(set_string)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"value",WRAP(get_string)},
+    {"type",WRAP(type)},
+  {"element",WRAP(element)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"value",WRAP(set_string)},
+    { NULL, NULL },
+  };
+}
+namespace ConfigListReg {
+  typedef ConfigList T;
+  typedef ConfigItem E;
+
+  an<T> make(){
+    return New<T>();
+  };
+  
+  string type(T &t){
+    switch (t.type()) {
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
+    }
+    return "";
+  }
+
+  an<E> element(an<T> t){
+      return (an<E>) t ;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"ConfigList", WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"get_at", WRAPMEM(T::GetAt)},
+    {"get_value_at", WRAPMEM(T::GetValueAt)},
+    {"set_at", WRAPMEM(T::SetAt)},
+    {"append", WRAPMEM(T::Append)},
+    {"insert", WRAPMEM(T::Insert)},
+    {"clear", WRAPMEM(T::Clear)},
+    {"empty", WRAPMEM(T::empty)},
+    {"resize", WRAPMEM(T::Resize)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"size", WRAPMEM(T::size)},
+    {"type",WRAP(type)},
+  {"element",WRAP(element)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+
+namespace ConfigMapReg {
+  typedef ConfigMap T;
+  typedef ConfigItem E;
+
+  an<T> make(){
+    return New<T>();
+  }
+
+  string type(T &t){
+    switch (t.type()) {
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
+    }
+    return "";
+  }
+
+  size_t size(T &t){
+    size_t count=0;
+    for (auto it=t.begin(); it !=t.end();it++)
+      count++ ;
+    return count;
+  }
+
+  an<E> element(an<T> t){
+    return (an<E>) t ;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"ConfigMap", WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"set", WRAPMEM(T::Set)},
+    {"get", WRAPMEM(T::Get)},
+    {"get_value", WRAPMEM(T::GetValue)},
+    {"has_key", WRAPMEM(T::HasKey)},
+    {"clear", WRAPMEM(T::Clear)},
+    {"empty", WRAPMEM(T::empty)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"size", WRAP(size)},
+    {"type",WRAP(type)},
+    {"element",WRAP(element)},
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace ConfigItemReg {
+  typedef ConfigItem T;
+  typedef ConfigMap M;
+  typedef ConfigList L;
+  typedef ConfigValue V;
+
+  string type(T &t){
+    switch (t.type()) {
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
+    }
+    return "";
+  }
+
+//START_GET_
+//sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
+#define GET_(f_name,from ,rt, k_type) \
+  an<rt> f_name( an<from> t) { \
+    if (t->type() == from::k_type) \
+      return std::dynamic_pointer_cast<rt> (t);\
+    return nullptr;\
+  }
+
+  GET_( get_value,T,  V, kScalar );
+  GET_( get_list, T,  L, kList );
+  GET_( get_map,  T,  M, kMap );
+
+#undef GET_
+//END_GET_
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"get_value",WRAP(get_value)},
+    {"get_list",WRAP(get_list)},
+    {"get_map",WRAP(get_map)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"type",WRAP(type)},
+  {"empty",WRAPMEM(T::empty)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+  
+}
+
 namespace ProjectionReg{
   typedef Projection T;
   an<T> make(){
@@ -598,8 +852,10 @@ namespace ProjectionReg{
   
   string apply(T &t, const string &s){
     string res= s;
-    if (t.Apply(&res)) return res;  // true 
-    return nullptr ;    // nullptr == nil == false 
+    if (t.Apply(&res))
+      return res;
+    else
+      return "";
   }
 
   static const luaL_Reg funcs[] = {
@@ -622,6 +878,124 @@ namespace ProjectionReg{
   };
   
 }
+
+namespace ConfigReg {
+  typedef Config T;
+
+  optional<bool> get_bool(T &t, const string &path) {
+    bool v;
+    if (t.GetBool(path, &v))
+      return v;
+    else
+      return {};
+  }
+
+  optional<int> get_int(T &t, const string &path) {
+    int v;
+    if (t.GetInt(path, &v))
+      return v;
+    else
+      return optional<int>{};
+  }
+
+  optional<double> get_double(T &t, const string &path) {
+    double v;
+    if (t.GetDouble(path, &v))
+      return v;
+    else
+      return optional<double>{};
+  }
+
+  optional<string> get_string(T &t, const string &path) {
+    string v;
+    if (t.GetString(path, &v))
+      return v;
+    else
+      return optional<string>{};
+  }
+  
+  // GetString : overload function
+  bool set_string(T &t, const string &path, const string &value) {
+    return t.SetString(path, value);
+  }
+
+  // GetItem SetItem : overload function
+  an<ConfigItem> get_item(T &t, const string & path){
+    return t.GetItem(path);
+  }
+
+  bool set_item(T &t ,const string &path, an<ConfigItem> item){
+    return t.SetItem(path,item);
+  }
+
+  bool set_value(T &t, const string &path,  an<ConfigValue>  value) {
+    return t.SetItem(path, value);
+  }
+
+  bool set_list(T &t, const string &path,  an<ConfigList>  value) {
+    return t.SetItem(path, value);
+  }
+
+  bool set_map(T &t, const string &path, an<ConfigMap> value) {
+    return t.SetItem(path, value);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    //bool LoadFromStream(std::istream& stream);
+    //bool SaveToStream(std::ostream& stream);
+    { "load_from_file", WRAPMEM(T::LoadFromFile) },
+    { "save_to_file", WRAPMEM(T::SaveToFile) },
+
+    { "is_null", WRAPMEM(T::IsNull) },
+    { "is_value", WRAPMEM(T::IsValue) },
+    { "is_list", WRAPMEM(T::IsList) },
+    { "is_map", WRAPMEM(T::IsMap) },
+
+    { "get_bool", WRAP(get_bool) },
+    { "get_int", WRAP(get_int) },
+    { "get_double", WRAP(get_double) },
+    { "get_string", WRAP(get_string) },
+
+    { "set_bool", WRAPMEM(T::SetBool) },
+    { "set_int", WRAPMEM(T::SetInt) },
+    { "set_double", WRAPMEM(T::SetDouble) },
+    { "set_string", WRAP(set_string) }, // redefine overload function 
+
+    { "get_item", WRAP(get_item) }, // redefine overload function 
+    { "set_item", WRAP(set_item) }, // create new function 
+
+    //an<ConfigItem> GetItem(const string& path);
+    //an<ConfigValue> GetValue(const string& path);
+    //RIME_API an<ConfigList> GetList(const string& path);
+    //RIME_API an<ConfigMap> GetMap(const string& path);
+
+    { "get_value", WRAPMEM(T::GetValue) },
+    { "get_list", WRAPMEM(T::GetList) },
+    { "get_map", WRAPMEM(T::GetMap) },
+
+    { "set_value", WRAP(set_value) }, // create new function 
+    { "set_list", WRAP(set_list) }, // create new function 
+    { "set_map", WRAP(set_map)}, // create new function 
+
+    { "get_list_size", WRAPMEM(T::GetListSize) },
+
+    //RIME_API bool SetItem(const string& path, an<ConfigItem> item);
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 template<typename T, typename ... I>
 static int raw_connect(lua_State *L) {
   Lua *lua = Lua::from_state(L);
@@ -893,6 +1267,7 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(SwitcherReg, L);
+
   LogReg::init(L);
   RimeApiReg::init(L);
 }
