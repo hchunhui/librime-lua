@@ -369,6 +369,10 @@ namespace KeyEventReg {
     return New<T>(key) ;
   }
 
+  an<T> make(const string &key) {
+    return New<T>(key) ;
+  }
+
   static const luaL_Reg funcs[] = {
     { "KeyEvent", WRAP(make)  },
     { NULL, NULL },
