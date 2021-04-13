@@ -27,11 +27,11 @@ struct LuaType<optional<T>> {
       lua_pushnil(L);
   }
 
-  static optional<T> todata(lua_State *L, int i) {
+  static optional<T> &todata(lua_State *L, int i, C_State *C) {
     if (lua_type(L, i) == LUA_TNIL)
-      return {};
+      return C->alloc<optional<T>>();
     else
-      return LuaType<T>::todata(L, i);
+      return C->alloc<optional<T>>(LuaType<T>::todata(L, i, C));
   }
 };
 
@@ -42,7 +42,6 @@ namespace SegmentReg {
   T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
   };
-
 
   string get_status(const T &t) {
     switch (t.status) {
@@ -362,6 +361,10 @@ namespace KeyEventReg {
     return t.modifier();
   }
   
+  an<T> make(const string &key) {
+    return New<T>(key) ;
+  }
+
   an<T> make(const string &key) {
     return New<T>(key) ;
   }
