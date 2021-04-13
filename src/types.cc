@@ -1349,6 +1349,9 @@ void types_init(lua_State *L) {
   EXPORT(TranslatorReg , L);
   EXPORT(TranslatorOptionsReg , L);
   EXPORT(MemoryReg , L);
+  EXPORT(TableTranslatorReg, L);
+  EXPORT(ScriptTranslatorReg, L);
+
 
   LogReg::init(L);
   RimeApiReg::init(L);
