@@ -9,11 +9,11 @@
 #ifndef __TRANSLATOR_H
 #define __TRANSLATOR_H
 
-
-#include <rime/ticket.h>
-#include <rime/gear/table_translator.h>
-#include <rime/dict/corrector.h>   // StriptTranslator
 #include <rime/gear/script_translator.h>
+#include <rime/dict/corrector.h>   // StriptTranslator
+#include <rime/gear/table_translator.h>
+#include <rime/gear/unity_table_encoder.h> //table_translator
+#include <rime/gear/poet.h>
 
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
@@ -133,92 +133,92 @@ namespace TranslatorReg {
   };
 }
 
-/*
-   namespace TableTranslatorReg {
-   typedef TableTranslator T;
-   typedef Translator TT;
-   typedef Memory M;
-   typedef TranslatorOptions TO;
 
-// typedef Ticket TT
-an<T> make(const Ticket & tt ){
-return New <T>(tt);
-}
-an<TT> get_translator(T &t) {
-return (an<TT>) &t;
-}
-an<M>  get_memory(T &t) {
-return (an<M>) &t ;
-}
-an<TO>  get_option(T &t) {
-return (an<TO>) &t ;
-}
+namespace TableTranslatorReg {
+  typedef TableTranslator T;
+  typedef Translator TT;
+  typedef Memory M;
+  typedef TranslatorOptions TO;
+
+  // typedef Ticket TT
+  an<T> make(const Ticket & tt ){
+    return New <T>(tt);
+  }
+  an<TT> get_translator(T &t) {
+    return (an<TT>) &t;
+  }
+  an<M>  get_memory(T &t) {
+    return (an<M>) &t ;
+  }
+  an<TO>  get_option(T &t) {
+    return (an<TO>) &t ;
+  }
 
 
-static const luaL_Reg funcs[] = {
-{"TableTranslator",WRAP(make)},
-{ NULL, NULL },
-};
+  static const luaL_Reg funcs[] = {
+    {"TableTranslator",WRAP(make)},
+    { NULL, NULL },
+  };
 
-static const luaL_Reg methods[] = {
-{"query", WRAPMEM(T::Query)}, // translator.h_
-{ NULL, NULL },
-};
+  static const luaL_Reg methods[] = {
+    {"query", WRAPMEM(T::Query)}, // translator.h_
+    { NULL, NULL },
+  };
 
-// gear/translator_common.h   TranslatorOption
-static const luaL_Reg vars_get[] = {
-{"translator",WRAP(get_translator)},
-{"memory",WRAP(get_memory)},
-{"option", WRAP(get_option)},
-{ NULL, NULL },
-};
+  // gear/translator_common.h   TranslatorOption
+  static const luaL_Reg vars_get[] = {
+    {"translator",WRAP(get_translator)},
+    {"memory",WRAP(get_memory)},
+    {"option", WRAP(get_option)},
+    { NULL, NULL },
+  };
 
-static const luaL_Reg vars_set[] = {
-{ NULL, NULL },
-};
-}
-*/
-/*
-   namespace ScriptTranslatorReg {
-   typedef ScriptTranslator T;
-   typedef Translator TT;
-   typedef Memory M;
-   typedef TranslatorOptions TO;
-
-// typedef Ticket TT
-an<T> make( Ticket & tt ){
-return New <T>(tt);
-}
-an<TT> get_translator(T &t) {
-return (an<TT>) &t;
-}
-an<M>  get_memory(T &t) {
-return (an<M>) &t ;
-}
-an<TO>  get_option(T &t) {
-return (an<TO>) &t ;
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
 }
 
 
-static const luaL_Reg funcs[] = {
-{"ScriptTranslator",WRAP(make)},
-{ NULL, NULL },
-};
+namespace ScriptTranslatorReg {
+  typedef ScriptTranslator T;
+  typedef Translator TT;
+  typedef Memory M;
+  typedef TranslatorOptions TO;
 
-static const luaL_Reg methods[] = {
-{"query", WRAPMEM(T::Query)}, // translator.h_
-{ NULL, NULL },
-};
+  // typedef Ticket TT
+  an<T> make( Ticket & tt ){
+    return New <T>(tt);
+  }
+  an<TT> get_translator(T &t) {
+    return (an<TT>) &t;
+  }
+  an<M>  get_memory(T &t) {
+    return (an<M>) &t ;
+  }
+  an<TO>  get_option(T &t) {
+    return (an<TO>) &t ;
+  }
 
-// gear/translator_common.h   TranslatorOption
-static const luaL_Reg vars_get[] = {
-{ NULL, NULL },
-};
 
-static const luaL_Reg vars_set[] = {
-{ NULL, NULL },
-};
+  static const luaL_Reg funcs[] = {
+    {"ScriptTranslator",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"query", WRAPMEM(T::Query)}, // translator.h_
+    { NULL, NULL },
+  };
+
+  // gear/translator_common.h   TranslatorOption
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
 }
-*/
+
 
 #endif /* !TRANSLATOR_H */
