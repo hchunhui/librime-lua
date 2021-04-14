@@ -243,26 +243,6 @@ namespace TranslationReg {
   };
 }
 
-namespace TableTranslatorReg {
-  typedef ScriptTranslator T;
-  //typedef ConfigValue T;
-
-  static const luaL_Reg funcs[] = {
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg methods[] = {
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_get[] = {
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_set[] = {
-    { NULL, NULL },
-  };
-}
 
 namespace ReverseDbReg {
   typedef ReverseDb T;
@@ -988,7 +968,6 @@ void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
   EXPORT(CandidateReg, L);
   EXPORT(TranslationReg, L);
-  EXPORT(TableTranslatorReg, L);
   EXPORT(ReverseDbReg, L);
   EXPORT(SegmentationReg, L);
   EXPORT(MenuReg, L);
