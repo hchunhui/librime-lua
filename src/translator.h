@@ -14,6 +14,9 @@
 #include <rime/gear/table_translator.h>
 #include <rime/gear/unity_table_encoder.h> //table_translator
 #include <rime/gear/poet.h>
+// lookup  
+#include <boost/algorithm/string.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
@@ -139,6 +142,7 @@ namespace TableTranslatorReg {
   typedef Translator TT;
   typedef Memory M;
   typedef TranslatorOptions TO;
+  typedef Translation TTN;
 
   // typedef Ticket TT
   an<T> make(const Ticket & tt ){
@@ -154,6 +158,50 @@ namespace TableTranslatorReg {
     return (an<TO>) &t ;
   }
 
+  an<TTN> lookup( T &t,
+      const string input,
+      int start, int end,
+      int limit =0,
+      bool enable_user_dict_=false
+      )
+  {
+    // dict
+    bool predictive_=false;
+    auto dict=t.dict();
+    DictEntryIterator iter;
+    auto encoder= t.encoder();
+    if (dict && dict->loaded()) {
+      dict->LookupWords( &iter, input,predictive_,limit );
+    }
+
+    // user_dict
+    string code = input;
+    boost::trim_right_if(code, boost::is_any_of(t.delimiters()));
+    UserDictEntryIterator uter;
+    auto user_dict=t.user_dict();
+    bool enable_user_dict = enable_user_dict_ && user_dict &&
+      user_dict->loaded() && !t.IsUserDictDisabledFor(input);
+    if (enable_user_dict) {
+      user_dict->LookupWords(&uter,code,predictive_,limit);
+      if (encoder && encoder->loaded() ) {
+        encoder->LookupPhrases(&uter, code, predictive_ ,limit );
+      }
+    }
+    // create translation
+    auto language= t.language();
+    string preedit=input;
+    t.preedit_formatter().Apply(&preedit);
+    an<Translation> translation;
+
+    if (!iter.exhausted() || !uter.exhausted() )
+      translation= Cached<TableTranslation>(
+          &t , language, input, start, end, preedit, std::move(iter), std::move(uter) );
+
+    if (translation && translation->exhausted() ){
+      translation.reset();
+    }
+    return translation;
+  }
 
   static const luaL_Reg funcs[] = {
     {"TableTranslator",WRAP(make)},
@@ -162,6 +210,7 @@ namespace TableTranslatorReg {
 
   static const luaL_Reg methods[] = {
     {"query", WRAPMEM(T::Query)}, // translator.h_
+    {"lookup",WRAP(lookup)},
     { NULL, NULL },
   };
 
