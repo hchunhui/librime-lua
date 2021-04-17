@@ -1309,7 +1309,7 @@ namespace MemoryReg {
 
   // XXX: Currently the WRAP macro is not generic enough,
   // so that we need a raw function to get the lua state / parse variable args.
-  int raw_make(lua_State *L,const Ticket ticket) {
+  int raw_make(lua_State *L,const Ticket &ticket) {
     int n = lua_gettop(L);
     Lua *lua = Lua::from_state(L);
     if (n < 2)
