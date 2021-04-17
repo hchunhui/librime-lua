@@ -1309,13 +1309,14 @@ namespace MemoryReg {
 
   // XXX: Currently the WRAP macro is not generic enough,
   // so that we need a raw function to get the lua state / parse variable args.
-  int raw_make(lua_State *L,const Ticket &ticket) {
+  int raw_make(lua_State *L) {
     int n = lua_gettop(L);
     Lua *lua = Lua::from_state(L);
     if (n < 1)
       return 0;
 
-    an<T> memoli = New<T>(lua, ticket);
+    an<Ticket> ticket = LuaType<an<Ticket>>::todata(L, 1); 
+    an<T> memoli = New<T>(lua, *ticket); 
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }
@@ -1586,7 +1587,12 @@ namespace TicketReg {
     {"klass" ,WRAPMEM_GET(T::klass)},
     { NULL, NULL },
   };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
 }
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
