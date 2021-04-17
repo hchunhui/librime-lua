@@ -1604,6 +1604,60 @@ namespace SwitcherReg {
   };
 }
 
+namespace TicketReg {
+  typedef Ticket T;
+  an<T> make(Engine  *e,const string &ns) {
+    return New <T>(e,ns);
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Ticket",WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"engine" ,WRAPMEM_GET(T::engine)},
+    {"schema" ,WRAPMEM_GET(T::schema)},
+    {"name_space" ,WRAPMEM_GET(T::name_space)},
+    {"klass" ,WRAPMEM_GET(T::klass)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"engine" ,WRAPMEM_SET(T::engine)},
+    {"schema" ,WRAPMEM_SET(T::schema)},
+    {"name_space" ,WRAPMEM_SET(T::name_space)},
+    {"klass" ,WRAPMEM_SET(T::klass)},
+    { NULL, NULL },
+  };
+}
+
+namespace TranslatorReg {
+  typedef Translator T;
+
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"query", WRAPMEM(T::Query)}, // translator.h_
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
