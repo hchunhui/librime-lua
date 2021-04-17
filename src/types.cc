@@ -658,8 +658,8 @@ namespace ConfigValueReg {
     return "";
   }
 
-  an<E> element(T &t){
-    return (an<E>) &t ;
+  an<E> element(an<T> t){
+    return t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -709,8 +709,8 @@ namespace ConfigListReg {
     return "";
   }
 
-  an<E> element(T &t){
-    return (an<E>) &t ;
+  an<E> element(an<T> t){
+    return t;
   }
 
   static const luaL_Reg funcs[] = {
@@ -768,8 +768,8 @@ namespace ConfigMapReg {
     return count;
   }
 
-  an<E> element(T &t){
-    return (an<E>) &t ;
+  an<E> element(an<T> t){
+    return t ;
   }
 
   static const luaL_Reg funcs[] = {
