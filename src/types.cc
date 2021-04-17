@@ -18,7 +18,6 @@
 #include "translator.h"
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
-#include <rime/algo/algebra.h>
 
 using namespace rime;
 
@@ -49,10 +48,10 @@ namespace SegmentReg {
 
   string get_status(const T &t) {
     switch (t.status) {
-      case T::kVoid: return "kVoid";
-      case T::kGuess: return "kGuess";
-      case T::kSelected: return "kSelected";
-      case T::kConfirmed: return "kConfirmed";
+    case T::kVoid: return "kVoid";
+    case T::kGuess: return "kGuess";
+    case T::kSelected: return "kSelected";
+    case T::kConfirmed: return "kConfirmed";
     }
     return "";
   }
@@ -68,7 +67,6 @@ namespace SegmentReg {
       t.status = T::kConfirmed;
   }
 
-
   static const luaL_Reg funcs[] = {
     { "Segment", WRAP(make) },
     { NULL, NULL },
@@ -76,6 +74,7 @@ namespace SegmentReg {
 
   static const luaL_Reg methods[] = {
     { "clear", WRAPMEM(T::Clear) },
+    { "close", WRAPMEM(T::Close) },
     { "reopen", WRAPMEM(T::Reopen) },
     { "has_tag", WRAPMEM(T::HasTag) },
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
@@ -144,8 +143,8 @@ namespace CandidateReg {
   }
 
   an<T> make(const string type,
-      size_t start, size_t end,
-      const string text, const string comment)
+                    size_t start, size_t end,
+                    const string text, const string comment)
   {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
@@ -369,7 +368,7 @@ namespace KeyEventReg {
   int modifier(const T &t) {
     return t.modifier();
   }
-  
+
   an<T> make(const string &key) {
     return New<T>(key) ;
   }
@@ -908,63 +907,36 @@ namespace ProjectionReg{
 namespace ConfigReg {
   typedef Config T;
 
-  //START_GENFUNC_GET_
-  //
-  //sed -n -e'/\/\/START_GENFUNC_GET_/,/\/\/END_GENFUNC_GET_/p' src/types.cc | gcc -E -
-  //#define DOT_( lname, rname ) lname.rname 
-  //
-#define GENFUNC_GET_( func_name, obj_func, rt_type ) \
-  optional<rt_type> func_name( T &t, const string &path ){\
-    rt_type v;\
-    if ( t.obj_func( path, &v ))\
-    return v;\
-    return optional<rt_type>{} ;\
-  };
-
-
-  GENFUNC_GET_( get_bool  , GetBool  , bool );
-  GENFUNC_GET_( get_int   , GetInt   , int );
-  GENFUNC_GET_( get_double, GetDouble, double );
-  GENFUNC_GET_( get_string, GetString, string );
-#undef GENFUNC_GET_
-  //END_GENFUNC_GET_
-
-  /*  
-    optional<bool> get_bool(T &t, const string &path) {
+  optional<bool> get_bool(T &t, const string &path) {
     bool v;
     if (t.GetBool(path, &v))
-    return v;
+      return v;
     else
-    return optional<bool>{};
-    }
-    optional<int> get_int(T &t, const string &path) {
+      return {};
+  }
+
+  optional<int> get_int(T &t, const string &path) {
     int v;
     if (t.GetInt(path, &v))
-    return v;
+      return v;
     else
-    return optional<int>{};
-    }
+      return optional<int>{};
+  }
 
-    optional<double> get_double(T &t, const string &path) {
+  optional<double> get_double(T &t, const string &path) {
     double v;
     if (t.GetDouble(path, &v))
-    return v;
+      return v;
     else
-    return optional<double>{};
-    }
+      return optional<double>{};
+  }
 
-    optional<string> get_string(T &t, const string &path) {
+  optional<string> get_string(T &t, const string &path) {
     string v;
     if (t.GetString(path, &v))
-    return v;
+      return v;
     else
-    return optional<string>{};
-    }
-    */
-
-  // GetItem SetItem : overload function
-  an<ConfigItem> get_item(T &t, const string & path){
-    return t.GetItem(path);
+      return optional<string>{};
   }
 
   // GetString : overload function
@@ -1057,11 +1029,11 @@ static int raw_connect(lua_State *L) {
 
   auto c = t.connect
     ([lua, o](I... i) {
-     auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-     if (!r.ok()) {
-     auto e = r.get_err();
-     LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-     }
+       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
+       if (!r.ok()) {
+         auto e = r.get_err();
+         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+       }
      });
 
   LuaType<boost::signals2::connection>::pushdata(L, c);
@@ -1661,28 +1633,28 @@ namespace TranslatorReg {
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
-    export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<ns::T &>::name(), NULL,                   \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<const ns::T &>::name(), NULL,             \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<ns::T *>::name(), NULL,                   \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-    export_type(L, LuaType<const ns::T *>::name(), NULL,             \
-        ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<ns::T &>::name(), NULL,                   \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T &>::name(), NULL,             \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<ns::T *>::name(), NULL,                   \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
+  export_type(L, LuaType<const ns::T *>::name(), NULL,             \
+              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 
 void export_type(lua_State *L,
-    const char *name, lua_CFunction gc,
-    const luaL_Reg *funcs, const luaL_Reg *methods,
-    const luaL_Reg *vars_get, const luaL_Reg *vars_set);
+                 const char *name, lua_CFunction gc,
+                 const luaL_Reg *funcs, const luaL_Reg *methods,
+                 const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
@@ -1715,15 +1687,12 @@ void types_init(lua_State *L) {
   EXPORT(PhraseReg, L);
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
-  // lua/src/traslator.h
   EXPORT(TicketReg , L);
   EXPORT(TranslatorReg , L);
+  // lua/src/traslator.h
   EXPORT(TranslatorOptionsReg , L);
-  EXPORT(MemoryReg , L);
   EXPORT(TableTranslatorReg, L);
   EXPORT(ScriptTranslatorReg, L);
-
-
   LogReg::init(L);
   RimeApiReg::init(L);
 }
