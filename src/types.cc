@@ -11,6 +11,9 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
+#include <rime/gear/memory.h>
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
 #include "translator.h"
 #include "lua_gears.h"
@@ -326,8 +329,13 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
+    
+  an<T> make() {
+    return New<T>();
+  }
 
   static const luaL_Reg funcs[] = {
+    { "Menu", WRAP(make) },
     { NULL, NULL },
   };
 
@@ -398,14 +406,17 @@ namespace KeyEventReg {
 namespace EngineReg {
   typedef Engine T;
 
-  static void apply_schema(T *engine, Schema &schema){
-    engine->ApplySchema( &schema);
+  static void apply_schema(T *engine, Schema &schema) {
+    engine->ApplySchema(&schema);
   }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
+    { "process_key", WRAPMEM(T::ProcessKey) },
+    { "compose", WRAPMEM(T::Compose)},
     { "commit_text", WRAPMEM(T::CommitText) },
     { "apply_schema", WRAP(apply_schema) },
     { NULL, NULL },
@@ -532,6 +543,10 @@ namespace PreeditReg {
 namespace CompositionReg {
   typedef Composition T;
 
+  Segmentation *toSegmentation(T &t) {
+    return dynamic_cast<Segmentation *>(&t);
+  }
+  
   Segment &back(T &t) {
     return t.back();
   }
@@ -560,6 +575,7 @@ namespace CompositionReg {
     // XXX
     { "has_finished_composition", WRAPMEM(T::HasFinishedComposition) },
     { "get_prompt", WRAPMEM(T::GetPrompt) },
+    { "toSegmentation" , WRAP(toSegmentation) },
     { NULL, NULL },
   };
 
@@ -615,76 +631,54 @@ namespace ConfigValueReg {
     return New<T>(s);
   };
 
-  //START_GENFUNC_GET_
-  //
-  //sed -n -e'/\/\/START_GENFUNC_GET_/,/\/\/END_GENFUNC_GET_/p' src/types.cc | gcc -E -
-  //#define DOT_( lname, rname ) lname.rname 
-#define GENFUNC_GET_( func_name, obj_func, rt_type ) \
-  optional<rt_type> func_name( T &t){\
-    rt_type v;\
-    if ( t.obj_func( &v ))\
-    return v;\
-    return optional<rt_type>{} ;\
-  };
+  optional<bool> get_bool(T &t) {
+    bool v;
+    if (t.GetBool( &v))
+      return v;
+    else
+      return {};
+  }
 
-  // <optional<rt_type> func_name(T &t) 
-  GENFUNC_GET_( get_bool  , GetBool  , bool );
-  GENFUNC_GET_( get_int   , GetInt   , int );
-  GENFUNC_GET_( get_double, GetDouble, double );
-  GENFUNC_GET_( get_string, GetString, string );
-#undef GENFUNC_GET_
-  //END_GENFUNC_GET_
+  optional<int> get_int(T &t) {
+    int v;
+    if (t.GetInt( &v))
+      return v;
+    else
+      return optional<int>{};
+  }
 
-  /*
-     optional<bool> get_bool(T &t) {
-     bool v;
-     if (t.GetBool( &v))
-     return v;
-     else
-     return {};
-     }
+  optional<double> get_double(T &t) {
+    double v;
+    if (t.GetDouble( &v))
+      return v;
+    else
+      return optional<double>{};
+  }
 
-     optional<int> get_int(T &t) {
-     int v;
-     if (t.GetInt( &v))
-     return v;
-     else
-     return optional<int>{};
-     }
+  optional<string> get_string(T &t) {
+    string v;
+    if (t.GetString( &v))
+      return v;
+    else
+      return optional<string>{};
+  }
 
-     optional<double> get_double(T &t) {
-     double v;
-     if (t.GetDouble( &v))
-     return v;
-     else
-     return optional<double>{};
-
-     }
-
-     optional<string> get_string(T &t) {
-     string v;
-     if (t.GetString( &v))
-     return v;
-     else
-     return optional<string>{};
-     }
-     */
   bool set_string(T &t, const string &value) {
     return t.SetString( value);
   }
 
   string type(T &t){
     switch (t.type()) {
-      case T::kNull: return "kNull";
-      case T::kScalar: return "kScalar";
-      case T::kList: return "kList";
-      case T::kMap: return "kMap";
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
     }
     return "";
   }
 
   an<E> element(an<T> t){
-    return (an<E>) t ;
+    return t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -726,16 +720,16 @@ namespace ConfigListReg {
 
   string type(T &t){
     switch (t.type()) {
-      case T::kNull: return "kNull";
-      case T::kScalar: return "kScalar";
-      case T::kList: return "kList";
-      case T::kMap: return "kMap";
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
     }
     return "";
   }
 
   an<E> element(an<T> t){
-    return (an<E>) t ;
+    return t;
   }
 
   static const luaL_Reg funcs[] = {
@@ -778,10 +772,10 @@ namespace ConfigMapReg {
 
   string type(T &t){
     switch (t.type()) {
-      case T::kNull: return "kNull";
-      case T::kScalar: return "kScalar";
-      case T::kList: return "kList";
-      case T::kMap: return "kMap";
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
     }
     return "";
   }
@@ -794,7 +788,7 @@ namespace ConfigMapReg {
   }
 
   an<E> element(an<T> t){
-    return (an<E>) t ;
+    return t ;
   }
 
   static const luaL_Reg funcs[] = {
@@ -831,20 +825,20 @@ namespace ConfigItemReg {
 
   string type(T &t){
     switch (t.type()) {
-      case T::kNull: return "kNull";
-      case T::kScalar: return "kScalar";
-      case T::kList: return "kList";
-      case T::kMap: return "kMap";
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
     }
     return "";
   }
 
-  //START_GET_
-  //sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
+//START_GET_
+//sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
 #define GET_(f_name,from ,rt, k_type) \
   an<rt> f_name( an<from> t) { \
     if (t->type() == from::k_type) \
-    return std::dynamic_pointer_cast<rt> (t);\
+      return std::dynamic_pointer_cast<rt> (t);\
     return nullptr;\
   }
 
@@ -853,7 +847,7 @@ namespace ConfigItemReg {
   GET_( get_map,  T,  M, kMap );
 
 #undef GET_
-  //END_GET_
+//END_GET_
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -875,7 +869,6 @@ namespace ConfigItemReg {
   static const luaL_Reg vars_set[] = {
     { NULL, NULL },
   };
-
 }
 
 namespace ProjectionReg{
@@ -883,7 +876,6 @@ namespace ProjectionReg{
   an<T> make(){
     return New<T>();
   }
-
 
   string apply(T &t, const string &s){
     string res= s;
@@ -911,7 +903,6 @@ namespace ProjectionReg{
   static const luaL_Reg vars_set[] = {
     { NULL, NULL },
   };
-
 }
 
 namespace ConfigReg {
@@ -981,41 +972,27 @@ namespace ConfigReg {
     return t.SetString(path, value);
   }
 
+  // GetItem SetItem : overload function
+  an<ConfigItem> get_item(T &t, const string & path){
+    return t.GetItem(path);
+  }
 
+  bool set_item(T &t ,const string &path, an<ConfigItem> item){
+    return t.SetItem(path,item);
+  }
 
-  //START_SET_CONFIG 
-  //
-  //sed  sed -n -e'/\/\/START_SET_/,/\/\/END_SET_/p' src/types.cc | gcc -E -
-#define GENFUNC_SET_( func_name, obj_type ) \
-  bool func_name( T &t, const string &path, obj_type value ){\
-    return t.SetItem(path, value );\
-  };
+  bool set_value(T &t, const string &path,  an<ConfigValue>  value) {
+    return t.SetItem(path, value);
+  }
 
-  // bool func_name(T &t, const string &path, obj_type) 
-  GENFUNC_SET_( set_item, an<ConfigItem> );
-  GENFUNC_SET_( set_value, an<ConfigValue> );
-  GENFUNC_SET_( set_list, an<ConfigList> );
-  GENFUNC_SET_( set_map, an<ConfigMap> );
-#undef GENFUNC_SET_
+  bool set_list(T &t, const string &path,  an<ConfigList>  value) {
+    return t.SetItem(path, value);
+  }
 
-  //END_SET_
-  /*
-     bool set_item(T &t ,const string &path, an<ConfigItem> item){
-     return t.SetItem(path,item);
-     }
+  bool set_map(T &t, const string &path, an<ConfigMap> value) {
+    return t.SetItem(path, value);
+  }
 
-     bool set_value(T &t, const string &path,  an<ConfigValue>  value) {
-     return t.SetItem(path, value);
-     }
-
-     bool set_list(T &t, const string &path,  an<ConfigList>  value) {
-     return t.SetItem(path, value);
-     }
-
-     bool set_map(T &t, const string &path, an<ConfigMap> value) {
-     return t.SetItem(path, value);
-     }
-     */
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -1039,10 +1016,10 @@ namespace ConfigReg {
     { "set_bool", WRAPMEM(T::SetBool) },
     { "set_int", WRAPMEM(T::SetInt) },
     { "set_double", WRAPMEM(T::SetDouble) },
-    { "set_string", WRAP(set_string) }, // redefine overload function 
+    { "set_string", WRAP(set_string) }, // redefine overload function
 
-    { "get_item", WRAP(get_item) }, // redefine overload function 
-    { "set_item", WRAP(set_item) }, // create new function 
+    { "get_item", WRAP(get_item) }, // redefine overload function
+    { "set_item", WRAP(set_item) }, // create new function
 
     //an<ConfigItem> GetItem(const string& path);
     //an<ConfigValue> GetValue(const string& path);
@@ -1053,9 +1030,9 @@ namespace ConfigReg {
     { "get_list", WRAPMEM(T::GetList) },
     { "get_map", WRAPMEM(T::GetMap) },
 
-    { "set_value", WRAP(set_value) }, // create new function 
-    { "set_list", WRAP(set_list) }, // create new function 
-    { "set_map", WRAP(set_map)}, // create new function 
+    { "set_value", WRAP(set_value) }, // create new function
+    { "set_list", WRAP(set_list) }, // create new function
+    { "set_map", WRAP(set_map)}, // create new function
 
     { "get_list_size", WRAPMEM(T::GetListSize) },
 
@@ -1222,6 +1199,340 @@ namespace LogReg {
     lua_setglobal(L, "log");
   }
 }
+namespace CommitEntryReg {
+  typedef CommitEntry T;
+
+  vector<const rime::DictEntry*> get(T& ce) {
+    return ce.elements;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"get",WRAP(get)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace DictEntryReg {
+  typedef DictEntry T;
+  an<T> make() {
+    return an<T>(new T());
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"DictEntry",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"text",WRAPMEM_GET(T::text)},
+    {"comment",WRAPMEM_GET(T::comment)},
+    {"preedit",WRAPMEM_GET(T::preedit)},
+    {"weight",WRAPMEM_GET(T::weight)},
+    {"commit_count", WRAPMEM_GET(T::commit_count)},
+    {"custom_code",WRAPMEM_GET(T::custom_code)},
+    {"remaining_code_length",WRAPMEM_GET(T::remaining_code_length)},
+    {"code",WRAPMEM_GET(T::code)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"text",WRAPMEM_SET(T::text)},
+    {"comment",WRAPMEM_SET(T::comment)},
+    {"preedit",WRAPMEM_SET(T::preedit)},
+    {"weight",WRAPMEM_SET(T::weight)},
+    {"commit_count", WRAPMEM_SET(T::commit_count)},
+    {"custom_code",WRAPMEM_SET(T::custom_code)},
+    {"remaining_code_length",WRAPMEM_SET(T::remaining_code_length)},
+    {"code",WRAPMEM_SET(T::code)},
+    { NULL, NULL },
+  };
+}
+namespace CodeReg {
+
+  typedef Code T;
+
+  an<T> make() {
+    return an<T>(new Code());
+  }
+
+  void pushCode(T& code, const rime::SyllableId inputCode) {
+    code.push_back(inputCode);
+  }
+
+  string printCode(T& code) {
+    return code.ToString();
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Code", WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"push",WRAP(pushCode)},
+    {"print",WRAP(printCode)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace MemoryReg {
+  class LuaMemory : public Memory {
+    an<LuaObj> memorize_callback;
+    Lua *lua_;
+  public:
+    using Memory::Memory;
+    DictEntryIterator iter;
+    UserDictEntryIterator uter;
+
+    LuaMemory(Lua *lua, const Ticket& ticket)
+      : lua_(lua), Memory(ticket) {}
+
+    virtual bool Memorize(const CommitEntry&);
+
+    void memorize(an<LuaObj> func) {
+      memorize_callback = func;
+    }
+
+    void clearDict() {
+      iter = DictEntryIterator();
+    }
+    void clearUser() {
+      uter = UserDictEntryIterator();
+    }
+  };
+  typedef LuaMemory T;
+
+  bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
+    if (!memorize_callback)
+      return false;
+
+    auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
+      return false;
+    } else
+      return r.get();
+  }
+
+  // XXX: Currently the WRAP macro is not generic enough,
+  // so that we need a raw function to get the lua state / parse variable args.
+  int raw_make(lua_State *L) {
+    // TODO: fix the memory leak
+    C_State C;
+
+    int n = lua_gettop(L);
+    Lua *lua = Lua::from_state(L);
+    Engine *engine = LuaType<Engine *>::todata(L, 1);
+    Schema *schema = LuaType<Schema *>::todata(L, 2);
+    string ns = "translator";
+    if (n == 3)
+      ns = LuaType<string>::todata(L, 3, &C);
+
+    Ticket translatorTicket;
+    translatorTicket.engine = engine;
+    translatorTicket.name_space = ns;
+    translatorTicket.schema = schema;
+    translatorTicket.klass = "lua_translator";
+    an<T> memoli = New<T>(lua, translatorTicket);
+    LuaType<an<T>>::pushdata(L, memoli);
+    return 1;
+  }
+
+  bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
+    memory.clearDict();
+    limit = limit == 0 ? 0xffffffffffffffff : limit;
+    if (auto dict = memory.dict())
+      return dict->LookupWords(&memory.iter, input, isExpand, limit) > 0;
+    else
+      return false;
+  }
+
+  optional<an<DictEntry>> dictNext(T& memory) {
+    if (memory.iter.exhausted()) {
+      return {};
+    }
+    an<DictEntry> ret = memory.iter.Peek();
+    memory.iter.Next();
+    return ret;
+  }
+
+  bool userLookup(T& memory, const string& input, const bool isExpand) {
+    memory.clearUser();
+    if (auto dict = memory.user_dict())
+      return dict->LookupWords(&memory.uter, input, isExpand) > 0;
+    else
+      return false;
+  }
+
+  optional<an<DictEntry>> userNext(T& memory) {
+    if (memory.uter.exhausted()) {
+      return {};
+    }
+    an<DictEntry> ret = memory.uter.Peek();
+    memory.uter.Next();
+    return ret;
+  }
+
+  bool updateToUserdict(T& memory, const DictEntry& entry, const int commits, const string& new_entry_prefix) {
+    if (auto dict = memory.user_dict())
+      return dict->UpdateEntry(entry, commits, new_entry_prefix);
+    else
+      return false;
+  }
+
+  int raw_iter_user(lua_State* L) {
+    lua_pushcfunction(L, WRAP(userNext));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+
+  int raw_iter_dict(lua_State* L) {
+    lua_pushcfunction(L, WRAP(dictNext));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+
+  static const luaL_Reg funcs[] = {
+      {"Memory", raw_make},
+      {NULL, NULL},
+  };
+
+  std::vector<string> decode(T& memory, Code& code) {
+    std::vector<string> res;
+    if (auto dict = memory.dict())
+      dict->Decode(code,&res);
+    return res;
+  }
+  static const luaL_Reg methods[] = {
+      { "dict_lookup", WRAP(dictLookup)},
+      { "user_lookup", WRAP(userLookup)},
+      { "memorize", WRAPMEM(T::memorize)},
+      { "decode", WRAP(decode)},
+      { "iter_dict", raw_iter_dict},
+      { "iter_user", raw_iter_user},
+      { "update_userdict", WRAP(updateToUserdict)},
+      {NULL, NULL},
+  };
+
+  static const luaL_Reg vars_get[] = {
+      {NULL, NULL},
+  };
+
+  static const luaL_Reg vars_set[] = {
+      {NULL, NULL},
+  };
+}  // namespace MemoryReg
+
+//--- wrappers for Phrase
+namespace PhraseReg {
+  typedef Phrase T;
+
+  an<T> make(MemoryReg::LuaMemory& memory, 
+    const string& type,
+    size_t start,
+    size_t end,
+    const an<DictEntry>& entry)
+  {
+    return New<Phrase>(memory.language(),type, start,end, entry);
+  }
+
+  an<Candidate> toCandidate(an<T> phrase) {
+    return phrase;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "Phrase", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "toCandidate", WRAP(toCandidate)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "language", WRAPMEM(T::language)},
+    { "type", WRAPMEM(T::type) },
+    { "start", WRAPMEM(T::start) },
+    { "_end", WRAPMEM(T::end) }, // end is keyword in Lua...
+    { "quality", WRAPMEM(T::quality) },
+    { "text", WRAPMEM(T::text) },
+    { "comment", WRAPMEM(T::comment) },
+    { "preedit", WRAPMEM(T::preedit) },
+    { "weight", WRAPMEM(T::weight)},
+    { "code", WRAPMEM(T::code)},
+    { "entry", WRAPMEM(T::entry)},
+    //span
+    //language doesn't wrap yet, so Wrap it later
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "type", WRAPMEM(T::set_type) },
+    { "start", WRAPMEM(T::set_start) },
+    { "_end", WRAPMEM(T::set_end) },
+    { "quality", WRAPMEM(T::set_quality) },
+    { "comment", WRAPMEM(T::set_comment) },
+    { "preedit", WRAPMEM(T::set_preedit) },
+    { "weight", WRAPMEM(T::set_weight)},
+    // set_syllabifier
+    { NULL, NULL },
+  };
+}// Phrase work with Translator
+
+namespace KeySequenceReg {
+  typedef KeySequence T;
+
+  an<T> make() {
+    return New<T>();
+  }
+
+  vector<KeyEvent> toKeyEvent(T& t) {
+    return t;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "KeySequence", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "parse", WRAPMEM(T::Parse) },
+    { "toKeyEvent", WRAP(toKeyEvent) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}// KeySequence a vector of Keyevent
 
 namespace RimeApiReg {
   string get_rime_version() {
@@ -1343,6 +1654,12 @@ void types_init(lua_State *L) {
   EXPORT(PropertyUpdateNotifierReg, L);
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
+  EXPORT(MemoryReg, L);
+  EXPORT(DictEntryReg, L);
+  EXPORT(CodeReg, L);
+  EXPORT(CommitEntryReg, L);
+  EXPORT(PhraseReg, L);
+  EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
   // lua/src/traslator.h
   EXPORT(TicketReg , L);
