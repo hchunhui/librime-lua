@@ -1567,8 +1567,8 @@ namespace SwitcherReg {
 
 namespace TicketReg {
   typedef Ticket T;
-  an<T> make(Engine  *e,const string &ns) {
-    return New <T>(e,ns);
+  an<T> make(Schema *s, const string &ns) {
+    return New <T>(s,ns);
   }
 
   static const luaL_Reg funcs[] = {

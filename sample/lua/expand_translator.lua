@@ -29,7 +29,7 @@ local function memoryCallback(memory, commit)
 end
 
 local function init(env)
-  local ticket = Ticket(env.engine, env.name_space)
+  local ticket = Ticket(env.engine.schema, env.name_space)
   env.mem = Memory(ticket)
   env.mem:memorize(function(commit) memoryCallback(env.mem, commit) end)
   -- or use
