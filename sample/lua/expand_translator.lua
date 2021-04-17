@@ -29,7 +29,8 @@ local function memoryCallback(memory, commit)
 end
 
 local function init(env)
-  env.mem = Memory(env.engine,env.engine.schema)
+  local ticket = Ticket(env.engine, env.name_space) 
+  env.mem = Memory(ticket)
   env.mem:memorize(function(commit) memoryCallback(env.mem, commit) end)
   -- or use
   -- schema = Schema("cangjie5") -- schema_id

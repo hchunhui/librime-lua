@@ -1312,7 +1312,7 @@ namespace MemoryReg {
   int raw_make(lua_State *L,const Ticket &ticket) {
     int n = lua_gettop(L);
     Lua *lua = Lua::from_state(L);
-    if (n < 2)
+    if (n < 1)
       return 0;
 
     an<T> memoli = New<T>(lua, ticket);
