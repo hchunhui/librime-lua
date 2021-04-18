@@ -328,7 +328,7 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
-    
+
   an<T> make() {
     return New<T>();
   }
@@ -545,7 +545,7 @@ namespace CompositionReg {
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
-  
+
   Segment &back(T &t) {
     return t.back();
   }
@@ -1578,12 +1578,48 @@ namespace SwitcherReg {
 
 namespace TicketReg {
   typedef Ticket T;
-  an<T> make(Engine  *e,const string &ns) {
-    return New <T>(e,ns);
+  typedef Engine E;
+  typedef Schema S;
+  int raw_make(lua_State *L){
+    C_State C;
+    Lua *lua = Lua::from_state(L);
+    int n = lua_gettop(L);
+    if (n < 1)
+      return 0;
+
+    an<T> t;
+    if (luaL_getmetafield(L, 1, "name")) {
+        const char *tname = luaL_checkstring(L, -1) ;
+        if (strcmp(tname, LuaType<E *>::name()) == 0 ) {
+          auto o = LuaType<E *>::todata(L, 1);
+          string ns= (n>=2) ? LuaType<string>::todata(L, 2, &C) :"" ;
+          string klass= (n>=3) ? LuaType<string>::todata(L, 3, &C) :"" ;
+
+          t =New <T>((E *) o, ns, klass);
+
+          lua_pop(L, n +1);
+          LuaType<an<T>>::pushdata(L, t);
+          return 1;
+        }
+        if (strcmp(tname, LuaType<S *>::name()) == 0 ) {
+          auto o = LuaType<S *>::todata(L, 1);
+          string ns= (n>=2) ? LuaType<string>::todata(L, 2, &C) :"" ;
+
+          t =New <T>((S *) o, ns);
+
+          lua_pop(L, n +1);
+          LuaType<an<T>>::pushdata(L, t);
+          return 1;
+        }
+        lua_pop(L, n+1);
+        return 0;
+    }
+    lua_pop(L, n);
+    return 0;
   }
 
   static const luaL_Reg funcs[] = {
-    {"Ticket",WRAP(make) },
+    {"Ticket", raw_make },
     { NULL, NULL },
   };
 
@@ -1592,18 +1628,18 @@ namespace TicketReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    {"engine" ,WRAPMEM_GET(T::engine)},
-    {"schema" ,WRAPMEM_GET(T::schema)},
-    {"name_space" ,WRAPMEM_GET(T::name_space)},
-    {"klass" ,WRAPMEM_GET(T::klass)},
+    {"engine" , WRAPMEM_GET(T::engine)},
+    {"schema" , WRAPMEM_GET(T::schema)},
+    {"name_space" , WRAPMEM_GET(T::name_space)},
+    {"klass" , WRAPMEM_GET(T::klass)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
-    {"engine" ,WRAPMEM_SET(T::engine)},
-    {"schema" ,WRAPMEM_SET(T::schema)},
-    {"name_space" ,WRAPMEM_SET(T::name_space)},
-    {"klass" ,WRAPMEM_SET(T::klass)},
+    {"engine" , WRAPMEM_SET(T::engine)},
+    {"schema" , WRAPMEM_SET(T::schema)},
+    {"name_space" , WRAPMEM_SET(T::name_space)},
+    {"klass" , WRAPMEM_SET(T::klass)},
     { NULL, NULL },
   };
 }
