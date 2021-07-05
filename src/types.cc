@@ -895,7 +895,6 @@ namespace ConfigItemReg {
     {"get_list",WRAP(get_list)},
     {"get_map",WRAP(get_map)},
     {"to_obj",raw_to_obj},
-
     { NULL, NULL },
   };
 
@@ -1004,7 +1003,6 @@ namespace ConfigReg {
   bool set_map(T &t, const string &path, an<ConfigMap> value) {
     return t.SetItem(path, value);
   }
-
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
