@@ -815,6 +815,7 @@ namespace ConfigMapReg {
     {"has_key", WRAPMEM(T::HasKey)},
     {"clear", WRAPMEM(T::Clear)},
     {"empty", WRAPMEM(T::empty)},
+    {"keys", raw_keys},
     { NULL, NULL },
   };
 
@@ -822,7 +823,6 @@ namespace ConfigMapReg {
     {"size", WRAP(size)},
     {"type",WRAP(type)},
     {"element",WRAP(element)},
-    {"keys", raw_keys},
   };
 
   static const luaL_Reg vars_set[] = {
