@@ -788,6 +788,21 @@ namespace ConfigMapReg {
     return t ;
   }
 
+  int raw_keys(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( n < 1 ) return 0;
+    an<T> t= LuaType<an<T>>::todata(L, 1);
+    lua_pop(L, n);
+    lua_newtable(L);
+    int index=1;
+    for ( auto  it : *t) {
+      lua_pushstring(L, it.first.c_str());
+      lua_seti(L,1 , index++);
+    }
+    return 1;
+  }
+
+
   static const luaL_Reg funcs[] = {
     {"ConfigMap", WRAP(make)},
     { NULL, NULL },
@@ -800,6 +815,7 @@ namespace ConfigMapReg {
     {"has_key", WRAPMEM(T::HasKey)},
     {"clear", WRAPMEM(T::Clear)},
     {"empty", WRAPMEM(T::empty)},
+    {"keys", raw_keys},
     { NULL, NULL },
   };
 
@@ -846,6 +862,30 @@ namespace ConfigItemReg {
 #undef GET_
 //END_GET_
 
+  int raw_to_obj(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( n < 1 ) return 0 ;
+
+    an<T> t_ptr = LuaType<an<T>>::todata(L,1);
+
+    switch(t_ptr->type()) {
+      case T::kScalar:
+        LuaType<lua_CFunction>::pushdata(L,  WRAP(get_value) );
+        break;
+      case T::kList:
+        LuaType<lua_CFunction>::pushdata(L,  WRAP(get_list) );
+        break;
+      case T::kMap:
+        LuaType<lua_CFunction>::pushdata(L,  WRAP(get_map) );
+        break;
+      default:
+        return 1;  // return self  ConfigItem
+    }
+    lua_insert(L,1);
+    if (lua_pcall(L, 1, 1, 0) != 0)  return 0;
+    return 1;
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -854,6 +894,7 @@ namespace ConfigItemReg {
     {"get_value",WRAP(get_value)},
     {"get_list",WRAP(get_list)},
     {"get_map",WRAP(get_map)},
+    {"to_obj",raw_to_obj},
     { NULL, NULL },
   };
 
