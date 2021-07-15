@@ -12,7 +12,7 @@ bool LuaTranslation::Next() {
   if (!r.ok()) {
     LuaErr e = r.get_err();
     if (e.e != "")
-      LOG(ERROR) << "LuaTranslation::Next error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "LuaTranslation::Next of "<< name_space_ << " error(" << e.status << "): " << e.e;
     set_exhausted(true);
     return false;
   } else {
@@ -77,7 +77,7 @@ LuaFilter::~LuaFilter() {
     auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
     if (!r.ok()) {
       auto e = r.get_err();
-      LOG(ERROR) << "LuaFilter::~LuaFilter error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "LuaFilter::~LuaFilter of "<< name_space_ << " error(" << e.status << "): " << e.e;
     }
   }
 }
@@ -104,7 +104,7 @@ LuaTranslator::~LuaTranslator() {
     auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
     if (!r.ok()) {
       auto e = r.get_err();
-      LOG(ERROR) << "LuaTranslator::~LuaTranslator error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "LuaTranslator::~LuaTranslator of "<< name_space_ << " error(" << e.status << "): " << e.e;
     }
   }
 }
@@ -120,7 +120,7 @@ bool LuaSegmentor::Proceed(Segmentation* segmentation) {
                       an<LuaObj>>(func_, *segmentation, env_);
   if (!r.ok()) {
     auto e = r.get_err();
-    LOG(ERROR) << "LuaSegmentor::Proceed error(" << e.status << "): " << e.e;
+    LOG(ERROR) << "LuaSegmentor::Proceed of "<< name_space_ << " error(" << e.status << "): " << e.e;
     return true;
   } else
     return r.get();
@@ -131,7 +131,7 @@ LuaSegmentor::~LuaSegmentor() {
     auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
     if (!r.ok()) {
       auto e = r.get_err();
-      LOG(ERROR) << "LuaSegmentor::~LuaSegmentor error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "LuaSegmentor::~LuaSegmentor of "<< name_space_ << " error(" << e.status << "): " << e.e;
     }
   }
 }
@@ -147,7 +147,7 @@ ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
                       an<LuaObj>>(func_, key_event, env_);
   if (!r.ok()) {
     auto e = r.get_err();
-    LOG(ERROR) << "LuaProcessor::ProcessKeyEvent error(" << e.status << "): " << e.e;
+    LOG(ERROR) << "LuaProcessor::ProcessKeyEvent of "<< name_space_ << " error(" << e.status << "): " << e.e;
     return kNoop;
   } else
     switch (r.get()) {
@@ -162,7 +162,7 @@ LuaProcessor::~LuaProcessor() {
     auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
     if (!r.ok()) {
       auto e = r.get_err();
-      LOG(ERROR) << "LuaProcessor::~LuaProcessor error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "LuaProcessor::~LuaProcessor of "<< name_space_ << " error(" << e.status << "): " << e.e;
     }
   }
 }
