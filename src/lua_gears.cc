@@ -41,7 +41,7 @@ static void raw_init(lua_State *L, const Ticket &t,
       int status = lua_pcall(L, 1, 1, 0);
       if (status != LUA_OK) {
         const char *e = lua_tostring(L, -1);
-        LOG(ERROR) << "Lua error:(" << status << "): " << e;
+        LOG(ERROR) << "Lua Compoment of " << t.name_space << " initialize  error:(" << status << "): " << e;
       }
     }
     lua_pop(L, 1);
