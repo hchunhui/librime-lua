@@ -12,7 +12,7 @@ bool LuaTranslation::Next() {
   if (!r.ok()) {
     LuaErr e = r.get_err();
     if (e.e != "")
-      LOG(ERROR) << "LuaTranslation::Next of "<< name_space_ << " error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "LuaTranslation::Next error(" << e.status << "): " << e.e;
     set_exhausted(true);
     return false;
   } else {
