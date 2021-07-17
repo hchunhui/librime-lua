@@ -788,6 +788,21 @@ namespace ConfigMapReg {
     return t ;
   }
 
+  int raw_keys(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( n < 1 ) return 0;
+    an<T> t= LuaType<an<T>>::todata(L, 1);
+    lua_pop(L, n);
+    lua_newtable(L);
+    int index=1;
+    for ( auto  it : *t) {
+      lua_pushstring(L, it.first.c_str());
+      lua_seti(L,1 , index++);
+    }
+    return 1;
+  }
+
+
   static const luaL_Reg funcs[] = {
     {"ConfigMap", WRAP(make)},
     { NULL, NULL },
@@ -800,6 +815,7 @@ namespace ConfigMapReg {
     {"has_key", WRAPMEM(T::HasKey)},
     {"clear", WRAPMEM(T::Clear)},
     {"empty", WRAPMEM(T::empty)},
+    {"keys", raw_keys},
     { NULL, NULL },
   };
 
