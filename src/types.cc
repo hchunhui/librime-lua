@@ -862,30 +862,6 @@ namespace ConfigItemReg {
 #undef GET_
 //END_GET_
 
-  int raw_to_obj(lua_State *L) {
-    int n = lua_gettop(L);
-    if ( n < 1 ) return 0 ;
-
-    an<T> t_ptr = LuaType<an<T>>::todata(L,1);
-
-    switch(t_ptr->type()) {
-      case T::kScalar:
-        LuaType<lua_CFunction>::pushdata(L,  WRAP(get_value) );
-        break;
-      case T::kList:
-        LuaType<lua_CFunction>::pushdata(L,  WRAP(get_list) );
-        break;
-      case T::kMap:
-        LuaType<lua_CFunction>::pushdata(L,  WRAP(get_map) );
-        break;
-      default:
-        return 1;  // return self  ConfigItem
-    }
-    lua_insert(L,1);
-    if (lua_pcall(L, 1, 1, 0) != 0)  return 0;
-    return 1;
-  }
-
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -894,7 +870,6 @@ namespace ConfigItemReg {
     {"get_value",WRAP(get_value)},
     {"get_list",WRAP(get_list)},
     {"get_map",WRAP(get_map)},
-    {"to_obj",raw_to_obj},
     { NULL, NULL },
   };
 
