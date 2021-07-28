@@ -39,7 +39,17 @@ public:
                                 CandidateList* candidates);
 
   virtual bool AppliesToSegment(Segment* segment) {
-    return TagsMatch(segment);
+    if ( ! tags_match_ )
+      return TagsMatch(segment);
+
+    auto r = lua_->call<bool, an<LuaObj>, Segment *, an<LuaObj>>(tags_match_, segment,  env_);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << "LuaFilter::AppliesToSegment of " << name_space_ << " error(" << e.status << "): " << e.e;
+      return false;
+    }
+    else
+      return  r.get();
   }
 
 private:
@@ -47,6 +57,7 @@ private:
   an<LuaObj> env_;
   an<LuaObj> func_;
   an<LuaObj> fini_;
+  an<LuaObj> tags_match_;
 };
 
 class LuaTranslator : public Translator {
@@ -93,6 +104,7 @@ private:
 };
 
 template<typename T>
+
 class LuaComponent : public T::Component {
 private:
   an<Lua> lua_;
