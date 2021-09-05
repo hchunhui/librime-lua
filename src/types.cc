@@ -403,8 +403,17 @@ namespace KeyEventReg {
 namespace EngineReg {
   typedef Engine T;
 
-  static void apply_schema(T *engine, Schema &schema) {
-    engine->ApplySchema(&schema);
+  //static void apply_schema(T *engine, Schema &schema) {
+  static void apply_schema(T *engine, const string  &schema) {
+    if (!engine)
+      return;
+    if (schema == ".next"){
+      Switcher switcher(engine);
+      switcher.SelectNextSchema();
+    }
+    else {
+      engine->ApplySchema(new Schema(schema));
+    }
   }
 
   static const luaL_Reg funcs[] = {
