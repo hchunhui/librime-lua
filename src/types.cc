@@ -403,17 +403,8 @@ namespace KeyEventReg {
 namespace EngineReg {
   typedef Engine T;
 
-  //static void apply_schema(T *engine, Schema &schema) {
-  static void apply_schema(T *engine, const string  &schema) {
-    if (!engine)
-      return;
-    if (schema == ".next"){
-      Switcher switcher(engine);
-      switcher.SelectNextSchema();
-    }
-    else {
-      engine->ApplySchema(new Schema(schema));
-    }
+  static void apply_schema(T *engine, the<Schema> &schema) {
+    engine->ApplySchema(schema.release());
   }
 
   static const luaL_Reg funcs[] = {
@@ -597,8 +588,8 @@ namespace CompositionReg {
 namespace SchemaReg {
   typedef Schema T;
 
-  an<T> make(const string &schema_id){
-    return New<T>(schema_id ) ;
+  the<T> make(const string &schema_id) {
+    return std::unique_ptr<T>(new T(schema_id));
   };
 
   static const luaL_Reg funcs[] = {
@@ -1658,4 +1649,7 @@ void types_init(lua_State *L) {
   EXPORT(SwitcherReg, L);
   LogReg::init(L);
   RimeApiReg::init(L);
+
+  export_type(L, LuaType<the<SchemaReg::T>>::name(), LuaType<the<SchemaReg::T>>::gc,
+              SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
 }
