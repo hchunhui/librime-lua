@@ -1541,11 +1541,20 @@ namespace RimeApiReg {
     return string(rime->get_sync_dir());
   }
 
+  int raw_getmetatable(lua_State *L){
+    int n = lua_gettop(L);
+    if ( 1 != n)
+       return 0;
+     luaL_getmetatable(L, lua_tostring(L,1));
+     return 1;
+   }
+
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
     { "get_shared_data_dir", WRAP(get_shared_data_dir) },
     { "get_user_data_dir",  WRAP(get_user_data_dir) },
     { "get_sync_dir",  WRAP(get_sync_dir) },
+    { "get_regmetatable",raw_getmetatable },
     { NULL, NULL },
   };
 
