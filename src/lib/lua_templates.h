@@ -164,6 +164,13 @@ struct LuaType<T &> {
         return *(*ao).get();
       }
 
+      if (strcmp(tname, LuaType<std::unique_ptr<T>>::name()) == 0 ||
+          strcmp(tname, LuaType<std::unique_ptr<U>>::name()) == 0) {
+        auto ao = (std::unique_ptr<T> *) _p;
+        lua_pop(L, 2);
+        return *(*ao).get();
+      }
+
       if (strcmp(tname, LuaType<T *>::name()) == 0 ||
           strcmp(tname, LuaType<U *>::name()) == 0) {
         auto p = (T **) _p;
@@ -184,6 +191,37 @@ struct LuaType<T &> {
     const char *msg = lua_pushfstring(L, "%s expected", name());
     luaL_argerror(L, i, msg);
     abort(); // unreachable
+  }
+};
+
+template<typename T>
+struct LuaType<std::unique_ptr<T>> {
+  using UT = std::unique_ptr<T>;
+
+  static const char *name() {
+    return typeid(LuaType<UT>).name();
+  }
+
+  static int gc(lua_State *L) {
+    UT *o = (UT *) luaL_checkudata(L, 1, name());
+    o->~UT();
+    return 0;
+  }
+
+  static void pushdata(lua_State *L, UT &o) {
+    void *u = lua_newuserdata(L, sizeof(UT));
+    new(u) UT(std::move(o));
+    luaL_getmetatable(L, name());
+    if (lua_isnil(L, -1)) {
+      // If T is not registered,
+      // registers a "__gc" to prevent memory leaks.
+      lua_pop(L, 1);
+      luaL_newmetatable(L, name());
+      lua_pushstring(L, "__gc");
+      lua_pushcfunction(L, gc);
+      lua_settable(L, -3);
+    }
+    lua_setmetatable(L, -2);
   }
 };
 
