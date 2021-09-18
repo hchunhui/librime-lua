@@ -263,11 +263,26 @@ void LuaObj::pushdata(lua_State *L, std::shared_ptr<LuaObj> &o) {
 std::shared_ptr<LuaObj> LuaObj::todata(lua_State *L, int i) {
   return std::shared_ptr<LuaObj>(new LuaObj(L, i));
 }
+#define REG_METATABLE_NAME "RegMatetable"
+static void reg_metatable_list(lua_State *L,const char *name) {
+  static int index=0;
+  if ( lua_getglobal(L, REG_METATABLE_NAME ) != LUA_TTABLE) {
+    lua_pop(L,1);
+    lua_newtable(L);
+    lua_setglobal(L,REG_METATABLE_NAME);
+    lua_getglobal(L, REG_METATABLE_NAME);
+  }
 
+  lua_pushstring(L, name);
+  lua_seti(L, 1, ++index);
+  lua_pop(L,1);
+}
 void export_type(lua_State *L,
                  const char *name, lua_CFunction gc,
                  const luaL_Reg *funcs, const luaL_Reg *methods,
                  const luaL_Reg *vars_get, const luaL_Reg *vars_set) {
+
+  reg_metatable_list(L,name);
   for (int i = 0; funcs[i].name; i++) {
     lua_register(L, funcs[i].name, funcs[i].func);
   }
