@@ -1,3 +1,21 @@
+
+-- 增加 KeySequence(string) 
+-- 1 
+--    local ks= KeySequence()
+--    ks:parse("abc")
+-- 2 
+--    local ks= KeySequence("abc") 
+--
+local _KeySequence=KeySequence 
+KeySequence = function(str)
+  local ks = _KeySequence()
+  if type(str)== "string" then 
+    ks:parse(str)
+  end 
+  return ks 
+end 
+
+
 --[[
 librime-lua 样例
 
