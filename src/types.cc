@@ -1492,8 +1492,8 @@ namespace PhraseReg {
 namespace KeySequenceReg {
   typedef KeySequence T;
 
-  an<T> make(const string str) {
-    return New<T>(str);
+  an<T> make() {
+    return New<T>();
   }
 
   vector<KeyEvent> toKeyEvent(T& t) {
