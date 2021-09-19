@@ -1507,6 +1507,7 @@ namespace KeySequenceReg {
 
   static const luaL_Reg methods[] = {
     { "parse", WRAPMEM(T::Parse) },
+    { "repr", WRAPMEM(T::repr) },
     { "toKeyEvent", WRAP(toKeyEvent) },
     { NULL, NULL },
   };
