@@ -28,12 +28,17 @@ static void raw_init(lua_State *L, const Ticket &t,
   Engine *e = t.engine;
   LuaType<Engine *>::pushdata(L, e);
   lua_setfield(L, -2, "engine");
-  LuaType<const string &>::pushdata(L, t.name_space);
+  LuaType<const string &>::pushdata(L,  t.klass );
+  lua_setfield(L, -2, "component");
+  Ticket t_m_ns(t.engine, t.name_space, t.name_space);
+  LuaType<const string &>::pushdata(L,  t_m_ns.klass );
+  lua_setfield(L, -2, "klass");
+  LuaType<const string &>::pushdata(L, t_m_ns.name_space);
   lua_setfield(L, -2, "name_space");
   *env = LuaObj::todata(L, -1);
   lua_pop(L, 1);
 
-  lua_getglobal(L, t.klass.c_str());
+  lua_getglobal(L, t_m_ns.klass.c_str());
   if (lua_type(L, -1) == LUA_TTABLE) {
     lua_getfield(L, -1, "init");
     if (lua_type(L, -1) == LUA_TFUNCTION) {
@@ -41,7 +46,7 @@ static void raw_init(lua_State *L, const Ticket &t,
       int status = lua_pcall(L, 1, 1, 0);
       if (status != LUA_OK) {
         const char *e = lua_tostring(L, -1);
-        LOG(ERROR) << "Lua Compoment of " << t.name_space << " initialize  error:(" << status << "): " << e;
+        LOG(ERROR) << "Lua Compoment of " << t.klass << "@" << t.name_space << " initialize  error:(" << status << "): " << e;
       }
     }
     lua_pop(L, 1);

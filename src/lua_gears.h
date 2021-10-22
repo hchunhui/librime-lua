@@ -112,8 +112,7 @@ private:
 public:
   LuaComponent(an<Lua> lua) : lua_(lua) {};
   T* Create(const Ticket &a) {
-    Ticket t(a.engine, a.name_space, a.name_space);
-    return new T(t, lua_.get());
+    return new T(a, lua_.get());
   }
 };
 
