@@ -10,8 +10,8 @@ engine:
     - lua_translator@expand_translator
 
 expand_translator:
-	wildcard: "*"
-
+  __include: cangjie6:/translator
+  tag: "abc"
 // you must add wildcard to speller, otherwise the Rime won't take it as normal input;
 speller:
   alphabet: zyxwvutsrqponmlkjihgfedcba*
@@ -29,7 +29,9 @@ local function memoryCallback(memory, commit)
 end
 
 local function init(env)
-  env.mem = Memory(env.engine,env.engine.schema)
+  env.mem = Memory(env.engine) -- ns: Translator 
+  --env.mem = Memory(env.engine , env.name_space ) -- ns: expend_translator 
+
   env.mem:memorize(function(commit) memoryCallback(env.mem, commit) end)
   -- or use
   -- schema = Schema("cangjie5") -- schema_id
