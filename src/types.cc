@@ -1331,9 +1331,22 @@ namespace MemoryReg {
 
     int n = lua_gettop(L);
     Lua *lua = Lua::from_state(L);
-    Engine *engine = LuaType<Engine *>::todata(L, 1);
-    string ns = (2 > n)  ? "translator" : LuaType<string>::todata(L, 2, &C);
-    an<T> memoli = New<T>(lua, Ticket(engine, ns) );
+    if ( 1 > n )
+      return 0;
+
+    Ticket translatorTicket( LuaType<Engine *>::todata(L, 1), "translator");
+    if ( 2 < n ){
+        translatorTicket.schema = & (LuaType<Schema &>::todata(L, 2));
+        translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
+    }
+    if ( 2 == n ){
+      if ( lua_isstring(L, 2) )
+        translatorTicket.name_space = LuaType<string>::todata(L, 2, &C);
+      else
+        translatorTicket.schema = & (LuaType<Schema &>::todata(L, 2));
+    }
+
+    an<T> memoli = New<T>(lua, translatorTicket);
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }

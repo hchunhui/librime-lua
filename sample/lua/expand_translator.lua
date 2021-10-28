@@ -15,7 +15,22 @@ expand_translator:
 // you must add wildcard to speller, otherwise the Rime won't take it as normal input;
 speller:
   alphabet: zyxwvutsrqponmlkjihgfedcba*
-]]
+--]]
+
+--[[
+  1:Memory(engine) --  ns = "translator"
+  2:Memory(engine, ns )
+  3:Memory(engine,schema) -- ns = "translator"
+  4:Memory(engine, schema, ns)
+
+  exp:
+     Memory(env.engine) == Memory(env,"translator")
+     Memory(env.engine,"cangjie5")
+     Momory(env.engine,env.engine.schema)
+     Memory(env.engine,Schema('cangjie6'),"cangjie5") -- cangjie6 方案 副字典 cangjie5
+
+
+--]]
 
 local function memoryCallback(memory, commit)
 	for i,dictentry in ipairs(commit:get())
@@ -29,8 +44,8 @@ local function memoryCallback(memory, commit)
 end
 
 local function init(env)
-  env.mem = Memory(env.engine) -- ns: Translator 
-  --env.mem = Memory(env.engine , env.name_space ) -- ns: expend_translator 
+  env.mem = Memory(env.engine) -- ns: Translator
+  --env.mem = Memory(env.engine , env.name_space ) -- ns: expend_translator
 
   env.mem:memorize(function(commit) memoryCallback(env.mem, commit) end)
   -- or use
