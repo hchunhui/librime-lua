@@ -17,6 +17,7 @@
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
+#include "lua_memory.h"
 
 using namespace rime;
 
@@ -1284,44 +1285,8 @@ namespace CodeReg {
   };
 }
 namespace MemoryReg {
-  class LuaMemory : public Memory {
-    an<LuaObj> memorize_callback;
-    Lua *lua_;
-  public:
-    using Memory::Memory;
-    DictEntryIterator iter;
-    UserDictEntryIterator uter;
-
-    LuaMemory(Lua *lua, const Ticket& ticket)
-      : lua_(lua), Memory(ticket) {}
-
-    virtual bool Memorize(const CommitEntry&);
-
-    void memorize(an<LuaObj> func) {
-      memorize_callback = func;
-    }
-
-    void clearDict() {
-      iter = DictEntryIterator();
-    }
-    void clearUser() {
-      uter = UserDictEntryIterator();
-    }
-  };
   typedef LuaMemory T;
 
-  bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
-    if (!memorize_callback)
-      return false;
-
-    auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
-      return false;
-    } else
-      return r.get();
-  }
 
   // XXX: Currently the WRAP macro is not generic enough,
   // so that we need a raw function to get the lua state / parse variable args.
@@ -1351,64 +1316,17 @@ namespace MemoryReg {
     return 1;
   }
 
-  bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
-    memory.clearDict();
-    limit = limit == 0 ? 0xffffffffffffffff : limit;
-    if (auto dict = memory.dict())
-      return dict->LookupWords(&memory.iter, input, isExpand, limit) > 0;
-    else
-      return false;
-  }
-
-  optional<an<DictEntry>> dictNext(T& memory) {
-    if (memory.iter.exhausted()) {
-      return {};
-    }
-    an<DictEntry> ret = memory.iter.Peek();
-    memory.iter.Next();
-    return ret;
-  }
-
-  bool userLookup(T& memory, const string& input, const bool isExpand) {
-    memory.clearUser();
-    if (auto dict = memory.user_dict())
-      return dict->LookupWords(&memory.uter, input, isExpand) > 0;
-    else
-      return false;
-  }
-
-  optional<an<DictEntry>> userNext(T& memory) {
-    if (memory.uter.exhausted()) {
-      return {};
-    }
-    an<DictEntry> ret = memory.uter.Peek();
-    memory.uter.Next();
-    return ret;
-  }
-
-  bool updateToUserdict(T& memory, const DictEntry& entry, const int commits, const string& new_entry_prefix) {
-    if (auto dict = memory.user_dict())
-      return dict->UpdateEntry(entry, commits, new_entry_prefix);
-    else
-      return false;
-  }
-
   int raw_iter_user(lua_State* L) {
-    lua_pushcfunction(L, WRAP(userNext));
+    lua_pushcfunction(L, WRAPMEM(T::userNext));
     lua_pushvalue(L, 1);
     return 2;
   }
 
   int raw_iter_dict(lua_State* L) {
-    lua_pushcfunction(L, WRAP(dictNext));
+    lua_pushcfunction(L, WRAPMEM(T::dictNext));
     lua_pushvalue(L, 1);
     return 2;
   }
-
-  static const luaL_Reg funcs[] = {
-      {"Memory", raw_make},
-      {NULL, NULL},
-  };
 
   std::vector<string> decode(T& memory, Code& code) {
     std::vector<string> res;
@@ -1416,14 +1334,20 @@ namespace MemoryReg {
       dict->Decode(code,&res);
     return res;
   }
+
+  static const luaL_Reg funcs[] = {
+      {"Memory", raw_make},
+      {NULL, NULL},
+  };
+
   static const luaL_Reg methods[] = {
-      { "dict_lookup", WRAP(dictLookup)},
-      { "user_lookup", WRAP(userLookup)},
+      { "dict_lookup", WRAPMEM(T::dictLookup)},
+      { "user_lookup", WRAPMEM(T::userLookup)},
       { "memorize", WRAPMEM(T::memorize)},
       { "decode", WRAP(decode)},
       { "iter_dict", raw_iter_dict},
       { "iter_user", raw_iter_user},
-      { "update_userdict", WRAP(updateToUserdict)},
+      { "update_userdict", WRAPMEM(T::updateToUserdict)},
       {NULL, NULL},
   };
 
