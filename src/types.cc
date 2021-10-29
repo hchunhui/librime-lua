@@ -1328,20 +1328,18 @@ namespace MemoryReg {
   int raw_make(lua_State *L) {
     // TODO: fix the memory leak
     C_State C;
-
     int n = lua_gettop(L);
     Lua *lua = Lua::from_state(L);
-    Engine *engine = LuaType<Engine *>::todata(L, 1);
-    Schema *schema = LuaType<Schema *>::todata(L, 2);
-    string ns = "translator";
-    if (n == 3)
-      ns = LuaType<string>::todata(L, 3, &C);
+    if (1 > n)
+      return 0;
 
-    Ticket translatorTicket;
-    translatorTicket.engine = engine;
-    translatorTicket.name_space = ns;
-    translatorTicket.schema = schema;
-    translatorTicket.klass = "lua_translator";
+    Engine *engine= LuaType<Engine *>::todata(L, 1);
+    Ticket translatorTicket(engine,"translator");
+    translatorTicket.schema = & (LuaType<Schema &>::todata(L, 2) );
+
+    if (3 <= n)
+      translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
+
     an<T> memoli = New<T>(lua, translatorTicket);
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
