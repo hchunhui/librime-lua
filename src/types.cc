@@ -1370,7 +1370,7 @@ namespace MemoryReg {
 
   bool LuaMemory::userLookup( const string& input, const bool isExpand) {
     uter_ = UserDictEntryIterator();
-    if (auto dict = user_dict())
+    if (auto dict = this->user_dict())
       return dict->LookupWords(&uter_ , input, isExpand) > 0;
     else
       return false;
