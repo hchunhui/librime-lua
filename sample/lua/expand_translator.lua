@@ -29,7 +29,9 @@ local function memoryCallback(memory, commit)
 end
 
 local function init(env)
-  env.mem = Memory(env.engine,env.engine.schema)
+  env.mem = Memory(env.engine,env.engine.schema)  --  ns= "translator"
+  -- env.mem = Memory(env.engine,env.engine.schema, env.name_space )  
+  -- env.mem = Memory(env.engine,Schema("cangjie5") ) --  ns= "translator- 
   env.mem:memorize(function(commit) memoryCallback(env.mem, commit) end)
   -- or use
   -- schema = Schema("cangjie5") -- schema_id
