@@ -1285,32 +1285,31 @@ namespace CodeReg {
 }
 namespace MemoryReg {
   class LuaMemory : public Memory {
-    an<LuaObj> memorize_callback;
-    Lua *lua_;
-  public:
-    using Memory::Memory;
-    DictEntryIterator iter;
-    UserDictEntryIterator uter;
+    protected:
+      an<LuaObj> memorize_callback;
+      Lua *lua_;
+      DictEntryIterator iter_;
+      UserDictEntryIterator uter_;
+    public:
 
-    LuaMemory(Lua *lua, const Ticket& ticket)
-      : lua_(lua), Memory(ticket) {}
+      LuaMemory(Lua *lua, const Ticket& ticket)
+        : lua_(lua), Memory(ticket) {}
 
-    virtual bool Memorize(const CommitEntry&);
+      virtual bool Memorize(const CommitEntry&);
 
-    void memorize(an<LuaObj> func) {
-      memorize_callback = func;
-    }
+      void memorize(an<LuaObj> func) {
+        memorize_callback = func;
+      }
 
-    void clearDict() {
-      iter = DictEntryIterator();
-    }
-    void clearUser() {
-      uter = UserDictEntryIterator();
-    }
+      bool dictLookup( const string& input, const bool isExpond, size_t limit);
+      bool userLookup( const string& input, const bool isExpand);
+      optional<an<DictEntry>> dictNext();
+      optional<an<DictEntry>> userNext();
+      bool updateToUserdict( const DictEntry& entry, const int commits, const string& new_entry_prefix);
   };
   typedef LuaMemory T;
 
-  bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
+  bool LuaMemory::Memorize(const CommitEntry& commit_entry) {
     if (!memorize_callback)
       return false;
 
@@ -1328,73 +1327,79 @@ namespace MemoryReg {
   int raw_make(lua_State *L) {
     // TODO: fix the memory leak
     C_State C;
+
     int n = lua_gettop(L);
     Lua *lua = Lua::from_state(L);
-    if (1 > n)
+    if ( 1 > n )
       return 0;
 
-    Engine *engine= LuaType<Engine *>::todata(L, 1);
-    Ticket translatorTicket(engine,"translator");
-    translatorTicket.schema = & (LuaType<Schema &>::todata(L, 2) );
-
-    if (3 <= n)
-      translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
+    Ticket translatorTicket( LuaType<Engine *>::todata(L, 1), "translator");
+    if ( 2 < n ){
+        translatorTicket.schema = & (LuaType<Schema &>::todata(L, 2));
+        translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
+    }
+    if ( 2 == n ){
+      if ( lua_isstring(L, 2) )
+        translatorTicket.name_space = LuaType<string>::todata(L, 2, &C);
+      else
+        translatorTicket.schema = & (LuaType<Schema &>::todata(L, 2));
+    }
 
     an<T> memoli = New<T>(lua, translatorTicket);
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }
 
-  bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
-    memory.clearDict();
+  bool LuaMemory::dictLookup( const string& input, const bool isExpand,size_t limit) {
+    iter_ = DictEntryIterator();
     limit = limit == 0 ? 0xffffffffffffffff : limit;
-    if (auto dict = memory.dict())
-      return dict->LookupWords(&memory.iter, input, isExpand, limit) > 0;
+    if (auto dict = this->dict())
+      return dict->LookupWords(&iter_, input, isExpand, limit) > 0;
     else
       return false;
   }
 
-  optional<an<DictEntry>> dictNext(T& memory) {
-    if (memory.iter.exhausted()) {
+  optional<an<DictEntry>> LuaMemory::dictNext() {
+    if (iter_.exhausted()) {
       return {};
     }
-    an<DictEntry> ret = memory.iter.Peek();
-    memory.iter.Next();
+    an<DictEntry> ret = iter_.Peek();
+    iter_.Next();
     return ret;
   }
 
-  bool userLookup(T& memory, const string& input, const bool isExpand) {
-    memory.clearUser();
-    if (auto dict = memory.user_dict())
-      return dict->LookupWords(&memory.uter, input, isExpand) > 0;
+  bool LuaMemory::userLookup( const string& input, const bool isExpand) {
+    uter_ = UserDictEntryIterator();
+    if (auto dict = user_dict())
+      return dict->LookupWords(&uter_ , input, isExpand) > 0;
     else
       return false;
   }
 
-  optional<an<DictEntry>> userNext(T& memory) {
-    if (memory.uter.exhausted()) {
+  optional<an<DictEntry>> LuaMemory::userNext() {
+    if (uter_.exhausted()) {
       return {};
     }
-    an<DictEntry> ret = memory.uter.Peek();
-    memory.uter.Next();
+    an<DictEntry> ret = uter_.Peek();
+    uter_.Next();
     return ret;
   }
 
-  bool updateToUserdict(T& memory, const DictEntry& entry, const int commits, const string& new_entry_prefix) {
-    if (auto dict = memory.user_dict())
+  bool LuaMemory::updateToUserdict( const DictEntry& entry, const int commits, const string& new_entry_prefix) {
+    if (auto dict = user_dict())
       return dict->UpdateEntry(entry, commits, new_entry_prefix);
     else
       return false;
   }
 
   int raw_iter_user(lua_State* L) {
-    lua_pushcfunction(L, WRAP(userNext));
+    lua_pushcfunction(L, WRAPMEM(T::userNext));
     lua_pushvalue(L, 1);
     return 2;
   }
 
   int raw_iter_dict(lua_State* L) {
-    lua_pushcfunction(L, WRAP(dictNext));
+    lua_pushcfunction(L, WRAPMEM(T::dictNext));
     lua_pushvalue(L, 1);
     return 2;
   }
@@ -1411,13 +1416,13 @@ namespace MemoryReg {
     return res;
   }
   static const luaL_Reg methods[] = {
-      { "dict_lookup", WRAP(dictLookup)},
-      { "user_lookup", WRAP(userLookup)},
+      { "dict_lookup", WRAPMEM(T::dictLookup)},
+      { "user_lookup", WRAPMEM(T::userLookup)},
       { "memorize", WRAPMEM(T::memorize)},
       { "decode", WRAP(decode)},
       { "iter_dict", raw_iter_dict},
       { "iter_user", raw_iter_user},
-      { "update_userdict", WRAP(updateToUserdict)},
+      { "update_userdict", WRAPMEM(T::updateToUserdict)},
       {NULL, NULL},
   };
 
