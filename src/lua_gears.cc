@@ -60,7 +60,6 @@ static void raw_init(lua_State *L, const Ticket &t,
   }
 
   if (lua_type(L, -1) != LUA_TFUNCTION) {
-    LOG(ERROR) << "Lua Compoment of " << t.name_space << " initialize error:( func_ type: " << luaL_typename(L, -1) << " expect function )";
     LOG(ERROR) << "Lua Compoment of initialize  error:("
       << " module: "<< t.klass
       << " name_space: " << t.name_space
