@@ -34,6 +34,16 @@ static void raw_init(lua_State *L, const Ticket &t,
   lua_pop(L, 1);
 
   lua_getglobal(L, t.klass.c_str());
+  if (lua_type(L, -1) == LUA_TNIL){
+    LOG(WARNING) << "Lua Component of initialize warning:( "
+      << " module: " << t.klass
+      << " name_space: " << t.name_space
+      << " ): module can't found ";
+    lua_pop(L, 1);
+    string do_str= t.klass + "= require(\"" +  t.klass + "\")";
+    luaL_dostring(L, do_str.c_str() );
+    lua_getglobal(L, t.klass.c_str());
+  }
   if (lua_type(L, -1) == LUA_TTABLE) {
     lua_getfield(L, -1, "init");
     if (lua_type(L, -1) == LUA_TFUNCTION) {
