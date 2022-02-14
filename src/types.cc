@@ -11,13 +11,11 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
-#include <rime/gear/memory.h>
-#include <rime/dict/dictionary.h>
-#include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 #include <opencc/opencc.h>
+#include "lua_ext_gears.h"
 
 using namespace rime;
 
@@ -327,7 +325,7 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
-    
+
   an<T> make() {
     return New<T>();
   }
@@ -544,7 +542,7 @@ namespace CompositionReg {
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
-  
+
   Segment &back(T &t) {
     return t.back();
   }
@@ -1285,44 +1283,8 @@ namespace CodeReg {
   };
 }
 namespace MemoryReg {
-  class LuaMemory : public Memory {
-    an<LuaObj> memorize_callback;
-    Lua *lua_;
-  public:
-    using Memory::Memory;
-    DictEntryIterator iter;
-    UserDictEntryIterator uter;
-
-    LuaMemory(Lua *lua, const Ticket& ticket)
-      : lua_(lua), Memory(ticket) {}
-
-    virtual bool Memorize(const CommitEntry&);
-
-    void memorize(an<LuaObj> func) {
-      memorize_callback = func;
-    }
-
-    void clearDict() {
-      iter = DictEntryIterator();
-    }
-    void clearUser() {
-      uter = UserDictEntryIterator();
-    }
-  };
   typedef LuaMemory T;
 
-  bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
-    if (!memorize_callback)
-      return false;
-
-    auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
-      return false;
-    } else
-      return r.get();
-  }
 
   // XXX: Currently the WRAP macro is not generic enough,
   // so that we need a raw function to get the lua state / parse variable args.
@@ -1435,7 +1397,7 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory, 
+  an<T> make(LuaMemory& memory,
     const string& type,
     size_t start,
     size_t end,
