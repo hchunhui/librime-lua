@@ -17,6 +17,7 @@
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
+#include <opencc/opencc.h>
 
 using namespace rime;
 
@@ -1588,6 +1589,35 @@ namespace SwitcherReg {
     { NULL, NULL },
   };
 }
+namespace OpenccReg{
+  typedef opencc::SimpleConverter T;
+
+  an<T> make(const string &filename){
+    return New<T>(filename);
+  }
+
+  string convert(T &t, const string& text){
+    return t.Convert(text);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "Opencc", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "convert", WRAP(convert) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 
 //--- Lua
 #define EXPORT(ns, L) \
@@ -1646,6 +1676,7 @@ void types_init(lua_State *L) {
   EXPORT(PhraseReg, L);
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
+  EXPORT(OpenccReg, L);
   LogReg::init(L);
   RimeApiReg::init(L);
 

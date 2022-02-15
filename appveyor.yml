@@ -32,6 +32,7 @@ install:
 
 build_script:
   - cd %RIME_DIR%
+  - copy env.vs2017_xp.bat env.bat
   - .\build.bat test
 
 after_build:
