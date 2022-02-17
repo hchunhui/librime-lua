@@ -149,8 +149,22 @@ namespace CandidateReg {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
 
+  an<T> shadow_candidate(const an<T> item,
+      const string& type, const string& text, const string& comment)
+  {
+    return New<ShadowCandidate>(item, type, text, comment);
+  }
+
+  an<T> uniquified_candidate(const an<T> item,
+      const string& type, const string& text, const string& comment)
+  {
+    return New<UniquifiedCandidate>(item, type, text, comment);
+  }
+
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
+    { "ShadowCandidate", WRAP(shadow_candidate) },
+    { "UniquifiedCandidate", WRAP(uniquified_candidate) },
     { NULL, NULL },
   };
 
@@ -158,6 +172,8 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
+    { "to_shadow_candidate", WRAP(shadow_candidate) },
+    { "to_uniquified_candidate", WRAP(uniquified_candidate) },
     { NULL, NULL },
   };
 
@@ -327,7 +343,7 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
-    
+
   an<T> make() {
     return New<T>();
   }
@@ -544,7 +560,7 @@ namespace CompositionReg {
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
-  
+
   Segment &back(T &t) {
     return t.back();
   }
@@ -1435,7 +1451,7 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory, 
+  an<T> make(MemoryReg::LuaMemory& memory,
     const string& type,
     size_t start,
     size_t end,
