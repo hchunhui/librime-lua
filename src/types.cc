@@ -160,6 +160,15 @@ namespace CandidateReg {
   {
     return New<UniquifiedCandidate>(item, type, text, comment);
   }
+  bool append(an<T> self, an<T> item) {
+    if (auto cand=  As<UniquifiedCandidate>(self) ) {
+      cand->Append(item);
+      return true;
+    }
+    LOG(WARNING) << "Can\'t append candidate.  args #1 expected an<UniquifiedCandidate> " ;
+    return false;
+  };
+
 
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
@@ -174,6 +183,7 @@ namespace CandidateReg {
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
     { "to_shadow_candidate", WRAP(shadow_candidate) },
     { "to_uniquified_candidate", WRAP(uniquified_candidate) },
+    { "append", WRAP(append)},
     { NULL, NULL },
   };
 
