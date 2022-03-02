@@ -1304,6 +1304,9 @@ namespace MemoryReg {
       translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
 
     an<T> memoli = New<T>(lua, translatorTicket);
+    if (4 <= n && memoli && lua_isfunction(L, 4))
+      memoli->memorize( LuaObj::todata(L, 4));
+
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }
