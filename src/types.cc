@@ -1197,6 +1197,9 @@ namespace CommitEntryReg {
 
   static const luaL_Reg methods[] = {
     {"get",WRAP(get)},
+    {"empty",WRAPMEM(T::empty)},
+    {"clear",WRAPMEM(T::Clear)},
+    {"append_phrase",WRAPMEM(T::AppendPhrase)},
     { NULL, NULL },
   };
 
