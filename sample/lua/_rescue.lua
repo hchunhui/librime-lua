@@ -15,13 +15,15 @@ local function comment_msg(err_comps)
   end
   return #tab > 1 and table.concat(tab,",") or ""
 end
-function M.Rescue_processor(key,env)
+
+function M.processor(key,env)
   return 2 -- Noop
 end
 
 function M.segment(seg,env)
   return true
 end
+
 function M.translato(input,seg,env)
   yield(Candidate("LuaError",seg.start,seg._end, "", "Err:" .. comment_msg(M.err_components) ))
 end
@@ -41,17 +43,17 @@ function Rescue(...)
   local arg,d1,d2= ...
   print("type arg",type(arg),type(d1),d1.name_space,type(d2))
   if type(arg) == "userdata" then
-    if arg.shift then
+    if arg.shift then -- Processor check (KeyEvent)
       func =M.processor
       comp="P@" .. (d1 and d1.name_space or "p")
-    elseif arg.tran then
+    elseif arg.tran then -- Segmentor check (Segmetion)
       func= M.segment
       comp="S@" .. (d1 and d1.name_space or "s")
-    elseif arg.iter then
+    elseif arg.iter then -- Filter check  (Translation)
       func= M.filter
       comp="F@" .. ( d1 and d1.name_space or "f")
     end
-  elseif type(arg) == "string" then
+  elseif type(arg) == "string" then -- Translator check ( string)
     comp="T@" .. (d2 and d2.name_space or "t")
     func= M.translato
   end
