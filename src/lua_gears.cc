@@ -25,6 +25,7 @@ bool LuaTranslation::Next() {
 static void raw_init(lua_State *L, const Ticket &t,
                      an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini) {
   lua_newtable(L);
+  bool init_ok= true;
   Engine *e = t.engine;
   LuaType<Engine *>::pushdata(L, e);
   lua_setfield(L, -2, "engine");
@@ -40,6 +41,7 @@ static void raw_init(lua_State *L, const Ticket &t,
       LuaObj::pushdata(L, *env);
       int status = lua_pcall(L, 1, 1, 0);
       if (status != LUA_OK) {
+        init_ok = false;
         const char *e = lua_tostring(L, -1);
         LOG(ERROR) << "Lua Compoment of initialize  error:("
           << " module: "<< t.klass
@@ -60,12 +62,17 @@ static void raw_init(lua_State *L, const Ticket &t,
   }
 
   if (lua_type(L, -1) != LUA_TFUNCTION) {
+    init_ok=false;
     LOG(ERROR) << "Lua Compoment of initialize  error:("
       << " module: "<< t.klass
       << " name_space: " << t.name_space
       << " func type: " << luaL_typename(L, -1)
       << " ): " << "func type error expect function ";
   }
+
+  if (!init_ok)
+    ( lua_getglobal(L, "Rescue") == LUA_TFUNCTION) ? lua_remove(L, -2) : lua_remove(L, -1);
+
   *func = LuaObj::todata(L, -1);
   lua_pop(L, 1);
 }
