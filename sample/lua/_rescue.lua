@@ -10,7 +10,7 @@ local M={}
 M.err_components={}
 local function comment_msg(err_comps)
   local tab={}
-  for k,v in next,err_comps do 
+  for k,v in next,err_comps do
     table.insert(tab, v and k or nil )
   end
   return #tab > 1 and table.concat(tab,",") or ""
@@ -28,9 +28,9 @@ end
 
 function M.filter(input, env)
   for cand in input:iter() do
-    if not cand.comment:match("- Err:") then  
+    if not cand.comment:match("- Err:") then
       cand.comment = cand.comment .. "- Err:" .. comment_msg(M.err_components)
-    end 
+    end
     yield(cand)
   end
 end
@@ -57,7 +57,7 @@ function Rescue(...)
   end
   if comp then
     M.err_components[comp]=true
-  end 
+  end
   return  func and  func(arg, ...)
 
 end
