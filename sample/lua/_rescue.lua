@@ -6,62 +6,50 @@
 -- Distributed under terms of the MIT license.
 --
 local M={}
-
-M.err_components={}
-local function comment_msg(err_comps)
+local E={}
+--
+function E:set(env,comp)
+  local id= env.engine.schema.schema_id
+  self[id] = self[id] or {}
+  self[id][comp .. env.name_space ]=true
+end
+function E:get(env)
+  local id= env.engine.schema.schema_id
   local tab={}
-  for k,v in next,err_comps do
-    table.insert(tab, v and k or nil )
+  for k,v in next , self[id] or {} do
+    table.insert(tab,  k  )
   end
-  return #tab > 1 and table.concat(tab,",") or ""
+  return table.concat( tab ,",")
 end
 
 function M.processor(key,env)
+  E:set(env,"P@")
   return 2 -- Noop
 end
 
-function M.segment(seg,env)
+function M.segmentor(seg,env)
+  E:set(env,"S@")
   return true
 end
 
-function M.translato(input,seg,env)
-  yield(Candidate("LuaError",seg.start,seg._end, "", "Err:" .. comment_msg(M.err_components) ))
+function M.translator(input,seg,env)
+  E:set(env,"T@")
+  yield(Candidate("LuaError",seg.start,seg._end, "", "Err:" .. E:get(env) ))
 end
 
 function M.filter(input, env)
+  E:set(env,"F@")
   for cand in input:iter() do
     if not cand.comment:match("- Err:") then
-      cand.comment = cand.comment .. "- Err:" .. comment_msg(M.err_components)
+      cand.comment = cand.comment .. "- Err:" .. E:get(env)
     end
     yield(cand)
   end
 end
-_Rescue=M
 
+Rescue_processor=M.processor
+Rescue_segmentor=M.segmentor
+Rescue_translator=M.translator
+Rescue_filter=M.filter
 
-function Rescue(...)
-  local arg,d1,d2= ...
-  print("type arg",type(arg),type(d1),d1.name_space,type(d2))
-  if type(arg) == "userdata" then
-    if arg.shift then -- Processor check (KeyEvent)
-      func =M.processor
-      comp="P@" .. (d1 and d1.name_space or "p")
-    elseif arg.tran then -- Segmentor check (Segmetion)
-      func= M.segment
-      comp="S@" .. (d1 and d1.name_space or "s")
-    elseif arg.iter then -- Filter check  (Translation)
-      func= M.filter
-      comp="F@" .. ( d1 and d1.name_space or "f")
-    end
-  elseif type(arg) == "string" then -- Translator check ( string)
-    comp="T@" .. (d2 and d2.name_space or "t")
-    func= M.translato
-  end
-  if comp then
-    M.err_components[comp]=true
-  end
-  return  func and  func(arg, ...)
-
-end
-
-return Rescue
+--return Rescue
