@@ -23,7 +23,7 @@ bool LuaTranslation::Next() {
 
 //---
 static void raw_init(lua_State *L, const Ticket &t,
-                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini) {
+                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini, const string &rescue_func) {
   lua_newtable(L);
   bool init_ok= true;
   Engine *e = t.engine;
@@ -71,7 +71,7 @@ static void raw_init(lua_State *L, const Ticket &t,
   }
 
   if (!init_ok)
-    ( lua_getglobal(L, "Rescue") == LUA_TFUNCTION) ? lua_remove(L, -2) : lua_remove(L, -1);
+    ( lua_getglobal(L, rescue_func.c_str() ) == LUA_TFUNCTION) ? lua_remove(L, -2) : lua_remove(L, -1);
 
   *func = LuaObj::todata(L, -1);
   lua_pop(L, 1);
@@ -95,7 +95,7 @@ static void raw_tags_match(lua_State *L, const Ticket &t, an<LuaObj> *tags_match
 //--- LuaFilter
 LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
   : Filter(ticket), TagMatching(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, "Rescue_filter");});
   // initilize lua function  : tags_match( segment, env)
   lua->to_state([&](lua_State *L) {raw_tags_match(L, ticket, &tags_match_);});
 }
@@ -120,7 +120,7 @@ LuaFilter::~LuaFilter() {
 //--- LuaTranslator
 LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
   : Translator(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, "Rescue_Translator");});
 }
 
 an<Translation> LuaTranslator::Query(const string& input,
@@ -147,7 +147,7 @@ LuaTranslator::~LuaTranslator() {
 //--- LuaSegmentor
 LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
   : Segmentor(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, "Rescue_segmentor");});
 }
 
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
@@ -174,7 +174,7 @@ LuaSegmentor::~LuaSegmentor() {
 //--- LuaProcessor
 LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
   : Processor(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, "Rescue_Porcessor");});
 }
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
