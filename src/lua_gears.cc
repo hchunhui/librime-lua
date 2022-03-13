@@ -120,7 +120,7 @@ LuaFilter::~LuaFilter() {
 //--- LuaTranslator
 LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
   : Translator(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, "Rescue_Translator");});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, "Rescue_translator");});
 }
 
 an<Translation> LuaTranslator::Query(const string& input,
@@ -174,7 +174,7 @@ LuaSegmentor::~LuaSegmentor() {
 //--- LuaProcessor
 LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
   : Processor(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, "Rescue_Porcessor");});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, "Rescue_processor");});
 }
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
