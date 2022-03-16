@@ -327,7 +327,7 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
-    
+
   an<T> make() {
     return New<T>();
   }
@@ -544,7 +544,7 @@ namespace CompositionReg {
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
-  
+
   Segment &back(T &t) {
     return t.back();
   }
@@ -1435,7 +1435,7 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory, 
+  an<T> make(MemoryReg::LuaMemory& memory,
     const string& type,
     size_t start,
     size_t end,
@@ -1491,8 +1491,11 @@ namespace PhraseReg {
 namespace KeySequenceReg {
   typedef KeySequence T;
 
-  an<T> make() {
-    return New<T>();
+  int raw_make(lua_State *L){
+    an<T> t = (0<lua_gettop(L)) ? New<T>((  lua_tostring(L,1) )) : New<T>();
+    lua_pop(L,lua_gettop(L));
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   vector<KeyEvent> toKeyEvent(T& t) {
@@ -1500,7 +1503,7 @@ namespace KeySequenceReg {
   }
 
   static const luaL_Reg funcs[] = {
-    { "KeySequence", WRAP(make) },
+    { "KeySequence", raw_make },
     { NULL, NULL },
   };
 
