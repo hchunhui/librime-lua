@@ -239,7 +239,11 @@ namespace ReverseDbReg {
   typedef ReverseDb T;
 
   an<T> make(const string &file) {
-    an<T> db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
+    string full_path = string(RimeGetUserDataDir()) + "/" + file;
+    if ( !boost::filesystem::exists( full_path) )
+      full_path = string(RimeGetSharedDataDir()) + "/" + file;
+
+    an<T> db = New<ReverseDb>(full_path);
     db->Load();
     return db;
   }
