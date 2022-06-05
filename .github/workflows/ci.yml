@@ -1,0 +1,14 @@
+on: [push, pull_request]
+
+jobs:
+  macos:
+    uses: rime/librime/.github/workflows/macos-build.yml@master
+    with:
+      repository: rime/librime
+      rime_plugins: ${{ github.repository }}@${{ github.ref_name }}
+
+  windows:
+    uses: rime/librime/.github/workflows/windows-build.yml@master
+    with:
+      repository: rime/librime
+      rime_plugins: ${{ github.repository }}@${{ github.ref_name }}
