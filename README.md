@@ -1,7 +1,5 @@
 # librime-lua: Extending [RIME](https://rime.im) with Lua scripts
 
-[![Build status](https://ci.appveyor.com/api/projects/status/github/hchunhui/librime-lua?svg=true)](https://ci.appveyor.com/project/hchunhui/librime-lua)
-
 Features
 ===
  - Supports extending RIME processors, segmentors, translators and filters
@@ -65,12 +63,6 @@ Build dependencies
 ---
   - librime >= 1.5.0
   - LuaJIT 2 / Lua 5.1 / Lua 5.2 / Lua 5.3 / Lua 5.4
-
-Prebuilt versions
----
-  - Windows
-    - [1.4.0 backport](https://github.com/hchunhui/librime-lua/releases)
-    - [master](https://ci.appveyor.com/project/hchunhui/librime-lua/build/artifacts)
 
 Instructions
 ---

@@ -571,8 +571,8 @@ struct LuaWrapper<S(*)(T...), f> {
 };
 
 // MemberWrapper: R (C::*)(T..) -> R (C &, T...)
-// MemberWrapper(get variable): R (C::*) -> R (C &)
-// MemberWrapper(set variable): R (C::*) -> void (C &, R)
+// MemberWrapperV(get variable): R (C::*) -> R (C &)
+// MemberWrapperV(set variable): R (C::*) -> void (C &, R)
 template<typename F, F f>
 struct MemberWrapper;
 
@@ -590,8 +590,11 @@ struct MemberWrapper<R (C::*)(T...) const, f> {
   }
 };
 
+template<typename F, F f>
+struct MemberWrapperV;
+
 template<typename R, typename C, R C::*f>
-struct MemberWrapper<R (C::*), f> {
+struct MemberWrapperV<R (C::*), f> {
   static R wrap_get(const C &c) {
     return c.*f;
   }
@@ -604,9 +607,9 @@ struct MemberWrapper<R (C::*), f> {
 #define WRAP(f) (&(LuaWrapper<decltype(&f), &f>::wrap))
 #define WRAPMEM(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap), \
                                           &MemberWrapper<decltype(&f), &f>::wrap>::wrap))
-#define WRAPMEM_GET(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap_get), \
-                                              &MemberWrapper<decltype(&f), &f>::wrap_get>::wrap))
-#define WRAPMEM_SET(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap_set), \
-                                              &MemberWrapper<decltype(&f), &f>::wrap_set>::wrap))
+#define WRAPMEM_GET(f) (&(LuaWrapper<decltype(&MemberWrapperV<decltype(&f), &f>::wrap_get), \
+                                              &MemberWrapperV<decltype(&f), &f>::wrap_get>::wrap))
+#define WRAPMEM_SET(f) (&(LuaWrapper<decltype(&MemberWrapperV<decltype(&f), &f>::wrap_set), \
+                                              &MemberWrapperV<decltype(&f), &f>::wrap_set>::wrap))
 
 #endif /* LIB_LUA_TEMPLATES_H_ */
