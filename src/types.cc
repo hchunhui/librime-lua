@@ -1189,7 +1189,7 @@ namespace LogReg {
 namespace CommitEntryReg {
   typedef CommitEntry T;
 
-  vector<const rime::DictEntry*> get(T& ce) {
+  vector<const rime::DictEntry*> get(const T& ce) {
     return ce.elements;
   }
 
