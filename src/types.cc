@@ -11,13 +11,13 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
-#include <rime/gear/memory.h>
-#include <rime/dict/dictionary.h>
-#include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 #include <opencc/opencc.h>
+#include "lua_ext_gears.h"
+
+#define ENABLE_TYPES_EXT
 
 using namespace rime;
 
@@ -149,8 +149,31 @@ namespace CandidateReg {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
 
+  an<T> shadow_candidate(const an<T> item,
+      const string& type, const string& text, const string& comment)
+  {
+    return New<ShadowCandidate>(item, type, text, comment);
+  }
+
+  an<T> uniquified_candidate(const an<T> item,
+      const string& type, const string& text, const string& comment)
+  {
+    return New<UniquifiedCandidate>(item, type, text, comment);
+  }
+  bool append(an<T> self, an<T> item) {
+    if (auto cand=  As<UniquifiedCandidate>(self) ) {
+      cand->Append(item);
+      return true;
+    }
+    LOG(WARNING) << "Can\'t append candidate.  args #1 expected an<UniquifiedCandidate> " ;
+    return false;
+  };
+
+
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
+    { "ShadowCandidate", WRAP(shadow_candidate) },
+    { "UniquifiedCandidate", WRAP(uniquified_candidate) },
     { NULL, NULL },
   };
 
@@ -158,6 +181,9 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
+    { "to_shadow_candidate", WRAP(shadow_candidate) },
+    { "to_uniquified_candidate", WRAP(uniquified_candidate) },
+    { "append", WRAP(append)},
     { NULL, NULL },
   };
 
@@ -327,7 +353,7 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
-    
+
   an<T> make() {
     return New<T>();
   }
@@ -544,7 +570,7 @@ namespace CompositionReg {
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
-  
+
   Segment &back(T &t) {
     return t.back();
   }
@@ -893,10 +919,8 @@ namespace ProjectionReg{
 
   string apply(T &t, const string &s){
     string res= s;
-    if (t.Apply(&res))
-      return res;
-    else
-      return "";
+    t.Apply(&res);
+    return res;
   }
 
   static const luaL_Reg funcs[] = {
@@ -1285,44 +1309,8 @@ namespace CodeReg {
   };
 }
 namespace MemoryReg {
-  class LuaMemory : public Memory {
-    an<LuaObj> memorize_callback;
-    Lua *lua_;
-  public:
-    using Memory::Memory;
-    DictEntryIterator iter;
-    UserDictEntryIterator uter;
-
-    LuaMemory(Lua *lua, const Ticket& ticket)
-      : lua_(lua), Memory(ticket) {}
-
-    virtual bool Memorize(const CommitEntry&);
-
-    void memorize(an<LuaObj> func) {
-      memorize_callback = func;
-    }
-
-    void clearDict() {
-      iter = DictEntryIterator();
-    }
-    void clearUser() {
-      uter = UserDictEntryIterator();
-    }
-  };
   typedef LuaMemory T;
 
-  bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
-    if (!memorize_callback)
-      return false;
-
-    auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
-      return false;
-    } else
-      return r.get();
-  }
 
   // XXX: Currently the WRAP macro is not generic enough,
   // so that we need a raw function to get the lua state / parse variable args.
@@ -1342,6 +1330,9 @@ namespace MemoryReg {
       translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
 
     an<T> memoli = New<T>(lua, translatorTicket);
+    if (4 <= n && memoli && lua_isfunction(L, 4))
+      memoli->memorize( LuaObj::todata(L, 4));
+
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }
@@ -1435,7 +1426,7 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory, 
+  an<T> make(LuaMemory& memory,
     const string& type,
     size_t start,
     size_t end,
@@ -1446,6 +1437,38 @@ namespace PhraseReg {
 
   an<Candidate> toCandidate(an<T> phrase) {
     return phrase;
+  }
+
+  double type(T &t){
+    return t.type();
+  }
+
+  void set_type(T &t, string v){
+    t.set_type(v);
+  }
+
+  size_t start(T &t){
+    return t.start();
+  }
+
+  void set_start(T &t, size_t v){
+    t.set_start(v);
+  }
+
+  size_t end(T &t){
+    return t.end();
+  }
+
+  void set_end(T &t, size_t v){
+    t.set_end(v);
+  }
+
+  double quality(T &t){
+    return t.quality();
+  }
+
+  void set_quality(T &t, double v){
+    t.set_quality(v);
   }
 
   static const luaL_Reg funcs[] = {
@@ -1460,10 +1483,10 @@ namespace PhraseReg {
 
   static const luaL_Reg vars_get[] = {
     { "language", WRAPMEM(T::language)},
-    { "type", WRAPMEM(T::type) },
-    { "start", WRAPMEM(T::start) },
-    { "_end", WRAPMEM(T::end) }, // end is keyword in Lua...
-    { "quality", WRAPMEM(T::quality) },
+    { "type", WRAP(type) },
+    { "start", WRAP(start) },
+    { "_end", WRAP(end) }, // end is keyword in Lua...
+    { "quality", WRAP(quality) },
     { "text", WRAPMEM(T::text) },
     { "comment", WRAPMEM(T::comment) },
     { "preedit", WRAPMEM(T::preedit) },
@@ -1476,10 +1499,10 @@ namespace PhraseReg {
   };
 
   static const luaL_Reg vars_set[] = {
-    { "type", WRAPMEM(T::set_type) },
-    { "start", WRAPMEM(T::set_start) },
-    { "_end", WRAPMEM(T::set_end) },
-    { "quality", WRAPMEM(T::set_quality) },
+    { "type", WRAP(set_type) },
+    { "start", WRAP(set_start) },
+    { "_end", WRAP(set_end) },
+    { "quality", WRAP(set_quality) },
     { "comment", WRAPMEM(T::set_comment) },
     { "preedit", WRAPMEM(T::set_preedit) },
     { "weight", WRAPMEM(T::set_weight)},
@@ -1619,6 +1642,10 @@ namespace OpenccReg{
   };
 }
 
+#ifdef ENABLE_TYPES_EXT
+#include "types_ext.inc"
+#endif
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -1679,6 +1706,9 @@ void types_init(lua_State *L) {
   EXPORT(OpenccReg, L);
   LogReg::init(L);
   RimeApiReg::init(L);
+#ifdef ENABLE_TYPES_EXT
+  EXPORT_TYPES_EXT(L);
+#endif
 
   export_type(L, LuaType<the<SchemaReg::T>>::name(), LuaType<the<SchemaReg::T>>::gc,
               SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
