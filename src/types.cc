@@ -11,13 +11,14 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
+#include <rime/gear/memory.h>
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 #include <opencc/opencc.h>
-#include "lua_ext_gears.h"
 
-#define ENABLE_TYPES_EXT
 
 using namespace rime;
 
@@ -1642,9 +1643,6 @@ namespace OpenccReg{
   };
 }
 
-#ifdef ENABLE_TYPES_EXT
-#include "types_ext.inc"
-#endif
 
 //--- Lua
 #define EXPORT(ns, L) \
@@ -1706,9 +1704,6 @@ void types_init(lua_State *L) {
   EXPORT(OpenccReg, L);
   LogReg::init(L);
   RimeApiReg::init(L);
-#ifdef ENABLE_TYPES_EXT
-  EXPORT_TYPES_EXT(L);
-#endif
 
   export_type(L, LuaType<the<SchemaReg::T>>::name(), LuaType<the<SchemaReg::T>>::gc,
               SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
