@@ -19,6 +19,8 @@
 #include "lib/lua_templates.h"
 #include <opencc/opencc.h>
 
+#define ENABLE_TYPES_EXT
+
 using namespace rime;
 
 template<typename T>
@@ -327,7 +329,7 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
-    
+
   an<T> make() {
     return New<T>();
   }
@@ -544,7 +546,7 @@ namespace CompositionReg {
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
-  
+
   Segment &back(T &t) {
     return t.back();
   }
@@ -1435,7 +1437,7 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory, 
+  an<T> make(MemoryReg::LuaMemory& memory,
     const string& type,
     size_t start,
     size_t end,
@@ -1629,6 +1631,10 @@ namespace OpenccReg{
   };
 }
 
+#ifdef ENABLE_TYPES_EXT
+#include "types_ext.inc"
+#endif
+
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -1689,6 +1695,9 @@ void types_init(lua_State *L) {
   EXPORT(OpenccReg, L);
   LogReg::init(L);
   RimeApiReg::init(L);
+#ifdef ENABLE_TYPES_EXT
+  EXPORT_TYPES_EXT(L);
+#endif
 
   export_type(L, LuaType<the<SchemaReg::T>>::name(), LuaType<the<SchemaReg::T>>::gc,
               SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
