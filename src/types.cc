@@ -1448,16 +1448,6 @@ namespace PhraseReg {
     return phrase;
   }
 
-  string type(T &t) { return t.type(); }
-  size_t start(T &t) { return t.start(); }
-  size_t end(T &t) { return t.end(); }
-  double quality(T &t) { return t.quality(); }
-
-  void set_type(T &t, string v) { t.set_type(v); }
-  void set_start(T &t, size_t v) { t.set_start(v); }
-  void set_end(T &t, size_t v) { t.set_end(v); }
-  void set_quality(T &t, double v) { t.set_quality(v); }
-
   static const luaL_Reg funcs[] = {
     { "Phrase", WRAP(make) },
     { NULL, NULL },
@@ -1469,30 +1459,30 @@ namespace PhraseReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    { "language", WRAPMEM(T::language)},
-    { "type", WRAP(type) },
-    { "start", WRAP(start) },
-    { "_end", WRAP(end) }, // end is keyword in Lua...
-    { "quality", WRAP(quality) },
-    { "text", WRAPMEM(T::text) },
-    { "comment", WRAPMEM(T::comment) },
-    { "preedit", WRAPMEM(T::preedit) },
-    { "weight", WRAPMEM(T::weight)},
-    { "code", WRAPMEM(T::code)},
-    { "entry", WRAPMEM(T::entry)},
+    { "language", WRAPMEM(T, language)},
+    { "type", WRAPMEM(T, type) },
+    { "start", WRAPMEM(T, start) },
+    { "_end", WRAPMEM(T, end) }, // end is keyword in Lua...
+    { "quality", WRAPMEM(T, quality) },
+    { "text", WRAPMEM(T, text) },
+    { "comment", WRAPMEM(T, comment) },
+    { "preedit", WRAPMEM(T, preedit) },
+    { "weight", WRAPMEM(T, weight)},
+    { "code", WRAPMEM(T, code)},
+    { "entry", WRAPMEM(T, entry)},
     //span
     //language doesn't wrap yet, so Wrap it later
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
-    { "type", WRAP(set_type) },
-    { "start", WRAP(set_start) },
-    { "_end", WRAP(set_end) },
-    { "quality", WRAP(set_quality) },
-    { "comment", WRAPMEM(T::set_comment) },
-    { "preedit", WRAPMEM(T::set_preedit) },
-    { "weight", WRAPMEM(T::set_weight)},
+    { "type", WRAPMEM(T, set_type) },
+    { "start", WRAPMEM(T, set_start) },
+    { "_end", WRAPMEM(T, set_end) },
+    { "quality", WRAPMEM(T, set_quality) },
+    { "comment", WRAPMEM(T, set_comment) },
+    { "preedit", WRAPMEM(T, set_preedit) },
+    { "weight", WRAPMEM(T, set_weight)},
     // set_syllabifier
     { NULL, NULL },
   };
