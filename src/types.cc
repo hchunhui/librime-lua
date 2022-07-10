@@ -1491,8 +1491,11 @@ namespace PhraseReg {
 namespace KeySequenceReg {
   typedef KeySequence T;
 
-  an<T> make() {
-    return New<T>();
+  int raw_make(lua_State *L){
+    an<T> t = (0<lua_gettop(L)) ? New<T>((  lua_tostring(L,1) )) : New<T>();
+    lua_pop(L,lua_gettop(L));
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   vector<KeyEvent> toKeyEvent(T& t) {
@@ -1500,7 +1503,7 @@ namespace KeySequenceReg {
   }
 
   static const luaL_Reg funcs[] = {
-    { "KeySequence", WRAP(make) },
+    { "KeySequence", raw_make },
     { NULL, NULL },
   };
 
