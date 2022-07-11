@@ -578,15 +578,25 @@ struct MemberWrapper;
 
 template<typename R, typename C, typename... T, R (C::*f)(T...)>
 struct MemberWrapper<R (C::*)(T...), f> {
-  static R wrap(C &c, T... t) {
+  template<typename D>
+  static R wrapT(D &c, T... t) {
     return (c.*f)(t...);
+  }
+
+  static R wrap(C &c, T... t) {
+    return wrapT<C>(c, t...);
   }
 };
 
 template<typename R, typename C, typename... T, R (C::*f)(T...) const>
 struct MemberWrapper<R (C::*)(T...) const, f> {
-  static R wrap(const C &c, T... t) {
+  template<typename D>
+  static R wrapT(const D &c, T... t) {
     return (c.*f)(t...);
+  }
+
+  static R wrap(const C &c, T... t) {
+    return wrapT<C>(c, t...);
   }
 };
 
@@ -595,21 +605,44 @@ struct MemberWrapperV;
 
 template<typename R, typename C, R C::*f>
 struct MemberWrapperV<R (C::*), f> {
-  static R wrap_get(const C &c) {
+  template<typename D>
+  static R wrapT_get(const D &c) {
     return c.*f;
   }
 
-  static void wrap_set(C &c, R r) {
+  template<typename D>
+  static void wrapT_set(D &c, R r) {
     c.*f = r;
+  }
+
+  static R wrap_get(const C &c) {
+    return wrapT_get<C>(c);
+  }
+
+  static void wrap_set(C &c, R r) {
+    return wrapT_set<C>(c, r);
   }
 };
 
+#define WRAP_PP_GET3(a1, a2, a3, ...) a3
+#define WRAP_FIX_MSVC(...) __VA_ARGS__
+#define WRAP_PP_CHOOSE(F, ...) WRAP_FIX_MSVC(WRAP_PP_GET3(__VA_ARGS__, F##_2, F##_1))
+
 #define WRAP(f) (&(LuaWrapper<decltype(&f), &f>::wrap))
-#define WRAPMEM(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap), \
-                                          &MemberWrapper<decltype(&f), &f>::wrap>::wrap))
-#define WRAPMEM_GET(f) (&(LuaWrapper<decltype(&MemberWrapperV<decltype(&f), &f>::wrap_get), \
-                                              &MemberWrapperV<decltype(&f), &f>::wrap_get>::wrap))
-#define WRAPMEM_SET(f) (&(LuaWrapper<decltype(&MemberWrapperV<decltype(&f), &f>::wrap_set), \
-                                              &MemberWrapperV<decltype(&f), &f>::wrap_set>::wrap))
+#define WRAPMEM_1(f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&f), &f>::wrap), \
+                                            &MemberWrapper<decltype(&f), &f>::wrap>::wrap))
+#define WRAPMEM_GET_1(f) (&(LuaWrapper<decltype(&MemberWrapperV<decltype(&f), &f>::wrap_get), \
+                                                &MemberWrapperV<decltype(&f), &f>::wrap_get>::wrap))
+#define WRAPMEM_SET_1(f) (&(LuaWrapper<decltype(&MemberWrapperV<decltype(&f), &f>::wrap_set), \
+                                                &MemberWrapperV<decltype(&f), &f>::wrap_set>::wrap))
+#define WRAPMEM_2(T, f) (&(LuaWrapper<decltype(&MemberWrapper<decltype(&T::f), &T::f>::wrapT<T>), \
+                                               &MemberWrapper<decltype(&T::f), &T::f>::wrapT<T>>::wrap))
+#define WRAPMEM_GET_2(T, f) (&(LuaWrapper<decltype(&MemberWrapperV<decltype(&T::f), &T::f>::wrapT_get<T>), \
+                                                   &MemberWrapperV<decltype(&T::f), &T::f>::wrapT_get<T>>::wrap))
+#define WRAPMEM_SET_2(T, f) (&(LuaWrapper<decltype(&MemberWrapperV<decltype(&T::f), &T::f>::wrapT_set<T>), \
+                                                   &MemberWrapperV<decltype(&T::f), &T::f>::wrapT_set<T>>::wrap))
+#define WRAPMEM(...) WRAP_FIX_MSVC(WRAP_PP_CHOOSE(WRAPMEM, __VA_ARGS__)(__VA_ARGS__))
+#define WRAPMEM_GET(...) WRAP_FIX_MSVC(WRAP_PP_CHOOSE(WRAPMEM_GET, __VA_ARGS__)(__VA_ARGS__))
+#define WRAPMEM_SET(...) WRAP_FIX_MSVC(WRAP_PP_CHOOSE(WRAPMEM_SET, __VA_ARGS__)(__VA_ARGS__))
 
 #endif /* LIB_LUA_TEMPLATES_H_ */
