@@ -24,7 +24,6 @@ namespace ProcessorReg{
   }
 
   static const luaL_Reg methods[] = {
-    //{"process_key_event",WRAPMEM(T::ProcessKeyEvent)},
     {"process_key_event",WRAP(process_key_event)},
     { NULL, NULL },
   };
@@ -38,6 +37,7 @@ namespace ProcessorReg{
   };
 
 }
+
 namespace SegmentorReg{
 
   typedef Segmentor T;
@@ -51,7 +51,6 @@ namespace SegmentorReg{
   }
 
   static const luaL_Reg methods[] = {
-    //{"proceed",WRAPMEM(T::Proceed)},
     {"proceed",WRAP(proceed)},
     { NULL, NULL },
   };
@@ -85,9 +84,11 @@ namespace TranslatorReg{
     { NULL, NULL },
   };
 }
+
 namespace FilterReg{
 
   typedef Filter T;
+
   an<Translation> apply(an<T> f, an<Translation> t){
     return f->Apply( t, nullptr );
   }
@@ -116,7 +117,6 @@ namespace ReverseLookupDictionaryReg {
   typedef ReverseLookupDictionaryComponent C;
 
   an<T> make(const string& dict_name) {
-
     if ( auto c = (C *) T::Require("reverse_lookup_dictionary")){
       auto t = (an<T>) c->Create(dict_name);
       if ( t  && t->Load())
@@ -222,10 +222,6 @@ namespace ComponentReg{
     {"Segmentor"   , raw_create<S>},
     {"Translator", raw_create<T>},
     {"Filter", raw_create<F>},
-    //{"Processor",  WRAP(create_processor)},
-    //{"Segment"   , WRAP(create_segmentor)},
-    //{"Translator", WRAP(create_translator)},
-    //{"Filter", WRAP(create_filter)},
     { NULL, NULL },
   };
 
