@@ -151,8 +151,31 @@ namespace CandidateReg {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
 
+  an<T> shadow_candidate(const an<T> item,
+      const string& type, const string& text, const string& comment)
+  {
+    return New<ShadowCandidate>(item, type, text, comment);
+  }
+
+  an<T> uniquified_candidate(const an<T> item,
+      const string& type, const string& text, const string& comment)
+  {
+    return New<UniquifiedCandidate>(item, type, text, comment);
+  }
+  bool append(an<T> self, an<T> item) {
+    if (auto cand=  As<UniquifiedCandidate>(self) ) {
+      cand->Append(item);
+      return true;
+    }
+    LOG(WARNING) << "Can\'t append candidate.  args #1 expected an<UniquifiedCandidate> " ;
+    return false;
+  };
+
+
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
+    { "ShadowCandidate", WRAP(shadow_candidate) },
+    { "UniquifiedCandidate", WRAP(uniquified_candidate) },
     { NULL, NULL },
   };
 
@@ -160,6 +183,9 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
+    { "to_shadow_candidate", WRAP(shadow_candidate) },
+    { "to_uniquified_candidate", WRAP(uniquified_candidate) },
+    { "append", WRAP(append)},
     { NULL, NULL },
   };
 
@@ -1493,8 +1519,11 @@ namespace PhraseReg {
 namespace KeySequenceReg {
   typedef KeySequence T;
 
-  an<T> make() {
-    return New<T>();
+  int raw_make(lua_State *L){
+    an<T> t = (0<lua_gettop(L)) ? New<T>((  lua_tostring(L,1) )) : New<T>();
+    lua_pop(L,lua_gettop(L));
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   vector<KeyEvent> toKeyEvent(T& t) {
@@ -1502,7 +1531,7 @@ namespace KeySequenceReg {
   }
 
   static const luaL_Reg funcs[] = {
-    { "KeySequence", WRAP(make) },
+    { "KeySequence", raw_make },
     { NULL, NULL },
   };
 
