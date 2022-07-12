@@ -96,7 +96,7 @@ LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
   auto f = lua_->newthread<an<LuaObj>, an<Translation>,
-                           an<LuaObj>>(func_, translation, env_);
+                           an<LuaObj>, CandidateList *>(func_, translation, env_, candidates);
   return New<LuaTranslation>(lua_, f);
 }
 
