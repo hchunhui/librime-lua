@@ -176,6 +176,7 @@ function F.init(env)
   env.ncomps={
     "simplifier",
     "single_char_filter",
+    "uniquifier"
   }
   env.comps={}
   for i,v in ipairs(env.ncomps) do
@@ -183,6 +184,7 @@ function F.init(env)
     assert( comp , "failed : create filter comp: " .. v)
     table.insert(env.comps, comp)
   end
+  -- reversedb test
   env.reversedb= ReverseLookup("luna_pinyin")
   assert(env.reversedb, "failed create reversedb : luna_pinyin")
   assert(env.reversedb:lookup("百")=="bai bo", "luna_pinyin reverse lookup  not match")
@@ -202,10 +204,10 @@ function F.tags_match(seg,env)
   end
   return true
 end
-
-function F.func(inp,env)
+--  new args  cands for subfilter:apply(inp,cands)
+function F.func(inp,env,cands)
   for i,v in ipairs(env.applyed) do
-    inp = v:apply(inp)
+    inp = v:apply(inp,cands)
   end
   for cand in inp:iter() do
     local code = env.reversedb:lookup(cand.text)

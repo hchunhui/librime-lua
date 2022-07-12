@@ -12,9 +12,7 @@ using namespace rime;
 
 namespace ProcessorReg{
   typedef Processor T;
-  static const luaL_Reg funcs[] = {
-    { NULL, NULL },
-  };
+
   int process_key_event(T &t, const KeyEvent &key){
     switch (t.ProcessKeyEvent(key) ){
       case kRejected: return kRejected;
@@ -22,6 +20,10 @@ namespace ProcessorReg{
       default: return kNoop;
     }
   }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
 
   static const luaL_Reg methods[] = {
     {"process_key_event",WRAP(process_key_event)},
@@ -39,16 +41,15 @@ namespace ProcessorReg{
 }
 
 namespace SegmentorReg{
-
   typedef Segmentor T;
-
-  static const luaL_Reg funcs[] = {
-    { NULL, NULL },
-  };
 
   bool proceed(T &t, Segmentation & s) {
     return t.Proceed(&s);
   }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
 
   static const luaL_Reg methods[] = {
     {"proceed",WRAP(proceed)},
@@ -63,8 +64,8 @@ namespace SegmentorReg{
     { NULL, NULL },
   };
 }
-namespace TranslatorReg{
 
+namespace TranslatorReg{
   typedef Translator T;
 
   static const luaL_Reg funcs[] = {
@@ -86,19 +87,14 @@ namespace TranslatorReg{
 }
 
 namespace FilterReg{
-
   typedef Filter T;
-
-  an<Translation> apply(an<T> f, an<Translation> t){
-    return f->Apply( t, nullptr );
-  }
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"apply",WRAP(apply)},
+    {"apply",WRAPMEM(T::Apply)},
     {"applies_to_segment",WRAPMEM(T::AppliesToSegment)},
     { NULL, NULL },
   };
@@ -155,19 +151,7 @@ namespace ReverseLookupDictionaryReg {
   };
 }
 
-template <typename O>
-an<O> create(Ticket & ticket){
-  if (auto c = O::Require(ticket.klass)) {
-    return (an<O>) c->Create(ticket);
-  }
-  else {
-    LOG(ERROR) << "error creating " << typeid(O).name() << ": '" << ticket.klass << "'";
-    return {};
-  }
-};
-
 namespace ComponentReg{
-
   typedef Processor P;
   typedef Segmentor S;
   typedef Translator T;
@@ -198,24 +182,6 @@ namespace ComponentReg{
       return 0;
     }
   };
-
-  an<P> create_processor(Engine *e, string ns, string prescription){
-    Ticket t = Ticket(e, ns, prescription);
-    return create<P>(t);
-  }
-  an<S> create_segmentor(Engine *e, string ns, string prescription){
-    Ticket t = Ticket(e, ns, prescription);
-    return create<S>(t);
-  }
-  an<T> create_translator(Engine *e, string ns, string prescription){
-    Ticket t = Ticket(e, ns, prescription);
-    return create<T>(t);
-  }
-  an<F> create_filter(Engine *e, string ns, string prescription){
-    Ticket t = Ticket(e, ns, prescription);
-    return create<F>(t);
-  }
-
 
   static const luaL_Reg funcs[] = {
     {"Processor",  raw_create<P>},

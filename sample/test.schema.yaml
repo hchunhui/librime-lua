@@ -54,9 +54,8 @@ engine:
     - lua_translator@m_translator@translator
     #- table_translator
   filters:
-    #- lua_filter@uniquifier
-    - uniquifier
     - lua_filter@init_filter
+    #- uniquifier
     #- simplifier
     #- single_char_filter
 
