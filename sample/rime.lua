@@ -95,3 +95,14 @@ expand_translator = require("expand_translator")
 -- switch_processor: 通过选择自定义的候选项来切换开关（以简繁切换和下一方案为例）
 -- 详见 `lua/switch.lua`
 switch_processor = require("switch")
+
+-- 由lua 導入 engine/下的組件 processor segmentor translator filters
+-- 生成一個processor 於自己 schema speller 取得 config
+-- processor=Component.Processor(env.engine,"","speller")
+-- 生成一每translator 由 luna_pinyin.schema:/translator 取得 translator config
+--
+-- tran = Component.Translator(env.engine,Schema('luna_pinyin'),"","script_translator")
+--
+-- 配合 test.schema.yaml
+--require 'component_test'
+
