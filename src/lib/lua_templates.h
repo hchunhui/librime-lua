@@ -100,9 +100,10 @@ struct LuaType {
       // registers a "__gc" to prevent memory leaks.
       lua_pop(L, 1);
       luaL_newmetatable(L, name());
-      lua_pushstring(L, "__gc");
+      lua_pushstring(L, name());
+      lua_setfield(L, -2, "name");
       lua_pushcfunction(L, gc);
-      lua_settable(L, -3);
+      lua_setfield(L, -2, "__gc");
     }
     lua_setmetatable(L, -2);
   }
@@ -217,9 +218,10 @@ struct LuaType<std::unique_ptr<T>> {
       // registers a "__gc" to prevent memory leaks.
       lua_pop(L, 1);
       luaL_newmetatable(L, name());
-      lua_pushstring(L, "__gc");
+      lua_pushstring(L, name());
+      lua_setfield(L, -2, "name");
       lua_pushcfunction(L, gc);
-      lua_settable(L, -3);
+      lua_setfield(L, -2, "__gc");
     }
     lua_setmetatable(L, -2);
   }
