@@ -7,6 +7,12 @@
 #include <set>
 #include <cstring>
 
+#ifdef __GNUC__
+#define LUAWRAPPER_LOCAL __attribute__((visibility("hidden")))
+#else
+#define LUAWRAPPER_LOCAL
+#endif
+
 extern "C" {
 #include <lua.h>
 #include <lualib.h>
@@ -24,7 +30,7 @@ extern "C" {
 // not rely on destructors. Instead the resources should be registered
 // here, so that they can be freed outside the call when exception
 // happens.
-class C_State {
+class LUAWRAPPER_LOCAL C_State {
   struct B {
     virtual ~B() {};
   };
@@ -50,7 +56,7 @@ public:
 //--- LuaType
 // Generic case (includes pointers)
 template<typename T>
-struct LuaType {
+struct LUAWRAPPER_LOCAL LuaType {
   static const char *name() {
     return typeid(LuaType<T>).name();
   }
@@ -498,7 +504,7 @@ LuaResult<void> Lua::void_call(I ... input) {
 // WRAPMEM_GET/SET(C::f): wraps member variable C::f
 
 template<typename F, F f>
-struct LuaWrapper;
+struct LUAWRAPPER_LOCAL LuaWrapper;
 
 // LuaWrapper: R(*)(T...) -> int (*)(lua_State *)
 template<typename S, typename... T, S(*f)(T...)>
@@ -576,7 +582,7 @@ struct LuaWrapper<S(*)(T...), f> {
 // MemberWrapperV(get variable): R (C::*) -> R (C &)
 // MemberWrapperV(set variable): R (C::*) -> void (C &, R)
 template<typename F, F f>
-struct MemberWrapper;
+struct LUAWRAPPER_LOCAL MemberWrapper;
 
 template<typename R, typename C, typename... T, R (C::*f)(T...)>
 struct MemberWrapper<R (C::*)(T...), f> {
@@ -603,7 +609,7 @@ struct MemberWrapper<R (C::*)(T...) const, f> {
 };
 
 template<typename F, F f>
-struct MemberWrapperV;
+struct LUAWRAPPER_LOCAL MemberWrapperV;
 
 template<typename R, typename C, R C::*f>
 struct MemberWrapperV<R (C::*), f> {
