@@ -212,9 +212,11 @@ namespace LevelDbReg{
   an<T> make(const string& file_name, const string& db_name){
     return New<LevelDb>(file_name,db_name,"userdb");
   }
-  string fetch(an<T> t, const string& key){
+  optional<string> fetch(an<T> t, const string& key){
     string res;
-    return ( t->Fetch(key,&res) )? res : nullptr ;
+    if ( t->Fetch(key,&res) )
+      return res;
+    return {};
   }
 
   bool loaded(an<T> t){
