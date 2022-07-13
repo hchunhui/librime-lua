@@ -8,6 +8,7 @@
 #ifndef _TYPE_EXT_INC
 #define _TYPE_EXT_INC
 #include <rime/common.h>
+#include <rime/dict/level_db.h>
 using namespace rime;
 
 namespace ProcessorReg{
@@ -151,6 +152,104 @@ namespace ReverseLookupDictionaryReg {
   };
 }
 
+// leveldb
+namespace DbAccessorReg{
+  typedef DbAccessor T;
+
+  // return key , value or nil
+  int raw_next(lua_State* L){
+    int n = lua_gettop(L);
+    if (1 > n )
+      return 0;
+    auto a = LuaType<an<T>>::todata(L, 1);
+    string key,value;
+    if (a->GetNextRecord(&key,&value)) {
+      LuaType<string>::pushdata(L,key);
+      LuaType<string>::pushdata(L,value);
+      return 2;
+    }else {
+      return 0;
+    }
+  };
+
+  // return raw_next, self
+  // for key,value in peek, self do print(key,value) end
+  int raw_iter(lua_State* L){
+    int n = lua_gettop(L);
+    if (1 > n)
+      return 0;
+    lua_pushcfunction(L, raw_next);
+    lua_insert(L, 1);
+    //lua_rotate(L, 2, 1);
+    lua_settop(L, 2);
+    return 2;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"reset", WRAPMEM(T::Reset)},
+    {"jump", WRAPMEM(T::Jump)},
+    {"iter",raw_iter},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace LevelDbReg{
+  typedef LevelDb T;
+  typedef DbAccessor A;
+
+  //
+  an<T> make(const string& file_name, const string& db_name){
+    return New<LevelDb>(file_name,db_name,"userdb");
+  }
+  optional<string> fetch(an<T> t, const string& key){
+    string res;
+    if ( t->Fetch(key,&res) )
+      return res;
+    return {};
+  }
+
+  bool loaded(an<T> t){
+    return t->loaded();
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"LevelDb", WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"open", WRAPMEM(T::Open)},
+    {"open_read_only", WRAPMEM(T::OpenReadOnly)},
+    {"close", WRAPMEM(T::Close)},
+    {"query", WRAPMEM(T::Query)}, // query(prefix_key) return DbAccessor
+    {"fetch", WRAP(fetch)},  //   fetch(key) return value
+    {"update", WRAPMEM(T::Update)}, // update(key,value) return bool
+    {"erase", WRAPMEM(T::Erase)}, // erase(key) return bool
+    {"loaded",WRAPMEM(T,loaded)},
+
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 namespace ComponentReg{
   typedef Processor P;
   typedef Segmentor S;
@@ -205,6 +304,8 @@ namespace ComponentReg{
   EXPORT(TranslatorReg, L);\
   EXPORT(FilterReg, L);\
   EXPORT(ReverseLookupDictionaryReg, L);\
+  EXPORT(DbAccessorReg, L);\
+  EXPORT(LevelDbReg, L);\
   ComponentReg::init(L);\
 }
 
