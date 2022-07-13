@@ -892,9 +892,8 @@ namespace ProjectionReg{
   }
 
   string apply(T &t, const string &s){
-    string res= s;
-    t.Apply(&res);
-    return res;
+    string res;
+    return (t.Apply(&res)? res : s;
   }
 
   static const luaL_Reg funcs[] = {
