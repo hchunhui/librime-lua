@@ -57,12 +57,12 @@ public:
 // Generic case (includes pointers)
 template<typename T>
 struct LUAWRAPPER_LOCAL LuaType {
-  static const char *name() {
-    return typeid(LuaType<T>).name();
+  static const std::type_info *type() {
+    return &typeid(LuaType<T>);
   }
 
   static int gc(lua_State *L) {
-    T *o = (T *) luaL_checkudata(L, 1, name());
+    T *o = (T *) luaL_checkudata(L, 1, type()->name());
     o->~T();
     return 0;
   }
@@ -100,14 +100,14 @@ struct LUAWRAPPER_LOCAL LuaType {
 
     void *u = lua_newuserdata(L, sizeof(T));
     new(u) T(o);
-    luaL_getmetatable(L, name());
+    luaL_getmetatable(L, type()->name());
     if (lua_isnil(L, -1)) {
       // If T is not registered,
       // registers a "__gc" to prevent memory leaks.
       lua_pop(L, 1);
-      luaL_newmetatable(L, name());
-      lua_pushstring(L, name());
-      lua_setfield(L, -2, "name");
+      luaL_newmetatable(L, type()->name());
+      lua_pushlightuserdata(L, (void *) type());
+      lua_setfield(L, -2, "type");
       lua_pushcfunction(L, gc);
       lua_setfield(L, -2, "__gc");
     }
@@ -118,11 +118,11 @@ struct LUAWRAPPER_LOCAL LuaType {
     typedef typename std::remove_const<T>::type U;
 
     if (lua_getmetatable(L, i)) {
-      lua_getfield(L, -1, "name");
-      const char *tname = luaL_checkstring(L, -1);
+      lua_getfield(L, -1, "type");
+      auto ttype = (const std::type_info *) lua_touserdata(L, -1);
       void *_p = lua_touserdata(L, i);
-      if (strcmp(tname, name()) == 0 ||
-          strcmp(tname, LuaType<U>::name()) == 0) {
+      if (*ttype == *type() ||
+          *ttype == *LuaType<U>::type()) {
         auto o = (T *) _p;
         lua_pop(L, 2);
         return *o;
@@ -131,7 +131,7 @@ struct LUAWRAPPER_LOCAL LuaType {
       lua_pop(L, 2);
     }
 
-    const char *msg = lua_pushfstring(L, "%s expected", name());
+    const char *msg = lua_pushfstring(L, "%s expected", type()->name());
     luaL_argerror(L, i, msg);
     abort(); // unreachable
   }
@@ -140,53 +140,53 @@ struct LUAWRAPPER_LOCAL LuaType {
 // References
 template<typename T>
 struct LuaType<T &> {
-  static const char *name() {
-    return typeid(LuaType<T &>).name();
+  static const std::type_info *type() {
+    return &typeid(LuaType<T &>);
   }
 
   static void pushdata(lua_State *L, T &o) {
     T **u = (T**) lua_newuserdata(L, sizeof(T *));
     *u = std::addressof(o);
-    luaL_setmetatable(L, name());
+    luaL_setmetatable(L, type()->name());
   }
 
   static T &todata(lua_State *L, int i, C_State * = NULL) {
     typedef typename std::remove_const<T>::type U;
 
     if (lua_getmetatable(L, i)) {
-      lua_getfield(L, -1, "name");
-      const char *tname = luaL_checkstring(L, -1);
+      lua_getfield(L, -1, "type");
+      auto ttype = (const std::type_info *) lua_touserdata(L, -1);
       void *_p = lua_touserdata(L, i);
-      if (strcmp(tname, name()) == 0 ||
-          strcmp(tname, LuaType<U &>::name()) == 0) {
+      if (*ttype == *type() ||
+          *ttype == *LuaType<U &>::type()) {
         auto po = (T **) _p;
         lua_pop(L, 2);
         return **po;
       }
 
-      if (strcmp(tname, LuaType<std::shared_ptr<T>>::name()) == 0 ||
-          strcmp(tname, LuaType<std::shared_ptr<U>>::name()) == 0) {
+      if (*ttype == *LuaType<std::shared_ptr<T>>::type() ||
+          *ttype == *LuaType<std::shared_ptr<U>>::type()) {
         auto ao = (std::shared_ptr<T> *) _p;
         lua_pop(L, 2);
         return *(*ao).get();
       }
 
-      if (strcmp(tname, LuaType<std::unique_ptr<T>>::name()) == 0 ||
-          strcmp(tname, LuaType<std::unique_ptr<U>>::name()) == 0) {
+      if (*ttype == *LuaType<std::unique_ptr<T>>::type() ||
+          *ttype == *LuaType<std::unique_ptr<U>>::type()) {
         auto ao = (std::unique_ptr<T> *) _p;
         lua_pop(L, 2);
         return *(*ao).get();
       }
 
-      if (strcmp(tname, LuaType<T *>::name()) == 0 ||
-          strcmp(tname, LuaType<U *>::name()) == 0) {
+      if (*ttype == *LuaType<T *>::type() ||
+          *ttype == *LuaType<U *>::type()) {
         auto p = (T **) _p;
         lua_pop(L, 2);
         return **p;
       }
 
-      if (strcmp(tname, LuaType<T>::name()) == 0 ||
-          strcmp(tname, LuaType<U>::name()) == 0) {
+      if (*ttype == *LuaType<T>::type() ||
+          *ttype == *LuaType<U>::type()) {
         auto o = (T *) _p;
         lua_pop(L, 2);
         return *o;
@@ -195,7 +195,7 @@ struct LuaType<T &> {
       lua_pop(L, 2);
     }
 
-    const char *msg = lua_pushfstring(L, "%s expected", name());
+    const char *msg = lua_pushfstring(L, "%s expected", type()->name());
     luaL_argerror(L, i, msg);
     abort(); // unreachable
   }
@@ -205,12 +205,12 @@ template<typename T>
 struct LuaType<std::unique_ptr<T>> {
   using UT = std::unique_ptr<T>;
 
-  static const char *name() {
-    return typeid(LuaType<UT>).name();
+  static const std::type_info *type() {
+    return &typeid(LuaType<UT>);
   }
 
   static int gc(lua_State *L) {
-    UT *o = (UT *) luaL_checkudata(L, 1, name());
+    UT *o = (UT *) luaL_checkudata(L, 1, type()->name());
     o->~UT();
     return 0;
   }
@@ -218,14 +218,14 @@ struct LuaType<std::unique_ptr<T>> {
   static void pushdata(lua_State *L, UT &o) {
     void *u = lua_newuserdata(L, sizeof(UT));
     new(u) UT(std::move(o));
-    luaL_getmetatable(L, name());
+    luaL_getmetatable(L, type()->name());
     if (lua_isnil(L, -1)) {
       // If T is not registered,
       // registers a "__gc" to prevent memory leaks.
       lua_pop(L, 1);
-      luaL_newmetatable(L, name());
-      lua_pushstring(L, name());
-      lua_setfield(L, -2, "name");
+      luaL_newmetatable(L, type()->name());
+      lua_pushlightuserdata(L, (void *) type());
+      lua_setfield(L, -2, "type");
       lua_pushcfunction(L, gc);
       lua_setfield(L, -2, "__gc");
     }
