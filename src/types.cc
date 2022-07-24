@@ -1657,26 +1657,26 @@ namespace OpenccReg{
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
-  export_type(L, LuaType<ns::T>::name(), LuaType<ns::T>::gc,       \
+  export_type(L, LuaType<ns::T>::type(), LuaType<ns::T>::gc,       \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T &>::name(), NULL,                   \
+  export_type(L, LuaType<ns::T &>::type(), NULL,                   \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T>::name(), LuaType<ns::T>::gc, \
+  export_type(L, LuaType<const ns::T>::type(), LuaType<ns::T>::gc, \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T &>::name(), NULL,             \
+  export_type(L, LuaType<const ns::T &>::type(), NULL,             \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<ns::T>>::name(), LuaType<an<ns::T>>::gc, \
+  export_type(L, LuaType<an<ns::T>>::type(), LuaType<an<ns::T>>::gc, \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<const ns::T>>::name(), LuaType<an<const ns::T>>::gc, \
+  export_type(L, LuaType<an<const ns::T>>::type(), LuaType<an<const ns::T>>::gc, \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T *>::name(), NULL,                   \
+  export_type(L, LuaType<ns::T *>::type(), NULL,                   \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T *>::name(), NULL,             \
+  export_type(L, LuaType<const ns::T *>::type(), NULL,             \
               ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
   } while (0)
 
 void export_type(lua_State *L,
-                 const char *name, lua_CFunction gc,
+                 const LuaTypeInfo *type, lua_CFunction gc,
                  const luaL_Reg *funcs, const luaL_Reg *methods,
                  const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 
@@ -1718,6 +1718,6 @@ void types_init(lua_State *L) {
   EXPORT_TYPES_EXT(L);
 #endif
 
-  export_type(L, LuaType<the<SchemaReg::T>>::name(), LuaType<the<SchemaReg::T>>::gc,
+  export_type(L, LuaType<the<SchemaReg::T>>::type(), LuaType<the<SchemaReg::T>>::gc,
               SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
 }
