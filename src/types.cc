@@ -1676,7 +1676,7 @@ namespace OpenccReg{
   } while (0)
 
 void export_type(lua_State *L,
-                 const std::type_info *type, lua_CFunction gc,
+                 const LuaTypeInfo *type, lua_CFunction gc,
                  const luaL_Reg *funcs, const luaL_Reg *methods,
                  const luaL_Reg *vars_get, const luaL_Reg *vars_set);
 

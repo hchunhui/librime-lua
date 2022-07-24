@@ -53,12 +53,32 @@ public:
   }
 };
 
+struct LUAWRAPPER_LOCAL LuaTypeInfo {
+  const std::type_info *ti;
+  size_t hash;
+
+  template<typename T>
+  static const LuaTypeInfo &make() {
+    auto &i = typeid(T);
+    static LuaTypeInfo r = {&i, i.hash_code()};
+    return r;
+  }
+
+  const char *name() const {
+    return ti->name();
+  }
+
+  bool operator==(const LuaTypeInfo &o) const {
+    return hash == o.hash && *ti == *o.ti;
+  }
+};
+
 //--- LuaType
 // Generic case (includes pointers)
 template<typename T>
 struct LUAWRAPPER_LOCAL LuaType {
-  static const std::type_info *type() {
-    return &typeid(LuaType<T>);
+  static const LuaTypeInfo *type() {
+    return &LuaTypeInfo::make<LuaType<T>>();
   }
 
   static int gc(lua_State *L) {
@@ -119,7 +139,7 @@ struct LUAWRAPPER_LOCAL LuaType {
 
     if (lua_getmetatable(L, i)) {
       lua_getfield(L, -1, "type");
-      auto ttype = (const std::type_info *) lua_touserdata(L, -1);
+      auto ttype = (const LuaTypeInfo *) lua_touserdata(L, -1);
       void *_p = lua_touserdata(L, i);
       if (*ttype == *type() ||
           *ttype == *LuaType<U>::type()) {
@@ -140,8 +160,8 @@ struct LUAWRAPPER_LOCAL LuaType {
 // References
 template<typename T>
 struct LuaType<T &> {
-  static const std::type_info *type() {
-    return &typeid(LuaType<T &>);
+  static const LuaTypeInfo *type() {
+    return &LuaTypeInfo::make<LuaType<T &>>();
   }
 
   static void pushdata(lua_State *L, T &o) {
@@ -155,7 +175,7 @@ struct LuaType<T &> {
 
     if (lua_getmetatable(L, i)) {
       lua_getfield(L, -1, "type");
-      auto ttype = (const std::type_info *) lua_touserdata(L, -1);
+      auto ttype = (const LuaTypeInfo *) lua_touserdata(L, -1);
       void *_p = lua_touserdata(L, i);
       if (*ttype == *type() ||
           *ttype == *LuaType<U &>::type()) {
@@ -205,8 +225,8 @@ template<typename T>
 struct LuaType<std::unique_ptr<T>> {
   using UT = std::unique_ptr<T>;
 
-  static const std::type_info *type() {
-    return &typeid(LuaType<UT>);
+  static const LuaTypeInfo *type() {
+    return &LuaTypeInfo::make<LuaType<UT>>();
   }
 
   static int gc(lua_State *L) {
