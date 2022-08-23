@@ -87,6 +87,7 @@ namespace SegmentReg {
   static const luaL_Reg vars_get[] = {
     { "status", WRAP(get_status) },
     { "start", WRAPMEM_GET(T::start) },
+    { "_start", WRAPMEM_GET(T::start) },
     { "_end", WRAPMEM_GET(T::end) }, // end is keyword in Lua...
     { "length", WRAPMEM_GET(T::length) },
     { "tags", WRAPMEM_GET(T::tags) },
@@ -99,6 +100,7 @@ namespace SegmentReg {
   static const luaL_Reg vars_set[] = {
     { "status", WRAP(set_status) },
     { "start", WRAPMEM_SET(T::start) },
+    { "_start", WRAPMEM_SET(T::start) },
     { "_end", WRAPMEM_SET(T::end) }, // end is keyword in Lua...
     { "length", WRAPMEM_SET(T::length) },
     { "tags", WRAPMEM_SET(T::tags) },
@@ -192,6 +194,7 @@ namespace CandidateReg {
   static const luaL_Reg vars_get[] = {
     { "type", WRAPMEM(T::type) },
     { "start", WRAPMEM(T::start) },
+    { "_start", WRAPMEM(T::start) },
     { "_end", WRAPMEM(T::end) }, // end is keyword in Lua...
     { "quality", WRAPMEM(T::quality) },
     { "text", WRAPMEM(T::text) },
@@ -203,6 +206,7 @@ namespace CandidateReg {
   static const luaL_Reg vars_set[] = {
     { "type", WRAPMEM(T::set_type) },
     { "start", WRAPMEM(T::set_start) },
+    { "_start", WRAPMEM(T::set_start) },
     { "_end", WRAPMEM(T::set_end) },
     { "quality", WRAPMEM(T::set_quality) },
     { "text", WRAP(set_text) },
@@ -1490,6 +1494,7 @@ namespace PhraseReg {
     { "language", WRAPMEM(T, language)},
     { "type", WRAPMEM(T, type) },
     { "start", WRAPMEM(T, start) },
+    { "_start", WRAPMEM(T, start) },
     { "_end", WRAPMEM(T, end) }, // end is keyword in Lua...
     { "quality", WRAPMEM(T, quality) },
     { "text", WRAPMEM(T, text) },
@@ -1506,6 +1511,7 @@ namespace PhraseReg {
   static const luaL_Reg vars_set[] = {
     { "type", WRAPMEM(T, set_type) },
     { "start", WRAPMEM(T, set_start) },
+    { "_start", WRAPMEM(T, set_start) },
     { "_end", WRAPMEM(T, set_end) },
     { "quality", WRAPMEM(T, set_quality) },
     { "comment", WRAPMEM(T, set_comment) },
