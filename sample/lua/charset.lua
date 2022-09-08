@@ -1,6 +1,14 @@
 --[[
-charset_filter: 滤除含 CJK 扩展汉字的候选项
-charset_comment_filter: 为候选项加上其所属字符集的注释
+关于CJK扩展字符
+  CJK = 中日韩（China, Japan, Korea），这个主要是指的东亚地区使用汉字及部分衍生偏僻字的字符集
+  （由于其使用频率非常低，一般的电脑系统里没有相关的字符，因此不能显示这些字）
+
+查询unicode 编码
+  1. https://unicode.org/charts/
+
+导出函数
+  1. charset_filter: 滤除含 CJK 扩展汉字的候选项
+  2. charset_comment_filter: 为候选项加上其所属字符集的注释
 
 本例说明了 filter 最基本的写法。
 
@@ -9,14 +17,16 @@ charset_comment_filter: 为候选项加上其所属字符集的注释
 
 -- 帮助函数（可跳过）
 local charset = {
-   ["CJK"] = { first = 0x4E00, last = 0x9FFF },
-   ["ExtA"] = { first = 0x3400, last = 0x4DBF },
-   ["ExtB"] = { first = 0x20000, last = 0x2A6DF },
-   ["ExtC"] = { first = 0x2A700, last = 0x2B73F },
-   ["ExtD"] = { first = 0x2B740, last = 0x2B81F },
-   ["ExtE"] = { first = 0x2B820, last = 0x2CEAF },
-   ["ExtF"] = { first = 0x2CEB0, last = 0x2EBEF },
-   ["Compat"] = { first = 0x2F800, last = 0x2FA1F } }
+   ["CJK"] = { first = 0x4E00, last = 0x9FFF },     -- CJK Unified Ideographs - https://unicode.org/charts/PDF/U4E00.pdf
+   ["ExtA"] = { first = 0x3400, last = 0x4DBF },    -- CJK Unified Ideographs Extension A - https://unicode.org/charts/PDF/U3400.pdf
+   ["ExtB"] = { first = 0x20000, last = 0x2A6DF },  -- CJK Unified Ideographs Extension B - https://unicode.org/charts/PDF/U20000.pdf
+   ["ExtC"] = { first = 0x2A700, last = 0x2B73F },  -- CJK Unified Ideographs Extension C - https://unicode.org/charts/PDF/U2A700.pdf
+   ["ExtD"] = { first = 0x2B740, last = 0x2B81F },  -- CJK Unified Ideographs Extension D - https://unicode.org/charts/PDF/U2B740.pdf
+   ["ExtE"] = { first = 0x2B820, last = 0x2CEAF },  -- CJK Unified Ideographs Extension E - https://unicode.org/charts/PDF/U2B820.pdf
+   ["ExtF"] = { first = 0x2CEB0, last = 0x2EBEF },  -- CJK Unified Ideographs Extension F - https://unicode.org/charts/PDF/U2CEB0.pdf
+   ["ExtG"] = { first = 0x30000, last = 0x3134A },  -- CJK Unified Ideographs Extension G - https://unicode.org/charts/PDF/U30000.pdf
+   ["Compat"] = { first = 0x2F800, last = 0x2FA1F } -- CJK Compatibility Ideographs Supplement - https://unicode.org/charts/PDF/U2F800.pdf
+}
 
 local function exists(single_filter, text)
   for i in utf8.codes(text) do
