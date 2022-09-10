@@ -18,6 +18,7 @@
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 #include <opencc/opencc.h>
+#include <rime/service.h>
 
 #define ENABLE_TYPES_EXT
 
@@ -827,7 +828,7 @@ namespace ConfigMapReg {
       keys.push_back(it.first);
     return keys;
   }
- 
+
   static const luaL_Reg funcs[] = {
     {"ConfigMap", WRAP(make)},
     { NULL, NULL },
@@ -1570,11 +1571,35 @@ namespace RimeApiReg {
     return string(rime->get_sync_dir());
   }
 
+  string get_distribution_name(){
+    Deployer &deployer(Service::instance().deployer());
+    return deployer.distribution_name;
+  }
+
+  string get_distribution_code_name(){
+    Deployer &deployer(Service::instance().deployer());
+    return deployer.distribution_code_name;
+  }
+
+  string get_distribution_version(){
+    Deployer &deployer(Service::instance().deployer());
+    return deployer.distribution_version;
+  }
+
+  string get_user_id(){
+    Deployer &deployer(Service::instance().deployer());
+    return deployer.user_id;
+  }
+
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
     { "get_shared_data_dir", WRAP(get_shared_data_dir) },
     { "get_user_data_dir",  WRAP(get_user_data_dir) },
     { "get_sync_dir",  WRAP(get_sync_dir) },
+    { "get_distribution_name",  WRAP(get_distribution_name) },
+    { "get_distribution_code_name",  WRAP(get_distribution_code_name) },
+    { "get_distribution_version",  WRAP(get_distribution_version) },
+    { "get_user_id",  WRAP(get_user_id) },
     { NULL, NULL },
   };
 
