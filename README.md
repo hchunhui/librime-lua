@@ -106,3 +106,13 @@ Instructions
 
    For more information on RIME plugins,
    see [here](https://github.com/rime/librime/tree/master/sample).
+
+Installation
+===
+
+weasel
+---
+
+1. Prepare the compiled file (or the latest artifact in [actions](https://github.com/hchunhui/librime-lua/actions)).
+
+2. Extract `rime-xxxx-Windows.7z/dist/lib/rime.dll` file and overwrite it to the `rime.dll` file under the weasel installation directory.
