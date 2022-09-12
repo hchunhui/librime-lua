@@ -97,7 +97,11 @@ an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
   auto f = lua_->newthread<an<LuaObj>, an<Translation>,
                            an<LuaObj>, CandidateList *>(func_, translation, env_, candidates);
-  return New<LuaTranslation>(lua_, f);
+  an<Translation> t = New<LuaTranslation>(lua_, f);
+  if (t->exhausted())
+    return translation;
+  else
+    return t;
 }
 
 LuaFilter::~LuaFilter() {
