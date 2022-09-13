@@ -480,6 +480,12 @@ namespace ContextReg {
   bool push_input(T &t, const string &str) {
     return t.PushInput(str);
   }
+  
+  bool toggle_option(T &t, const string &str{
+    bool set_opt = ! t.get_option(str);
+    t.set_option(str, set_opt);
+    return set_opt;
+  }
 
   //CommitHistory &get_commit_history(T &t) {
   //  return t.commit_history();
@@ -514,6 +520,7 @@ namespace ContextReg {
     { "refresh_non_confirmed_composition", WRAPMEM(T::RefreshNonConfirmedComposition) },
     { "set_option", WRAPMEM(T::set_option) },
     { "get_option", WRAPMEM(T::get_option) },
+    { "toggle_option", WRAP(toggle_option) },
     { "set_property", WRAPMEM(T::set_property) },
     { "get_property", WRAPMEM(T::get_property) },
     { "clear_transient_options", WRAPMEM(T::ClearTransientOptions) },
