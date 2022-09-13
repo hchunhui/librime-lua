@@ -481,7 +481,7 @@ namespace ContextReg {
     return t.PushInput(str);
   }
   
-  bool toggle_option(T &t, const string &str{
+  bool toggle_option(T &t, const string &str) {
     bool set_opt = ! t.get_option(str);
     t.set_option(str, set_opt);
     return set_opt;
