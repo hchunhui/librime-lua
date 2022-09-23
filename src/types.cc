@@ -193,23 +193,23 @@ namespace CandidateReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    { "type", WRAPMEM(T::type) },
-    { "start", WRAPMEM(T::start) },
-    { "_start", WRAPMEM(T::start) },
-    { "_end", WRAPMEM(T::end) }, // end is keyword in Lua...
-    { "quality", WRAPMEM(T::quality) },
-    { "text", WRAPMEM(T::text) },
-    { "comment", WRAPMEM(T::comment) },
-    { "preedit", WRAPMEM(T::preedit) },
+    { "type", WRAPMEM(T, type) },
+    { "start", WRAPMEM(T, start) },
+    { "_start", WRAPMEM(T, start) },
+    { "_end", WRAPMEM(T, end) }, // end is keyword in Lua...
+    { "quality", WRAPMEM(T, quality) },
+    { "text", WRAPMEM(T, text) },
+    { "comment", WRAPMEM(T, comment) },
+    { "preedit", WRAPMEM(T, preedit) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
-    { "type", WRAPMEM(T::set_type) },
-    { "start", WRAPMEM(T::set_start) },
-    { "_start", WRAPMEM(T::set_start) },
-    { "_end", WRAPMEM(T::set_end) },
-    { "quality", WRAPMEM(T::set_quality) },
+    { "type", WRAPMEM(T, set_type) },
+    { "start", WRAPMEM(T, set_start) },
+    { "_start", WRAPMEM(T, set_start) },
+    { "_end", WRAPMEM(T, set_end) },
+    { "quality", WRAPMEM(T, set_quality) },
     { "text", WRAP(set_text) },
     { "comment", WRAP(set_comment) },
     { "preedit", WRAP(set_preedit) },
