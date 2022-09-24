@@ -33,7 +33,22 @@ static void raw_init(lua_State *L, const Ticket &t,
   *env = LuaObj::todata(L, -1);
   lua_pop(L, 1);
 
-  lua_getglobal(L, t.klass.c_str());
+  if (t.klass.size() > 0 && t.klass[0] == '*') {
+    lua_getglobal(L, "require");
+    lua_pushstring(L, t.klass.c_str() + 1);
+    int status = lua_pcall(L, 1, 1, 0);
+    if (status != LUA_OK) {
+      const char *e = lua_tostring(L, -1);
+      LOG(ERROR) << "Lua Compoment of autoload error:("
+                 << " module: "<< t.klass
+                 << " name_space: " << t.name_space
+                 << " status: " << status
+                 << " ): " << e;
+    }
+  } else {
+    lua_getglobal(L, t.klass.c_str());
+  }
+
   if (lua_type(L, -1) == LUA_TTABLE) {
     lua_getfield(L, -1, "init");
     if (lua_type(L, -1) == LUA_TFUNCTION) {
