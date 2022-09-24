@@ -1340,7 +1340,7 @@ namespace MemoryReg {
     if (!memorize_callback)
       return false;
 
-    auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
+    auto r = lua_->call<bool, an<LuaObj>, T &, const CommitEntry &>(memorize_callback, *this, commit_entry);
     if (!r.ok()) {
       auto e = r.get_err();
       LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
@@ -1363,10 +1363,13 @@ namespace MemoryReg {
     Ticket translatorTicket(engine,"translator");
     translatorTicket.schema = & (LuaType<Schema &>::todata(L, 2) );
 
-    if (3 <= n)
+    if (3 == n)
       translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
 
     an<T> memoli = New<T>(lua, translatorTicket);
+    if (4 <= n)
+      memoli->memorize(LuaObj::todata(L, 4));
+
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }
