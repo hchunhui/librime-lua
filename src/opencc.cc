@@ -5,9 +5,6 @@
  * Distributed under terms of the MIT license.
  */
 
-#ifndef OPENCC_H
-#define OPENCC_H
-
 #include <opencc/Exception.hpp>
 #include <opencc/Config.hpp> // Place OpenCC #includes here to avoid VS2015 compilation errors
 #include <opencc/Converter.hpp>
@@ -18,10 +15,10 @@
 #include "opencc.h"
 
 using namespace OpenccReg;
-
-optional<an<Opencc>> Opencc::create(const string &config_path) {
+/*
+shared_ptr<Opencc> Opencc::create(const string &config_path) {
   try {
-    return New<Opencc>(config_path);
+    return make_shared<Opencc>(config_path);
   }
   catch (opencc::FileNotFound &ex) {
     LOG(ERROR) << config_path << " : onpecc file not found";// << ex.what();
@@ -34,7 +31,7 @@ optional<an<Opencc>> Opencc::create(const string &config_path) {
   }
   return {};
 }
-
+*/
 Opencc::Opencc(const string& config_path) {
   opencc::Config config;
   converter_ = config.NewFromFile(config_path);
@@ -96,7 +93,7 @@ string Opencc::random_convert_text(const string& text) {
   return (RandomConvertText(text, &res))? res : text ;
 };
 
-optional<vector<string>> Opencc::convert_word(const string& text){
+vector<string> Opencc::convert_word(const string& text){
   vector<string> res;
   if (ConvertWord(text, &res)){
     return res;
@@ -104,4 +101,3 @@ optional<vector<string>> Opencc::convert_word(const string& text){
   return {};
 };
 
-#endif /* !OPENCC_H */

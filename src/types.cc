@@ -1648,7 +1648,7 @@ namespace OpenccReg {
   typedef Opencc T;
   namespace ns = boost::filesystem;
 
-  optional<an<T>> make1(const string &filename) {
+  optional<an<T>> make(const string &filename) {
     string user_path( RimeGetUserDataDir());
     string shared_path(RimeGetSharedDataDir());
     user_path += "/opencc/" + filename;
@@ -1661,16 +1661,28 @@ namespace OpenccReg {
     else
       path = &filename;
 
-    return  T::create(*path);
+    try{
+      return  New<T>(*path);
+    }
+    catch(...) {
+      LOG(ERROR) << *path  << " File not found or InvalidFormat";
+      return {};
+    }
+  }
+  optional<vector<string>> convert_word(T &t,const string &s) {
+    vector<string> res;
+    if (t.ConvertWord(s,&res))
+      return res;
+    return {};
   }
 
   static const luaL_Reg funcs[] = {
-    {"Opencc",WRAP(make1)},
+    {"Opencc",WRAP(make)},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"convert_word", WRAPMEM(T,convert_word)},
+    {"convert_word", WRAP(convert_word)},
     {"random_convert_text", WRAPMEM(T,random_convert_text)},
     {"convert_text", WRAPMEM(T,convert_text)},
     {"convert", WRAPMEM(T,convert_text)},
