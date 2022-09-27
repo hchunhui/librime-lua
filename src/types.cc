@@ -17,8 +17,8 @@
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
-#include <opencc/opencc.h>
 #include <rime/service.h>
+#include "opencc.h"
 
 #define ENABLE_TYPES_EXT
 
@@ -1643,24 +1643,37 @@ namespace SwitcherReg {
     { NULL, NULL },
   };
 }
-namespace OpenccReg{
-  typedef opencc::SimpleConverter T;
 
-  an<T> make(const string &filename){
-    return New<T>(filename);
-  }
+namespace OpenccReg {
+  typedef Opencc T;
+  namespace ns = boost::filesystem;
 
-  string convert(T &t, const string& text){
-    return t.Convert(text);
+  optional<an<T>> make1(const string &filename) {
+    string user_path( RimeGetUserDataDir());
+    string shared_path(RimeGetSharedDataDir());
+    user_path += "/opencc/" + filename;
+    shared_path += "/opencc/" + filename;
+    const string *path;
+    if (ns::exists(user_path))
+      path = &user_path;
+    else if (ns::exists(shared_path))
+      path = &shared_path;
+    else
+      path = &filename;
+
+    return  T::create(*path);
   }
 
   static const luaL_Reg funcs[] = {
-    { "Opencc", WRAP(make) },
+    {"Opencc",WRAP(make1)},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    { "convert", WRAP(convert) },
+    {"convert_word", WRAPMEM(T,convert_word)},
+    {"random_convert_text", WRAPMEM(T,random_convert_text)},
+    {"convert_text", WRAPMEM(T,convert_text)},
+    {"convert", WRAPMEM(T,convert_text)},
     { NULL, NULL },
   };
 
@@ -1672,7 +1685,6 @@ namespace OpenccReg{
     { NULL, NULL },
   };
 }
-
 #ifdef ENABLE_TYPES_EXT
 #include "types_ext.inc"
 #endif
