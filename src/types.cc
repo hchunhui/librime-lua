@@ -16,30 +16,16 @@
 #include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
-#include "lib/lua_templates.h"
 #include <opencc/opencc.h>
 #include <rime/service.h>
+
+#include "lib/lua_export_type.h"
+#include "lib/luatype_boost_optional.h"
 
 #define ENABLE_TYPES_EXT
 
 using namespace rime;
-
-template<typename T>
-struct LuaType<optional<T>> {
-  static void pushdata(lua_State *L, optional<T> o) {
-    if (o)
-      LuaType<T>::pushdata(L, *o);
-    else
-      lua_pushnil(L);
-  }
-
-  static optional<T> &todata(lua_State *L, int i, C_State *C) {
-    if (lua_type(L, i) == LUA_TNIL)
-      return C->alloc<optional<T>>();
-    else
-      return C->alloc<optional<T>>(LuaType<T>::todata(L, i, C));
-  }
-};
+using boost::optional;
 
 //--- wrappers for Segment
 namespace SegmentReg {
@@ -1677,32 +1663,6 @@ namespace OpenccReg{
 #include "types_ext.inc"
 #endif
 
-//--- Lua
-#define EXPORT(ns, L) \
-  do { \
-  export_type(L, LuaType<ns::T>::type(), LuaType<ns::T>::gc,       \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T &>::type(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T>::type(), LuaType<ns::T>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T &>::type(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<ns::T>>::type(), LuaType<an<ns::T>>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<const ns::T>>::type(), LuaType<an<const ns::T>>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T *>::type(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T *>::type(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  } while (0)
-
-void export_type(lua_State *L,
-                 const LuaTypeInfo *type, lua_CFunction gc,
-                 const luaL_Reg *funcs, const luaL_Reg *methods,
-                 const luaL_Reg *vars_get, const luaL_Reg *vars_set);
-
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
   EXPORT(CandidateReg, L);
@@ -1741,6 +1701,6 @@ void types_init(lua_State *L) {
   EXPORT_TYPES_EXT(L);
 #endif
 
-  export_type(L, LuaType<the<SchemaReg::T>>::type(), LuaType<the<SchemaReg::T>>::gc,
-              SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
+  lua_export_type(L, LuaType<the<SchemaReg::T>>::type(), LuaType<the<SchemaReg::T>>::gc,
+                  SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
 }
