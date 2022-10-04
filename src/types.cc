@@ -1580,12 +1580,12 @@ namespace RimeApiReg {
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
     { "get_shared_data_dir", WRAP(get_shared_data_dir) },
-    { "get_user_data_dir",  WRAP(get_user_data_dir) },
-    { "get_sync_dir",  WRAP(get_sync_dir) },
-    { "get_distribution_name",  WRAP(get_distribution_name) },
-    { "get_distribution_code_name",  WRAP(get_distribution_code_name) },
-    { "get_distribution_version",  WRAP(get_distribution_version) },
-    { "get_user_id",  WRAP(get_user_id) },
+    { "get_user_data_dir", WRAP(get_user_data_dir) },
+    { "get_sync_dir", WRAP(get_sync_dir) },
+    { "get_distribution_name", WRAP(get_distribution_name) },
+    { "get_distribution_code_name", WRAP(get_distribution_code_name) },
+    { "get_distribution_version", WRAP(get_distribution_version) },
+    { "get_user_id", WRAP(get_user_id) },
     { NULL, NULL },
   };
 
