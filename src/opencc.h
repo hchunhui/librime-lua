@@ -1,9 +1,8 @@
-/*
- * opencc.h
- * Copyright (C) 2022 Shewer Lu <shewer@gmail.com>
- *
- * Distributed under terms of the MIT license.
- */
+// Copyright RIME Developers 
+// Distributed under the BSD License
+// from: <librime/src/rime/gear/simplifier.cc>
+// 2011-12-12 GONG Chen <chen.sst@gmail.com>
+// 
 
 #ifndef _LUA_OPENCC_H
 #define _LUA_OPENCC_H
