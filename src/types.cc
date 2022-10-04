@@ -18,6 +18,7 @@
 #include "lua_gears.h"
 #include <opencc/opencc.h>
 #include <rime/service.h>
+#include <boost/regex.hpp>
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
@@ -1577,6 +1578,33 @@ namespace RimeApiReg {
     return deployer.user_id;
   }
 
+// boost::regex api
+  optional<std::vector<string>> regex_search(
+      const string &target ,const string &pattern )
+  {
+    boost::regex reg(pattern);
+    boost::smatch sm;
+    std::vector<string> res;
+    if ( boost::regex_search(target,sm,reg)) {
+      for (auto str : sm)
+        res.push_back(str);
+      return res;
+    }
+    return {}; // return nil
+  }
+
+  bool regex_match(const string &target, const string &pattern)
+  {
+    boost::regex reg(pattern);
+    return boost::regex_match(target, reg);
+  }
+
+  string regex_replace(const string &target, const string &pattern, const string &fmt)
+  {
+    boost::regex reg(pattern);
+    return boost::regex_replace(target, reg, fmt);
+  }
+
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
     { "get_shared_data_dir", WRAP(get_shared_data_dir) },
@@ -1586,6 +1614,9 @@ namespace RimeApiReg {
     { "get_distribution_code_name", WRAP(get_distribution_code_name) },
     { "get_distribution_version", WRAP(get_distribution_version) },
     { "get_user_id", WRAP(get_user_id) },
+    { "regex_match", WRAP(regex_match) },
+    { "regex_search", WRAP(regex_search) },
+    { "regex_replace", WRAP(regex_replace) },
     { NULL, NULL },
   };
 
