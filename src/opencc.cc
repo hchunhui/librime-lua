@@ -1,9 +1,9 @@
-/*
- * opencc.h
- * Copyright (C) 2022 Shewer Lu <shewer@gmail.com>
- *
- * Distributed under terms of the MIT license.
- */
+// Copyright RIME Developers 
+// Distributed under the BSD License
+// from: <librime/src/rime/gear/simplifier.cc>
+// 2011-12-12 GONG Chen <chen.sst@gmail.com>
+// 
+
 
 #include <opencc/Exception.hpp>
 #include <opencc/Config.hpp> // Place OpenCC #includes here to avoid VS2015 compilation errors
