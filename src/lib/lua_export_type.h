@@ -41,6 +41,11 @@ void lua_export_type(lua_State *L,
                   LuaType<std::shared_ptr<const ns::T>>::gc,           \
                   ns::funcs, ns::methods, ns::vars_get, ns::vars_set)
 
+#define EXPORT_UPTR_TYPE(ns, L) \
+  lua_export_type(L, LuaType<std::unique_ptr<ns::T>>::type(),          \
+                  LuaType<std::unique_ptr<ns::T>>::gc,                 \
+                  ns::funcs, ns::methods, ns::vars_get, ns::vars_set)
+
 #define EXPORT(ns, L) \
   do {                         \
   EXPORT_TYPE(ns, L);          \

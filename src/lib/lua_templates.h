@@ -238,6 +238,11 @@ struct LuaType<std::unique_ptr<T>> {
   }
 
   static void pushdata(lua_State *L, UT &o) {
+    if (!o) {
+      lua_pushnil(L);
+      return;
+    }
+
     void *u = lua_newuserdata(L, sizeof(UT));
     new(u) UT(std::move(o));
     luaL_getmetatable(L, type()->name());

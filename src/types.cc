@@ -1701,6 +1701,5 @@ void types_init(lua_State *L) {
   EXPORT_TYPES_EXT(L);
 #endif
 
-  lua_export_type(L, LuaType<the<SchemaReg::T>>::type(), LuaType<the<SchemaReg::T>>::gc,
-                  SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
+  EXPORT_UPTR_TYPE(SchemaReg, L);
 }
