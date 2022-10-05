@@ -16,30 +16,17 @@
 #include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
-#include "lib/lua_templates.h"
 #include <rime/service.h>
+#include <boost/regex.hpp>
 #include "opencc.h"
+
+#include "lib/lua_export_type.h"
+#include "lib/luatype_boost_optional.h"
 
 #define ENABLE_TYPES_EXT
 
 using namespace rime;
-
-template<typename T>
-struct LuaType<optional<T>> {
-  static void pushdata(lua_State *L, optional<T> o) {
-    if (o)
-      LuaType<T>::pushdata(L, *o);
-    else
-      lua_pushnil(L);
-  }
-
-  static optional<T> &todata(lua_State *L, int i, C_State *C) {
-    if (lua_type(L, i) == LUA_TNIL)
-      return C->alloc<optional<T>>();
-    else
-      return C->alloc<optional<T>>(LuaType<T>::todata(L, i, C));
-  }
-};
+using boost::optional;
 
 //--- wrappers for Segment
 namespace SegmentReg {
@@ -1591,15 +1578,45 @@ namespace RimeApiReg {
     return deployer.user_id;
   }
 
+// boost::regex api
+  optional<std::vector<string>> regex_search(
+      const string &target ,const string &pattern )
+  {
+    boost::regex reg(pattern);
+    boost::smatch sm;
+    std::vector<string> res;
+    if ( boost::regex_search(target,sm,reg)) {
+      for (auto str : sm)
+        res.push_back(str);
+      return res;
+    }
+    return {}; // return nil
+  }
+
+  bool regex_match(const string &target, const string &pattern)
+  {
+    boost::regex reg(pattern);
+    return boost::regex_match(target, reg);
+  }
+
+  string regex_replace(const string &target, const string &pattern, const string &fmt)
+  {
+    boost::regex reg(pattern);
+    return boost::regex_replace(target, reg, fmt);
+  }
+
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
     { "get_shared_data_dir", WRAP(get_shared_data_dir) },
-    { "get_user_data_dir",  WRAP(get_user_data_dir) },
-    { "get_sync_dir",  WRAP(get_sync_dir) },
-    { "get_distribution_name",  WRAP(get_distribution_name) },
-    { "get_distribution_code_name",  WRAP(get_distribution_code_name) },
-    { "get_distribution_version",  WRAP(get_distribution_version) },
-    { "get_user_id",  WRAP(get_user_id) },
+    { "get_user_data_dir", WRAP(get_user_data_dir) },
+    { "get_sync_dir", WRAP(get_sync_dir) },
+    { "get_distribution_name", WRAP(get_distribution_name) },
+    { "get_distribution_code_name", WRAP(get_distribution_code_name) },
+    { "get_distribution_version", WRAP(get_distribution_version) },
+    { "get_user_id", WRAP(get_user_id) },
+    { "regex_match", WRAP(regex_match) },
+    { "regex_search", WRAP(regex_search) },
+    { "regex_replace", WRAP(regex_replace) },
     { NULL, NULL },
   };
 
@@ -1701,32 +1718,6 @@ namespace OpenccReg {
 #include "types_ext.inc"
 #endif
 
-//--- Lua
-#define EXPORT(ns, L) \
-  do { \
-  export_type(L, LuaType<ns::T>::type(), LuaType<ns::T>::gc,       \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T &>::type(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T>::type(), LuaType<ns::T>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T &>::type(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<ns::T>>::type(), LuaType<an<ns::T>>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<an<const ns::T>>::type(), LuaType<an<const ns::T>>::gc, \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<ns::T *>::type(), NULL,                   \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  export_type(L, LuaType<const ns::T *>::type(), NULL,             \
-              ns::funcs, ns::methods, ns::vars_get, ns::vars_set); \
-  } while (0)
-
-void export_type(lua_State *L,
-                 const LuaTypeInfo *type, lua_CFunction gc,
-                 const luaL_Reg *funcs, const luaL_Reg *methods,
-                 const luaL_Reg *vars_get, const luaL_Reg *vars_set);
-
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
   EXPORT(CandidateReg, L);
@@ -1765,6 +1756,5 @@ void types_init(lua_State *L) {
   EXPORT_TYPES_EXT(L);
 #endif
 
-  export_type(L, LuaType<the<SchemaReg::T>>::type(), LuaType<the<SchemaReg::T>>::gc,
-              SchemaReg::funcs, SchemaReg::methods, SchemaReg::vars_get, SchemaReg::vars_set);
+  EXPORT_UPTR_TYPE(SchemaReg, L);
 }
