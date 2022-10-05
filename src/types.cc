@@ -16,9 +16,9 @@
 #include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
-#include <opencc/opencc.h>
 #include <rime/service.h>
 #include <boost/regex.hpp>
+#include "opencc.h"
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
@@ -1660,24 +1660,49 @@ namespace SwitcherReg {
     { NULL, NULL },
   };
 }
-namespace OpenccReg{
-  typedef opencc::SimpleConverter T;
 
-  an<T> make(const string &filename){
-    return New<T>(filename);
+namespace OpenccReg {
+  typedef Opencc T;
+  namespace ns = boost::filesystem;
+
+  optional<an<T>> make(const string &filename) {
+    string user_path( RimeGetUserDataDir());
+    string shared_path(RimeGetSharedDataDir());
+    user_path += "/opencc/" + filename;
+    shared_path += "/opencc/" + filename;
+    const string *path;
+    if (ns::exists(user_path))
+      path = &user_path;
+    else if (ns::exists(shared_path))
+      path = &shared_path;
+    else
+      path = &filename;
+
+    try{
+      return  New<T>(*path);
+    }
+    catch(...) {
+      LOG(ERROR) << *path  << " File not found or InvalidFormat";
+      return {};
+    }
   }
-
-  string convert(T &t, const string& text){
-    return t.Convert(text);
+  optional<vector<string>> convert_word(T &t,const string &s) {
+    vector<string> res;
+    if (t.ConvertWord(s,&res))
+      return res;
+    return {};
   }
 
   static const luaL_Reg funcs[] = {
-    { "Opencc", WRAP(make) },
+    {"Opencc",WRAP(make)},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    { "convert", WRAP(convert) },
+    {"convert_word", WRAP(convert_word)},
+    {"random_convert_text", WRAPMEM(T,random_convert_text)},
+    {"convert_text", WRAPMEM(T,convert_text)},
+    {"convert", WRAPMEM(T,convert_text)},
     { NULL, NULL },
   };
 
@@ -1689,7 +1714,6 @@ namespace OpenccReg{
     { NULL, NULL },
   };
 }
-
 #ifdef ENABLE_TYPES_EXT
 #include "types_ext.inc"
 #endif
