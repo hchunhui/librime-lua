@@ -28,6 +28,8 @@
 using namespace rime;
 using boost::optional;
 
+namespace {
+
 //--- wrappers for Segment
 namespace SegmentReg {
   typedef Segment T;
@@ -1661,8 +1663,8 @@ namespace SwitcherReg {
   };
 }
 
-namespace OpenccReg {
-  typedef Opencc T;
+namespace OpenccReg1 {
+  typedef OpenccReg::Opencc T;
   namespace ns = boost::filesystem;
 
   optional<an<T>> make(const string &filename) {
@@ -1718,6 +1720,8 @@ namespace OpenccReg {
 #include "types_ext.inc"
 #endif
 
+}
+
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
   EXPORT(CandidateReg, L);
@@ -1749,7 +1753,7 @@ void types_init(lua_State *L) {
   EXPORT(PhraseReg, L);
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
-  EXPORT(OpenccReg, L);
+  EXPORT(OpenccReg1, L);
   LogReg::init(L);
   RimeApiReg::init(L);
 #ifdef ENABLE_TYPES_EXT
