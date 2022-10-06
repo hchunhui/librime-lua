@@ -1716,11 +1716,10 @@ namespace OpenccReg1 {
     { NULL, NULL },
   };
 }
-#ifdef ENABLE_TYPES_EXT
-#include "types_ext.inc"
-#endif
 
 }
+
+void types_ext_init(lua_State *L);
 
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
@@ -1757,7 +1756,7 @@ void types_init(lua_State *L) {
   LogReg::init(L);
   RimeApiReg::init(L);
 #ifdef ENABLE_TYPES_EXT
-  EXPORT_TYPES_EXT(L);
+  types_ext_init(L);
 #endif
 
   EXPORT_UPTR_TYPE(SchemaReg, L);

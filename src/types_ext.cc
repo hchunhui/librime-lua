@@ -5,11 +5,20 @@
  * Distributed under terms of the MIT license.
  */
 
-#ifndef _TYPE_EXT_INC
-#define _TYPE_EXT_INC
 #include <rime/common.h>
+#include <rime/processor.h>
+#include <rime/segmentor.h>
+#include <rime/translator.h>
+#include <rime/filter.h>
+#include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/dict/level_db.h>
+
+#include "lib/lua_export_type.h"
+#include "lib/luatype_boost_optional.h"
+
 using namespace rime;
+
+namespace {
 
 namespace ProcessorReg{
   typedef Processor T;
@@ -297,18 +306,15 @@ namespace ComponentReg{
   }
 }
 
-#define EXPORT_TYPES_EXT(L) \
-{\
-  EXPORT(ProcessorReg, L);\
-  EXPORT(SegmentorReg, L);\
-  EXPORT(TranslatorReg, L);\
-  EXPORT(FilterReg, L);\
-  EXPORT(ReverseLookupDictionaryReg, L);\
-  EXPORT(DbAccessorReg, L);\
-  EXPORT(LevelDbReg, L);\
-  ComponentReg::init(L);\
 }
 
-#endif /* ifndef _TYPE_EXT_INC */
-
-
+void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
+  EXPORT(ProcessorReg, L);
+  EXPORT(SegmentorReg, L);
+  EXPORT(TranslatorReg, L);
+  EXPORT(FilterReg, L);
+  EXPORT(ReverseLookupDictionaryReg, L);
+  EXPORT(DbAccessorReg, L);
+  EXPORT(LevelDbReg, L);
+  ComponentReg::init(L);
+}
