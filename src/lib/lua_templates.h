@@ -140,14 +140,15 @@ struct LUAWRAPPER_LOCAL LuaType {
     if (lua_getmetatable(L, i)) {
       lua_getfield(L, -1, "type");
       auto ttype = (const LuaTypeInfo *) lua_touserdata(L, -1);
-      void *_p = lua_touserdata(L, i);
-      if (*ttype == *type() ||
-          *ttype == *LuaType<U>::type()) {
-        auto o = (T *) _p;
-        lua_pop(L, 2);
-        return *o;
+      if (ttype) {
+        void *_p = lua_touserdata(L, i);
+        if (*ttype == *type() ||
+            *ttype == *LuaType<U>::type()) {
+          auto o = (T *) _p;
+          lua_pop(L, 2);
+          return *o;
+        }
       }
-
       lua_pop(L, 2);
     }
 
@@ -176,42 +177,43 @@ struct LuaType<T &> {
     if (lua_getmetatable(L, i)) {
       lua_getfield(L, -1, "type");
       auto ttype = (const LuaTypeInfo *) lua_touserdata(L, -1);
-      void *_p = lua_touserdata(L, i);
-      if (*ttype == *type() ||
-          *ttype == *LuaType<U &>::type()) {
-        auto po = (T **) _p;
-        lua_pop(L, 2);
-        return **po;
-      }
+      if (ttype) {
+        void *_p = lua_touserdata(L, i);
+        if (*ttype == *type() ||
+            *ttype == *LuaType<U &>::type()) {
+          auto po = (T **) _p;
+          lua_pop(L, 2);
+          return **po;
+        }
 
-      if (*ttype == *LuaType<std::shared_ptr<T>>::type() ||
-          *ttype == *LuaType<std::shared_ptr<U>>::type()) {
-        auto ao = (std::shared_ptr<T> *) _p;
-        lua_pop(L, 2);
-        return *(*ao).get();
-      }
+        if (*ttype == *LuaType<std::shared_ptr<T>>::type() ||
+            *ttype == *LuaType<std::shared_ptr<U>>::type()) {
+          auto ao = (std::shared_ptr<T> *) _p;
+          lua_pop(L, 2);
+          return *(*ao).get();
+        }
 
-      if (*ttype == *LuaType<std::unique_ptr<T>>::type() ||
-          *ttype == *LuaType<std::unique_ptr<U>>::type()) {
-        auto ao = (std::unique_ptr<T> *) _p;
-        lua_pop(L, 2);
-        return *(*ao).get();
-      }
+        if (*ttype == *LuaType<std::unique_ptr<T>>::type() ||
+            *ttype == *LuaType<std::unique_ptr<U>>::type()) {
+          auto ao = (std::unique_ptr<T> *) _p;
+          lua_pop(L, 2);
+          return *(*ao).get();
+        }
 
-      if (*ttype == *LuaType<T *>::type() ||
-          *ttype == *LuaType<U *>::type()) {
-        auto p = (T **) _p;
-        lua_pop(L, 2);
-        return **p;
-      }
+        if (*ttype == *LuaType<T *>::type() ||
+            *ttype == *LuaType<U *>::type()) {
+          auto p = (T **) _p;
+          lua_pop(L, 2);
+          return **p;
+        }
 
-      if (*ttype == *LuaType<T>::type() ||
-          *ttype == *LuaType<U>::type()) {
-        auto o = (T *) _p;
-        lua_pop(L, 2);
-        return *o;
+        if (*ttype == *LuaType<T>::type() ||
+            *ttype == *LuaType<U>::type()) {
+          auto o = (T *) _p;
+          lua_pop(L, 2);
+          return *o;
+        }
       }
-
       lua_pop(L, 2);
     }
 
@@ -236,6 +238,11 @@ struct LuaType<std::unique_ptr<T>> {
   }
 
   static void pushdata(lua_State *L, UT &o) {
+    if (!o) {
+      lua_pushnil(L);
+      return;
+    }
+
     void *u = lua_newuserdata(L, sizeof(UT));
     new(u) UT(std::move(o));
     luaL_getmetatable(L, type()->name());

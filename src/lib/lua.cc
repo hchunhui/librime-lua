@@ -264,10 +264,10 @@ std::shared_ptr<LuaObj> LuaObj::todata(lua_State *L, int i) {
   return std::shared_ptr<LuaObj>(new LuaObj(L, i));
 }
 
-void export_type(lua_State *L,
-                 const LuaTypeInfo *type, lua_CFunction gc,
-                 const luaL_Reg *funcs, const luaL_Reg *methods,
-                 const luaL_Reg *vars_get, const luaL_Reg *vars_set) {
+void lua_export_type(lua_State *L,
+                     const LuaTypeInfo *type, lua_CFunction gc,
+                     const luaL_Reg *funcs, const luaL_Reg *methods,
+                     const luaL_Reg *vars_get, const luaL_Reg *vars_set) {
   for (int i = 0; funcs[i].name; i++) {
     lua_register(L, funcs[i].name, funcs[i].func);
   }
