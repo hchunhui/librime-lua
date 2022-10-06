@@ -12,9 +12,36 @@
 #include <opencc/ConversionChain.hpp>
 #include <opencc/Dict.hpp>
 #include <opencc/DictEntry.hpp>
-#include "opencc.h"
+#include <opencc/Common.hpp>
+#include <boost/filesystem.hpp>
+#include <rime/common.h>
+#include <rime_api.h>
 
-using namespace OpenccReg;
+#include "lib/lua_export_type.h"
+#include "lib/luatype_boost_optional.h"
+
+using namespace std;
+using boost::optional;
+
+namespace {
+
+class Opencc {
+public:
+  //static shared_ptr<Opencc> create(const string &config_path);
+  Opencc(const string& config_path);
+  bool ConvertWord(const string& text, vector<string>* forms);
+  bool RandomConvertText(const string& text, string* simplified);
+  bool ConvertText(const string& text, string* simplified);
+  // --- lua wrap
+  vector<string> convert_word( const string& text);
+  string random_convert_text( const string& text);
+  string convert_text( const string& text);
+
+private:
+  opencc::ConverterPtr converter_;
+  opencc::DictPtr dict_;
+};
+
 /*
 shared_ptr<Opencc> Opencc::create(const string &config_path) {
   try {
@@ -101,3 +128,62 @@ vector<string> Opencc::convert_word(const string& text){
   return {};
 };
 
+namespace OpenccReg {
+  typedef Opencc T;
+  namespace ns = boost::filesystem;
+
+  optional<T> make(const string &filename) {
+    string user_path( RimeGetUserDataDir());
+    string shared_path(RimeGetSharedDataDir());
+    user_path += "/opencc/" + filename;
+    shared_path += "/opencc/" + filename;
+    const string *path;
+    if (ns::exists(user_path))
+      path = &user_path;
+    else if (ns::exists(shared_path))
+      path = &shared_path;
+    else
+      path = &filename;
+
+    try{
+      return T(*path);
+    }
+    catch(...) {
+      LOG(ERROR) << *path  << " File not found or InvalidFormat";
+      return {};
+    }
+  }
+  optional<vector<string>> convert_word(T &t,const string &s) {
+    vector<string> res;
+    if (t.ConvertWord(s,&res))
+      return res;
+    return {};
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Opencc",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"convert_word", WRAP(convert_word)},
+    {"random_convert_text", WRAPMEM(T,random_convert_text)},
+    {"convert_text", WRAPMEM(T,convert_text)},
+    {"convert", WRAPMEM(T,convert_text)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+}
+
+void LUAWRAPPER_LOCAL opencc_init(lua_State *L) {
+  EXPORT_TYPE(OpenccReg, L);
+}

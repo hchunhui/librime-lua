@@ -18,7 +18,6 @@
 #include "lua_gears.h"
 #include <rime/service.h>
 #include <boost/regex.hpp>
-#include "opencc.h"
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
@@ -1663,63 +1662,10 @@ namespace SwitcherReg {
   };
 }
 
-namespace OpenccReg1 {
-  typedef OpenccReg::Opencc T;
-  namespace ns = boost::filesystem;
-
-  optional<an<T>> make(const string &filename) {
-    string user_path( RimeGetUserDataDir());
-    string shared_path(RimeGetSharedDataDir());
-    user_path += "/opencc/" + filename;
-    shared_path += "/opencc/" + filename;
-    const string *path;
-    if (ns::exists(user_path))
-      path = &user_path;
-    else if (ns::exists(shared_path))
-      path = &shared_path;
-    else
-      path = &filename;
-
-    try{
-      return  New<T>(*path);
-    }
-    catch(...) {
-      LOG(ERROR) << *path  << " File not found or InvalidFormat";
-      return {};
-    }
-  }
-  optional<vector<string>> convert_word(T &t,const string &s) {
-    vector<string> res;
-    if (t.ConvertWord(s,&res))
-      return res;
-    return {};
-  }
-
-  static const luaL_Reg funcs[] = {
-    {"Opencc",WRAP(make)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg methods[] = {
-    {"convert_word", WRAP(convert_word)},
-    {"random_convert_text", WRAPMEM(T,random_convert_text)},
-    {"convert_text", WRAPMEM(T,convert_text)},
-    {"convert", WRAPMEM(T,convert_text)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_get[] = {
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_set[] = {
-    { NULL, NULL },
-  };
-}
-
 }
 
 void types_ext_init(lua_State *L);
+void opencc_init(lua_State *L);
 
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
@@ -1752,7 +1698,6 @@ void types_init(lua_State *L) {
   EXPORT(PhraseReg, L);
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
-  EXPORT(OpenccReg1, L);
   LogReg::init(L);
   RimeApiReg::init(L);
 #ifdef ENABLE_TYPES_EXT
@@ -1760,4 +1705,6 @@ void types_init(lua_State *L) {
 #endif
 
   EXPORT_UPTR_TYPE(SchemaReg, L);
+
+  opencc_init(L);
 }
