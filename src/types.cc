@@ -837,6 +837,7 @@ namespace ConfigMapReg {
     {"size", WRAP(size)},
     {"type",WRAP(type)},
     {"element",WRAP(element)},
+    { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
