@@ -295,7 +295,9 @@ namespace ReverseDbReg {
 namespace SegmentationReg {
   typedef Segmentation T;
 
-  Segment &back(T &t) {
+  optional<Segment &> back(T &t) {
+    if (t.empty())
+      return {};
     return t.back();
   }
 
@@ -566,7 +568,9 @@ namespace CompositionReg {
     return dynamic_cast<Segmentation *>(&t);
   }
 
-  Segment &back(T &t) {
+  optional<Segment &> back(T &t) {
+    if (t.empty())
+      return {};
     return t.back();
   }
 
