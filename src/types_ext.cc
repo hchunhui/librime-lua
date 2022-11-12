@@ -41,6 +41,7 @@ namespace ProcessorReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name_space",WRAPMEM(T, name_space)},
     { NULL, NULL },
   };
 
@@ -67,6 +68,7 @@ namespace SegmentorReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name_space",WRAPMEM(T, name_space)},
     { NULL, NULL },
   };
 
@@ -88,6 +90,7 @@ namespace TranslatorReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name_space",WRAPMEM(T, name_space)},
     { NULL, NULL },
   };
 
@@ -110,6 +113,7 @@ namespace FilterReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name_space",WRAPMEM(T, name_space)},
     { NULL, NULL },
   };
 
