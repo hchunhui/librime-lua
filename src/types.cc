@@ -456,6 +456,135 @@ namespace EngineReg {
   };
 }
 
+namespace CommitRecordReg {
+  typedef CommitRecord T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "type", WRAPMEM_GET(T::type) },
+    { "text", WRAPMEM_GET(T::text) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "type", WRAPMEM_SET(T::type) },
+    { "text", WRAPMEM_SET(T::text) },
+    { NULL, NULL },
+  };
+
+}
+
+namespace CommitHistoryReg {
+  typedef CommitHistory T;
+  typedef CommitRecord CR;
+  typedef T::reverse_iterator R_ITER;
+
+  int raw_push(lua_State *L){
+    C_State C;
+    int n = lua_gettop(L);
+    if (2 > n){
+      lua_pop(L, n);
+      return 0;
+    }
+
+    T &t = LuaType<T &>::todata(L,1);
+    if (2 < n) {
+      if (lua_isstring(L, 2))
+        // string, string
+        t.Push(
+            CommitRecord(
+              LuaType<string>::todata(L, 2, &C),
+              LuaType<string>::todata(L, 3, &C) ) );
+      else
+        // composition, string
+        t.Push(
+            LuaType<Composition &>::todata(L, 2),
+            LuaType<string>::todata(L, 3, &C) );
+    }else {
+      // keyevent
+      if (const auto o= LuaType<an<KeyEvent>>::todata(L, 2))
+        t.Push(*o);
+    }
+    lua_pop(L, n);
+    return 0;
+  }
+
+  optional<CR &> back(T &t) {
+    if (t.empty())
+      return {};
+    return t.back();
+  }
+
+  vector<CR> to_table(T &t) {
+    return vector<CR>(std::begin(t), std::end(t) );
+  }
+
+  // for it, cr in context.commit_history:iter() do
+  //   print(it, w.type,w.txxt )
+  // end
+  int raw_next(lua_State *L) {
+    int n = lua_gettop(L);
+    if (2 != n)
+      return 0;
+
+    T &t = LuaType<T &>::todata(L, 1);
+    R_ITER &it = LuaType<R_ITER &>::todata(L, 2);
+    if ( t.rend() != it){
+      LuaType<CR>::pushdata(L, *it++);
+      return 2;
+    }
+    return 0;
+  }
+
+  //  return raw_next, t,  t.rbegin()
+  int raw_iter(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( 1 > n )
+      return 0;
+
+    T &t = LuaType<T &>::todata(L, 1);
+    LuaType<lua_CFunction>::pushdata(L, raw_next);  // t ... raw_next
+    lua_pushvalue(L, 1); // t ... raw_next t
+    LuaType<R_ITER>::pushdata(L, *make_unique<R_ITER>(t.rbegin()) );
+    return 3;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    // push( KeyEvent| Composition, string| string, string)
+    {"push", raw_push},
+    {"back", WRAP(back)},
+    {"to_table", WRAP(to_table)},
+    {"iter", raw_iter},
+    {"repr",WRAPMEM(T,repr)},
+    {"latest_text",WRAPMEM(T, latest_text)},
+    //  std::list
+    {"empty", WRAPMEM(T, empty)},
+    {"clear", WRAPMEM(T, clear)},
+    {"pop_back", WRAPMEM(T, pop_back)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"size", WRAPMEM(T, size)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 namespace ContextReg {
   typedef Context T;
 
@@ -471,9 +600,9 @@ namespace ContextReg {
     return t.PushInput(str);
   }
 
-  //CommitHistory &get_commit_history(T &t) {
-  //  return t.commit_history();
-  //}
+  CommitHistory &get_commit_history(T &t) {
+    return t.commit_history();
+  }
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -521,7 +650,7 @@ namespace ContextReg {
     { "option_update_notifier", WRAPMEM(T::option_update_notifier) },
     { "property_update_notifier", WRAPMEM(T::property_update_notifier) },
     { "unhandled_key_notifier", WRAPMEM(T::unhandled_key_notifier) },
-    //{ "commit_history", WRAP(get_commit_history) },
+    { "commit_history", WRAP(get_commit_history) },
     { NULL, NULL },
   };
 
@@ -1681,6 +1810,8 @@ void types_init(lua_State *L) {
   EXPORT(MenuReg, L);
   EXPORT(KeyEventReg, L);
   EXPORT(EngineReg, L);
+  EXPORT(CommitRecordReg, L);
+  EXPORT(CommitHistoryReg, L);
   EXPORT(ContextReg, L);
   EXPORT(PreeditReg, L);
   EXPORT(CompositionReg, L);
