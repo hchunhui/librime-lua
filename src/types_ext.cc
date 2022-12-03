@@ -16,9 +16,28 @@
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
 
+#include <utility>
+
 using namespace rime;
 
 namespace {
+
+template<typename> using void_t = void;
+
+template<typename T, typename = void>
+struct COMPAT {
+  // fallback version of name_space() if librime is old
+  static nullptr_t name_space(T &t) {
+    return nullptr;
+  }
+};
+
+template<typename T>
+struct COMPAT<T, void_t<decltype(std::declval<T>().name_space())>> {
+  static std::string name_space(T &t) {
+    return t.name_space();
+  }
+};
 
 namespace ProcessorReg{
   typedef Processor T;
@@ -41,6 +60,7 @@ namespace ProcessorReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name_space",WRAP(COMPAT<T>::name_space)},
     { NULL, NULL },
   };
 
@@ -67,6 +87,7 @@ namespace SegmentorReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name_space",WRAP(COMPAT<T>::name_space)},
     { NULL, NULL },
   };
 
@@ -88,6 +109,7 @@ namespace TranslatorReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name_space",WRAP(COMPAT<T>::name_space)},
     { NULL, NULL },
   };
 
@@ -110,6 +132,7 @@ namespace FilterReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name_space",WRAP(COMPAT<T>::name_space)},
     { NULL, NULL },
   };
 
