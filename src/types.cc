@@ -316,6 +316,10 @@ namespace SegmentationReg {
   bool empty(T &t){
     return t.empty();
   }
+  
+  vector<Segment> get_segments(T &t) {
+    return t;
+  }
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -334,6 +338,7 @@ namespace SegmentationReg {
     { "get_current_end_position", WRAPMEM(T::GetCurrentEndPosition) },
     { "get_current_segment_length", WRAPMEM(T::GetCurrentSegmentLength) },
     { "get_confirmed_position", WRAPMEM(T::GetConfirmedPosition) },
+    { "get_segments", WRAP(get_segments)},
     { NULL, NULL },
   };
 
