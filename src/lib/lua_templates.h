@@ -425,6 +425,13 @@ struct LuaType<const std::vector<T>> : LuaType<std::vector<T>> {};
 template<typename T>
 struct LuaType<const std::vector<T> &> : LuaType<std::vector<T>> {};
 
+template<>
+struct LuaType<decltype(nullptr)> {
+  static void pushdata(lua_State *L, decltype(nullptr) o) {
+    lua_pushnil(L);
+  }
+};
+
 // Helper function for pushing a series of data
 static void pushdataX(lua_State *L) {}
 
