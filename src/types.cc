@@ -480,7 +480,7 @@ namespace CommitRecordReg {
   };
 
 }
-namespace CommitRecordIterReg{
+namespace CommitRecordIterReg {
   typedef CommitHistory::iterator T;
   typedef CommitRecord CR;
 
@@ -526,13 +526,31 @@ namespace CommitRecordIterReg{
   };
 }
 
-namespace CommitRecordReverseIterReg{
+namespace CommitRecordReverseIterReg {
   typedef CommitHistory::reverse_iterator T;
   typedef CommitRecord CR;
 
   CR& get_commit_record(T &t) {
     return *t;
   }
+
+  void set_text(T &t, string s) {
+    t->text = s;
+  }
+
+  void set_type(T &t, string s) {
+    t->type = s;
+  }
+
+  string get_text(T &t) {
+    return t->text;
+
+  }
+
+  string get_type(T &t) {
+    return t->type;
+  }
+
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -544,10 +562,14 @@ namespace CommitRecordReverseIterReg{
 
   static const luaL_Reg vars_get[] = {
     { "commit_record", WRAP(get_commit_record)},
+    { "text", WRAP(get_text)},
+    { "type", WRAP(get_type)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
+    { "text", WRAP(set_text)},
+    { "type", WRAP(set_type)},
     { NULL, NULL },
   };
 }
