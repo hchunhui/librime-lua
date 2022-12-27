@@ -37,8 +37,8 @@ function M.func(inp,seg,env)
   local context=env.engine.context
   local count = env.size
   --  期望
-  for it, h_record in context.commit_history:iter() do 
-    yield( Candidate(h_record.type, seg.start, seg._end, hrecord.text, "history") )
+  for it in context.commit_history:reverse_iter() do 
+    yield( Candidate(it.type, seg.start, seg._end, it.text, "history") )
     count = count -1
     if count <=0 then break end
   end
