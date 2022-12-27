@@ -484,21 +484,23 @@ namespace CommitRecordIterReg{
   typedef CommitHistory::iterator T;
   typedef CommitRecord CR;
 
-  CR& get_commit_record(T &t){
+  CR& get_commit_record(T &t) {
     return *t;
   }
 
-  void set_text(T &t, string s){
+  void set_text(T &t, string s) {
     t->text = s;
   }
-  void set_type(T &t, string s){
+
+  void set_type(T &t, string s) {
     t->type = s;
   }
-  string get_text(T &t){
+
+  string get_text(T &t) {
     return t->text;
 
   }
-  string get_type(T &t){
+  string get_type(T &t) {
     return t->type;
   }
 
@@ -528,7 +530,7 @@ namespace CommitRecordReverseIterReg{
   typedef CommitHistory::reverse_iterator T;
   typedef CommitRecord CR;
 
-  CR& get_commit_record(T &t){
+  CR& get_commit_record(T &t) {
     return *t;
   }
 
@@ -556,10 +558,10 @@ namespace CommitHistoryReg {
   typedef T::reverse_iterator RITER;
   typedef T::iterator ITER;
 
-  int raw_push(lua_State *L){
+  int raw_push(lua_State *L) {
     C_State C;
     int n = lua_gettop(L);
-    if (2 > n){
+    if (2 > n) {
       lua_pop(L, n);
       return 0;
     }
@@ -592,12 +594,13 @@ namespace CommitHistoryReg {
     return t.back();
   }
 
+  // clone CommitRecord
   vector<CR> to_table(T &t) {
     return vector<CR>(t.begin(), t.end());
   }
 
-  // for it, cr in context.commit_history:iter() do
-  //   print(it, w.type,w.txxt )
+  // for it in context.commit_history:iter() do
+  //   print(it, it.type,it.txxt )
   // end
   int raw_next(lua_State *L) {
     int n = lua_gettop(L);
@@ -606,27 +609,27 @@ namespace CommitHistoryReg {
 
     T &t = LuaType<T &>::todata(L, 1);
     ITER it;
-    if (1 == n || lua_isnil(L, 2)){
+    if (1 == n || lua_isnil(L, 2)) {
       it = t.begin();
-      LuaType<ITER>::pushdata(L, it); //t.begin());
+      LuaType<ITER>::pushdata(L, it);
       return 1;
     }
     it = ++LuaType<ITER&>::todata(L,2);
     return (t.end() != it ) ? 1 : 0;
   }
 
-  //  return raw_next, t,  t.rbegin()
+  //  return raw_next, t
   int raw_iter(lua_State *L) {
     int n = lua_gettop(L);
     if ( 1 > n )
       return 0;
 
-    LuaType<lua_CFunction>::pushdata(L, raw_next);  // t ... raw_next
-    lua_pushvalue(L, 1); // t ... raw_next t
+    LuaType<lua_CFunction>::pushdata(L, raw_next);
+    lua_pushvalue(L, 1);
     return 2;
   }
-  // for it, cr in context.commit_history:reverse_iter() do
-  //   print(it, w.type,w.txxt )
+  // for it in context.commit_history:reverse_iter() do
+  //   print(it, it.type,it.txxt )
   // end
   int raw_rnext(lua_State *L) {
     int n = lua_gettop(L);
@@ -635,23 +638,23 @@ namespace CommitHistoryReg {
 
     T &t = LuaType<T &>::todata(L, 1);
     RITER it;
-    if (1 == n || lua_isnil(L, 2)){
+    if (1 == n || lua_isnil(L, 2)) {
       it = t.rbegin();
-      LuaType<RITER>::pushdata(L, it); //t.begin());
+      LuaType<RITER>::pushdata(L, it); //t.rbegin());
       return 1;
     }
     it = ++LuaType<RITER&>::todata(L,2);
     return (t.rend() != it ) ? 1 : 0;
   }
 
-  //  return raw_next, t,  t.rbegin()
+  //  return raw_rnext, t
   int raw_reverse_iter(lua_State *L) {
     int n = lua_gettop(L);
     if ( 1 > n )
       return 0;
 
-    LuaType<lua_CFunction>::pushdata(L, raw_rnext);  // t ... raw_next
-    lua_pushvalue(L, 1); // t ... raw_next t
+    LuaType<lua_CFunction>::pushdata(L, raw_rnext);
+    lua_pushvalue(L, 1);
     return 2;
   }
 
