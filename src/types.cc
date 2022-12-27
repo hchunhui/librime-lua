@@ -480,11 +480,81 @@ namespace CommitRecordReg {
   };
 
 }
+namespace CommitRecordIterReg{
+  typedef CommitHistory::iterator T;
+  typedef CommitRecord CR;
+
+  CR& get_commit_record(T &t){
+    return *t;
+  }
+
+  void set_text(T &t, string s){
+    t->text = s;
+  }
+  void set_type(T &t, string s){
+    t->type = s;
+  }
+  string get_text(T &t){
+    return t->text;
+
+  }
+  string get_type(T &t){
+    return t->type;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "commit_record", WRAP(get_commit_record)},
+    { "text", WRAP(get_text)},
+    { "type", WRAP(get_type)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "text", WRAP(set_text)},
+    { "type", WRAP(set_type)},
+    { NULL, NULL },
+  };
+}
+
+namespace CommitRecordReverseIterReg{
+  typedef CommitHistory::reverse_iterator T;
+  typedef CommitRecord CR;
+
+  CR& get_commit_record(T &t){
+    return *t;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "commit_record", WRAP(get_commit_record)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 
 namespace CommitHistoryReg {
   typedef CommitHistory T;
   typedef CommitRecord CR;
-  typedef T::reverse_iterator R_ITER;
+  typedef T::reverse_iterator RITER;
+  typedef T::iterator ITER;
 
   int raw_push(lua_State *L){
     C_State C;
@@ -523,7 +593,7 @@ namespace CommitHistoryReg {
   }
 
   vector<CR> to_table(T &t) {
-    return vector<CR>(std::begin(t), std::end(t) );
+    return vector<CR>(t.begin(), t.end());
   }
 
   // for it, cr in context.commit_history:iter() do
@@ -531,16 +601,18 @@ namespace CommitHistoryReg {
   // end
   int raw_next(lua_State *L) {
     int n = lua_gettop(L);
-    if (2 != n)
+    if (1 > n)
       return 0;
 
     T &t = LuaType<T &>::todata(L, 1);
-    R_ITER &it = LuaType<R_ITER &>::todata(L, 2);
-    if ( t.rend() != it){
-      LuaType<CR>::pushdata(L, *it++);
-      return 2;
+    ITER it;
+    if (1 == n || lua_isnil(L, 2)){
+      it = t.begin();
+      LuaType<ITER>::pushdata(L, it); //t.begin());
+      return 1;
     }
-    return 0;
+    it = ++LuaType<ITER&>::todata(L,2);
+    return (t.end() != it ) ? 1 : 0;
   }
 
   //  return raw_next, t,  t.rbegin()
@@ -549,11 +621,38 @@ namespace CommitHistoryReg {
     if ( 1 > n )
       return 0;
 
-    T &t = LuaType<T &>::todata(L, 1);
     LuaType<lua_CFunction>::pushdata(L, raw_next);  // t ... raw_next
     lua_pushvalue(L, 1); // t ... raw_next t
-    LuaType<R_ITER>::pushdata(L, *make_unique<R_ITER>(t.rbegin()) );
-    return 3;
+    return 2;
+  }
+  // for it, cr in context.commit_history:reverse_iter() do
+  //   print(it, w.type,w.txxt )
+  // end
+  int raw_rnext(lua_State *L) {
+    int n = lua_gettop(L);
+    if (1 > n)
+      return 0;
+
+    T &t = LuaType<T &>::todata(L, 1);
+    RITER it;
+    if (1 == n || lua_isnil(L, 2)){
+      it = t.rbegin();
+      LuaType<RITER>::pushdata(L, it); //t.begin());
+      return 1;
+    }
+    it = ++LuaType<RITER&>::todata(L,2);
+    return (t.rend() != it ) ? 1 : 0;
+  }
+
+  //  return raw_next, t,  t.rbegin()
+  int raw_reverse_iter(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( 1 > n )
+      return 0;
+
+    LuaType<lua_CFunction>::pushdata(L, raw_rnext);  // t ... raw_next
+    lua_pushvalue(L, 1); // t ... raw_next t
+    return 2;
   }
 
   static const luaL_Reg funcs[] = {
@@ -566,6 +665,7 @@ namespace CommitHistoryReg {
     {"back", WRAP(back)},
     {"to_table", WRAP(to_table)},
     {"iter", raw_iter},
+    {"reverse_iter", raw_reverse_iter},
     {"repr",WRAPMEM(T,repr)},
     {"latest_text",WRAPMEM(T, latest_text)},
     //  std::list
@@ -1811,6 +1911,8 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventReg, L);
   EXPORT(EngineReg, L);
   EXPORT(CommitRecordReg, L);
+  EXPORT(CommitRecordIterReg, L);
+  EXPORT(CommitRecordReverseIterReg, L);
   EXPORT(CommitHistoryReg, L);
   EXPORT(ContextReg, L);
   EXPORT(PreeditReg, L);
@@ -1841,6 +1943,6 @@ void types_init(lua_State *L) {
 #endif
 
   EXPORT_UPTR_TYPE(SchemaReg, L);
-
   opencc_init(L);
+
 }
