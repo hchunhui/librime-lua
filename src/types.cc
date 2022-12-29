@@ -248,6 +248,7 @@ namespace TranslationReg {
   };
 
   static const luaL_Reg vars_get[] = {
+    { "exhausted", WRAPMEM(T, exhausted) },
     { NULL, NULL },
   };
 
