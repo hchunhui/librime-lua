@@ -630,6 +630,9 @@ namespace CommitHistoryReg {
       return 0;
 
     T &t = LuaType<T &>::todata(L, 1);
+    if (t.empty())
+      return 0;
+
     ITER it;
     if (1 == n || lua_isnil(L, 2)) {
       it = t.begin();
@@ -659,6 +662,9 @@ namespace CommitHistoryReg {
       return 0;
 
     T &t = LuaType<T &>::todata(L, 1);
+    if (t.empty())
+      return 0;
+
     RITER it;
     if (1 == n || lua_isnil(L, 2)) {
       it = t.rbegin();
