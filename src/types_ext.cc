@@ -1,7 +1,7 @@
 /*
  * types_ext.cc
  * Copyright (C) 2022 Shewer Lu <shewer@gmail.com>
- *
+
  * Distributed under terms of the MIT license.
  */
 
@@ -245,6 +245,7 @@ namespace ReverseLookupDictionaryReg {
     { NULL, NULL },
   };
 }
+
 // Dictionary
 namespace DictionaryReg {
   typedef Dictionary T;
@@ -271,11 +272,16 @@ namespace DictionaryReg {
       else if (2 == n) {
         dictname = string( lua_tostring(L, 1) );
         prism = string( lua_tostring(L, 2) );
+        if (prism.empty())
+          prism = dictname;
       }
       else if (3 <= n) {
         dictname = string( lua_tostring(L, 1) );
         prism = string( lua_tostring(L, 2) );
-        for (int i=3; i<n; i++)
+        if (prism.empty())
+          prism = dictname;
+
+        for (int i=3; i<=n; i++)
           packs.push_back(lua_tostring(L, i) );
       }
       dict = c->Create(dictname, prism, packs);
@@ -287,10 +293,19 @@ namespace DictionaryReg {
     }
 
     if ( dict ) {
+      dict->Load();
       LuaType<T *>::pushdata(L, dict);
       return 1;
     };
     return 0;
+  }
+
+  Table & get_table(T &t) {
+    return (Table &) t.primary_table();
+  }
+  vector<string> packs(T &t) {
+    vector<string> res = t.packs();// clone const vector<string>
+    return res;
   }
 
   static const luaL_Reg funcs[] = {
@@ -299,10 +314,18 @@ namespace DictionaryReg {
   };
 
   static const luaL_Reg methods[] = {
+    {"load", WRAPMEM(T,Load)},
+    {"loaded", WRAPMEM(T,loaded)},
+    {"remove", WRAPMEM(T,Remove)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name", WRAPMEM(T,name)},
+    //{"table", WRAP(get_table)}, // const Table error
+    //{"tables", WRAPMEM(T,tables)}, // const vector<table> error
+    //{"prism", WRAPMEM(T,prism)},
+    {"packs", WRAP(packs)}, // const vector<string> error
     { NULL, NULL },
   };
 
@@ -314,6 +337,7 @@ namespace DictionaryReg {
 namespace UserDictionaryReg {
   typedef UserDictionary T;
   typedef UserDictionaryComponent C;
+  typedef Dictionary D;
 
   int raw_make(lua_State* L) {
     int n = lua_gettop(L);
@@ -335,10 +359,6 @@ namespace UserDictionaryReg {
         user_dictname= string( lua_tostring(L, 1) );
         dbclass= string( lua_tostring(L, 2) );
       }
-      else if (3 == n) {
-        user_dictname= string( lua_tostring(L, 1) );
-        dbclass= string( lua_tostring(L, 2) );
-      }
       dict = c->Create( user_dictname, dbclass);
     }
     else {
@@ -347,22 +367,37 @@ namespace UserDictionaryReg {
     }
 
     if ( dict ) {
+      dict->Load();
       LuaType<T *>::pushdata(L, dict);
       return 1;
     };
     return 0;
   }
 
+  void attach(T &t, D &d) {
+    t.Attach(d.primary_table(), d.prism());
+  }
+  void unattach(T &t) {
+    t.Attach(nullptr, nullptr);
+  }
+
   static const luaL_Reg funcs[] = {
-    {"UserDictionary", raw_make},
+    {"UserDictionary", raw_make}, // UserDictionary("cangjie5","userdb")
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
+    {"attach", WRAP(attach) }, // udict:attach(dict)
+    {"unattach", WRAP(unattach) }, // udict:unattach()
+    {"load", WRAPMEM(T, Load)},
+    {"loaded", WRAPMEM(T, loaded)},
+    {"readonly", WRAPMEM(T, readonly)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    {"name", WRAPMEM(T, name)},
+    {"tick", WRAPMEM(T, tick)},
     { NULL, NULL },
   };
 
