@@ -747,6 +747,10 @@ namespace SchemaReg {
     return std::unique_ptr<T>(new T(schema_id));
   };
 
+  T* get_ptr(T &t) {
+    return &t;
+  }
+
   static const luaL_Reg funcs[] = {
     { "Schema", WRAP(make) },
     { NULL, NULL },
@@ -762,6 +766,7 @@ namespace SchemaReg {
     { "config", WRAPMEM(T::config) },
     { "page_size", WRAPMEM(T::page_size) },
     { "select_keys", WRAPMEM(T::select_keys) },
+    { "ptr", WRAP( get_ptr)},
     { NULL, NULL },
   };
 

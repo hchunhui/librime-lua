@@ -39,6 +39,62 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().name_space())>> {
   }
 };
 
+namespace TicketReg {
+  typedef  Ticket T;
+
+  int raw_make(lua_State* L) {
+    T t;
+    int n = lua_gettop(L);
+
+    if ( 2 == n ) {
+      // Ticket( *schema, ns )
+      t =Ticket(
+            LuaType<Schema *>::todata(L,1),
+            lua_tostring(L,2));
+    }
+    else if ( 3 == n ) {
+      // Ticket( *eng , ns , prescription)
+      t= Ticket(
+            LuaType<Engine *>::todata(L,1),
+            lua_tostring(L,2),
+            lua_tostring(L,3) );
+    }
+    else if ( n == 0) { } // return E
+    else {
+      return 0;
+    }
+    LuaType<T>::pushdata(L,t);
+    return 1;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "Ticket", raw_make},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"engine", WRAPMEM_GET(T::engine)},
+    {"schema", WRAPMEM_GET(T::schema)},
+    {"name_space", WRAPMEM_GET(T::name_space)},
+    {"klass", WRAPMEM_GET(T::klass)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"engine", WRAPMEM_SET(T::engine)},
+    {"schema", WRAPMEM_SET(T::schema)},
+    {"name_space", WRAPMEM_SET(T::name_space)},
+    {"klass", WRAPMEM_SET(T::klass)},
+    { NULL, NULL },
+  };
+
+
+};
+
 namespace ProcessorReg{
   typedef Processor T;
 
@@ -332,6 +388,7 @@ namespace ComponentReg{
 }
 
 void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
+  EXPORT(TicketReg, L);
   EXPORT(ProcessorReg, L);
   EXPORT(SegmentorReg, L);
   EXPORT(TranslatorReg, L);
