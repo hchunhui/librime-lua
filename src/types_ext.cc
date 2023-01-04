@@ -11,6 +11,8 @@
 #include <rime/translator.h>
 #include <rime/filter.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
 #include <rime/dict/level_db.h>
 
 #include "lib/lua_export_type.h"
@@ -243,7 +245,131 @@ namespace ReverseLookupDictionaryReg {
     { NULL, NULL },
   };
 }
+// Dictionary
+namespace DictionaryReg {
+  typedef Dictionary T;
+  typedef DictionaryComponent C;
 
+  int raw_make(lua_State* L) {
+    int n = lua_gettop(L);
+    if (n == 0 )
+      return 0;
+
+    auto c = (C *) T::Require("dictionary");
+    if (!c)
+      return 0;
+
+    T * dict=nullptr;
+    if (lua_isstring(L, 1)){
+      // from  dict_name , pirsm , packs
+      vector<string> packs;
+      string dictname, prism;
+      if ( 1 == n ){
+        dictname = string( lua_tostring(L, 1) );
+        prism = dictname;
+      }
+      else if (2 == n) {
+        dictname = string( lua_tostring(L, 1) );
+        prism = string( lua_tostring(L, 2) );
+      }
+      else if (3 <= n) {
+        dictname = string( lua_tostring(L, 1) );
+        prism = string( lua_tostring(L, 2) );
+        for (int i=3; i<n; i++)
+          packs.push_back(lua_tostring(L, i) );
+      }
+      dict = c->Create(dictname, prism, packs);
+    }
+    else {
+      // from name_space
+      Ticket t = LuaType<Ticket &>::todata(L, 1);
+      dict = c->Create(t);
+    }
+
+    if ( dict ) {
+      LuaType<T *>::pushdata(L, dict);
+      return 1;
+    };
+    return 0;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Dictionary",raw_make},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace UserDictionaryReg {
+  typedef UserDictionary T;
+  typedef UserDictionaryComponent C;
+
+  int raw_make(lua_State* L) {
+    int n = lua_gettop(L);
+    if (n == 0 )
+      return 0;
+
+    auto c = (C *) T::Require("user_dictionary");
+    if (!c)
+      return 0;
+
+    T * dict=nullptr;
+    if (lua_isstring(L, 1)){
+      string user_dictname, dbclass;
+      if ( 1 == n ){
+        user_dictname= string( lua_tostring(L, 1) );
+        dbclass= user_dictname;
+      }
+      else if (2 == n) {
+        user_dictname= string( lua_tostring(L, 1) );
+        dbclass= string( lua_tostring(L, 2) );
+      }
+      else if (3 == n) {
+        user_dictname= string( lua_tostring(L, 1) );
+        dbclass= string( lua_tostring(L, 2) );
+      }
+      dict = c->Create( user_dictname, dbclass);
+    }
+    else {
+      Ticket t = LuaType<Ticket &>::todata(L, 1);
+      dict = c->Create(t);
+    }
+
+    if ( dict ) {
+      LuaType<T *>::pushdata(L, dict);
+      return 1;
+    };
+    return 0;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"UserDictionary", raw_make},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 // leveldb
 namespace DbAccessorReg{
   typedef DbAccessor T;
@@ -403,6 +529,8 @@ void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(SegmentorReg, L);
   EXPORT(TranslatorReg, L);
   EXPORT(FilterReg, L);
+  EXPORT(DictionaryReg, L);
+  EXPORT(UserDictionaryReg, L);
   EXPORT(ReverseLookupDictionaryReg, L);
   EXPORT(DbAccessorReg, L);
   EXPORT(LevelDbReg, L);
