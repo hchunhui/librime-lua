@@ -49,7 +49,7 @@ namespace TicketReg {
     if ( 2 == n ) {
       // Ticket( *schema, ns )
       t =Ticket(
-            LuaType<Schema *>::todata(L,1),
+            &LuaType<Schema &>::todata(L,1),
             lua_tostring(L,2));
     }
     else if ( 3 == n ) {
@@ -66,6 +66,10 @@ namespace TicketReg {
     LuaType<T>::pushdata(L,t);
     return 1;
   }
+  void set_schema(T &t, Schema &s){
+    t.schema= &s;
+  }
+
 
   static const luaL_Reg funcs[] = {
     { "Ticket", raw_make},
@@ -86,7 +90,7 @@ namespace TicketReg {
 
   static const luaL_Reg vars_set[] = {
     {"engine", WRAPMEM_SET(T::engine)},
-    {"schema", WRAPMEM_SET(T::schema)},
+    {"schema", WRAP(set_schema)},
     {"name_space", WRAPMEM_SET(T::name_space)},
     {"klass", WRAPMEM_SET(T::klass)},
     { NULL, NULL },
@@ -347,17 +351,23 @@ namespace ComponentReg{
   template <typename O>
   int raw_create(lua_State *L){
     int n = lua_gettop(L);
-    if (3 > n || 4 < n)
-      return 0;
-
+    // args : (Ticket | engine, ns,pres | engine, schema, ns, pres)
     C_State C;
-    Ticket ticket(
-      LuaType<Engine *>::todata(L, 1),
-      LuaType<string>::todata(L, -2, &C),
-      LuaType<string>::todata(L, -1, &C)
-    );
-    if (n == 4)
-      ticket.schema = &(LuaType<Schema &>::todata(L, 2) ); //overwrite schema
+    Ticket ticket;
+
+    if (n == 1){
+      ticket = LuaType<Ticket &>::todata(L,1);
+    }
+    else if ( 3 <= n ){
+      ticket = Ticket(
+        LuaType<Engine *>::todata(L, 1),
+        LuaType<string>::todata(L, -2, &C),
+        LuaType<string>::todata(L, -1, &C));
+      if (n == 4)
+        ticket.schema = &(LuaType<Schema &>::todata(L, 2) ); //overwrite schema
+    }
+    else
+      return 0;
 
     if (auto c = O::Require(ticket.klass)) {
       an<O> obj = (an<O>) c->Create(ticket);
