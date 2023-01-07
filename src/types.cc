@@ -750,6 +750,9 @@ namespace SchemaReg {
   T* get_ptr(T &t) {
     return &t;
   }
+  const T* get_cptr(T &t) {
+    return &t;
+  }
 
   static const luaL_Reg funcs[] = {
     { "Schema", WRAP(make) },
@@ -767,6 +770,7 @@ namespace SchemaReg {
     { "page_size", WRAPMEM(T::page_size) },
     { "select_keys", WRAPMEM(T::select_keys) },
     { "ptr", WRAP( get_ptr)},
+    { "cptr", WRAP( get_cptr)},
     { NULL, NULL },
   };
 
@@ -1401,6 +1405,7 @@ namespace DictEntryReg {
     { NULL, NULL },
   };
 }
+
 namespace CodeReg {
 
   typedef Code T;
@@ -1552,6 +1557,10 @@ namespace MemoryReg {
     return 2;
   }
 
+  Memory* memory(T &t ) {
+    return dynamic_cast<Memory*>(&t);
+  }
+
   static const luaL_Reg funcs[] = {
       {"Memory", raw_make},
       {NULL, NULL},
@@ -1575,6 +1584,8 @@ namespace MemoryReg {
   };
 
   static const luaL_Reg vars_get[] = {
+      { "memory", WRAP(memory)},
+      { "language", WRAPMEM(T, language)},
       {NULL, NULL},
   };
 
@@ -1587,13 +1598,28 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory,
-    const string& type,
-    size_t start,
-    size_t end,
-    const an<DictEntry>& entry)
-  {
-    return New<Phrase>(memory.language(),type, start,end, entry);
+  int raw_make(lua_State *L) {
+    int n = lua_gettop(L);
+    if (5 != n)
+      return 0;
+
+    // try to replace const language
+    if ( LUA_TUSERDATA== lua_getfield(L,1,"language")){
+      lua_replace(L, 1);
+    }
+    else {
+      lua_pop(L, 1);
+    }
+
+    an<T> ph = New<T>(
+        &LuaType<const Language &>::todata(L,1),
+        lua_tostring(L, 2),
+        (int) lua_tointeger(L, 3),
+        (int) lua_tointeger(L, 4),
+        (LuaType<an<DictEntry>&>::todata(L, 5)) );
+    lua_pop(L,n);
+    LuaType<an<T>>::pushdata(L,ph);
+    return 1;
   }
 
   an<Candidate> toCandidate(an<T> phrase) {
@@ -1601,7 +1627,7 @@ namespace PhraseReg {
   }
 
   static const luaL_Reg funcs[] = {
-    { "Phrase", WRAP(make) },
+    { "Phrase", raw_make },
     { NULL, NULL },
   };
 
