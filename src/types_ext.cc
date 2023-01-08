@@ -11,9 +11,10 @@
 #include <rime/translator.h>
 #include <rime/filter.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
-#include <rime/dict/dictionary.h>
-#include <rime/dict/user_dictionary.h>
 #include <rime/dict/level_db.h>
+
+#include <rime/gear/script_translator.h>
+#include <rime/gear/table_translator.h>
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
@@ -21,7 +22,6 @@
 #include <utility>
 
 using namespace rime;
-
 namespace {
 
 template<typename> using void_t = void;
@@ -158,9 +158,42 @@ namespace SegmentorReg{
   };
 }
 
-namespace TranslatorReg{
-  typedef Translator T;
 
+namespace TranslatorReg{
+  class ScriptTranslatorOptions;
+  class TableTranslatorOptions;
+
+  typedef Translator T;
+  typedef TranslatorOptions O;
+  typedef ScriptTranslatorOptions SO;
+  typedef TableTranslatorOptions TO;
+
+  TranslatorOptions* options(T &t ) {
+    return dynamic_cast<TranslatorOptions*>(&t);
+  }
+
+  Memory* memory(T &t ) {
+    return dynamic_cast<Memory*>(&t);
+  }
+
+  SO* script_options(T &t){
+    if (auto c = dynamic_cast<ScriptTranslator*>(&t))
+      return (SO *) c;
+    return nullptr;
+  }
+
+  const Language* language(T &t) {
+    if (auto mem = dynamic_cast<Memory*>(&t) )
+      return mem->language();
+    else
+      return nullptr;
+  }
+
+  TO* table_options(T &t){
+    if (auto c = dynamic_cast<TableTranslator*>(&t))
+      return (TO *) c;
+    return nullptr;
+  }
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -172,6 +205,11 @@ namespace TranslatorReg{
 
   static const luaL_Reg vars_get[] = {
     {"name_space",WRAP(COMPAT<T>::name_space)},
+    {"options", WRAP(options)},
+    {"memory", WRAP(memory)},
+    {"language", WRAP(language)},
+    {"script_options", WRAP(script_options)},
+    {"table_options", WRAP(table_options)},
     { NULL, NULL },
   };
 
@@ -238,166 +276,6 @@ namespace ReverseLookupDictionaryReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_set[] = {
-    { NULL, NULL },
-  };
-}
-
-// Dictionary
-namespace DictionaryReg {
-  typedef Dictionary T;
-  typedef DictionaryComponent C;
-
-  int raw_make(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n == 0 )
-      return 0;
-
-    auto c = (C *) T::Require("dictionary");
-    if (!c)
-      return 0;
-
-    T * dict=nullptr;
-    if (lua_isstring(L, 1)){
-      // from  dict_name , pirsm , packs
-      vector<string> packs;
-      string dictname, prism;
-      if ( 1 == n ){
-        dictname = string( lua_tostring(L, 1) );
-        prism = dictname;
-      }
-      else if (2 == n) {
-        dictname = string( lua_tostring(L, 1) );
-        prism = string( lua_tostring(L, 2) );
-        if (prism.empty())
-          prism = dictname;
-      }
-      else if (3 <= n) {
-        dictname = string( lua_tostring(L, 1) );
-        prism = string( lua_tostring(L, 2) );
-        if (prism.empty())
-          prism = dictname;
-
-        for (int i=3; i<=n; i++)
-          packs.push_back(lua_tostring(L, i) );
-      }
-      dict = c->Create(dictname, prism, packs);
-    }
-    else {
-      // from name_space
-      Ticket t = LuaType<Ticket &>::todata(L, 1);
-      dict = c->Create(t);
-    }
-
-    if ( dict ) {
-      dict->Load();
-      LuaType<T *>::pushdata(L, dict);
-      return 1;
-    };
-    return 0;
-  }
-
-  Table & get_table(T &t) {
-    return (Table &) t.primary_table();
-  }
-  vector<string> packs(T &t) {
-    vector<string> res = t.packs();// clone const vector<string>
-    return res;
-  }
-
-  static const luaL_Reg funcs[] = {
-    {"Dictionary",raw_make},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg methods[] = {
-    {"load", WRAPMEM(T,Load)},
-    {"loaded", WRAPMEM(T,loaded)},
-    {"remove", WRAPMEM(T,Remove)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_get[] = {
-    {"name", WRAPMEM(T,name)},
-    //{"table", WRAP(get_table)}, // const Table error
-    //{"tables", WRAPMEM(T,tables)}, // const vector<table> error
-    //{"prism", WRAPMEM(T,prism)},
-    {"packs", WRAP(packs)}, // const vector<string> error
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_set[] = {
-    { NULL, NULL },
-  };
-}
-
-namespace UserDictionaryReg {
-  typedef UserDictionary T;
-  typedef UserDictionaryComponent C;
-  typedef Dictionary D;
-
-  int raw_make(lua_State* L) {
-    int n = lua_gettop(L);
-    if (n == 0 )
-      return 0;
-
-    auto c = (C *) T::Require("user_dictionary");
-    if (!c)
-      return 0;
-
-    T * dict=nullptr;
-    if (lua_isstring(L, 1)){
-      string user_dictname, dbclass;
-      if ( 1 == n ){
-        user_dictname= string( lua_tostring(L, 1) );
-        dbclass= user_dictname;
-      }
-      else if (2 == n) {
-        user_dictname= string( lua_tostring(L, 1) );
-        dbclass= string( lua_tostring(L, 2) );
-      }
-      dict = c->Create( user_dictname, dbclass);
-    }
-    else {
-      Ticket t = LuaType<Ticket &>::todata(L, 1);
-      dict = c->Create(t);
-    }
-
-    if ( dict ) {
-      dict->Load();
-      LuaType<T *>::pushdata(L, dict);
-      return 1;
-    };
-    return 0;
-  }
-
-  void attach(T &t, D &d) {
-    t.Attach(d.primary_table(), d.prism());
-  }
-  void unattach(T &t) {
-    t.Attach(nullptr, nullptr);
-  }
-
-  static const luaL_Reg funcs[] = {
-    {"UserDictionary", raw_make}, // UserDictionary("cangjie5","userdb")
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg methods[] = {
-    {"attach", WRAP(attach) }, // udict:attach(dict)
-    {"unattach", WRAP(unattach) }, // udict:unattach()
-    {"load", WRAPMEM(T, Load)},
-    {"loaded", WRAPMEM(T, loaded)},
-    {"readonly", WRAPMEM(T, readonly)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_get[] = {
-    {"name", WRAPMEM(T, name)},
-    {"tick", WRAPMEM(T, tick)},
     { NULL, NULL },
   };
 
@@ -553,21 +431,21 @@ namespace ComponentReg{
     lua_createtable(L, 0, 0);
     luaL_setfuncs(L, funcs, 0);
     lua_setglobal(L, "Component");
-  }
+  };
 }
 
 }
 
+void translator_options_init(lua_State *L);
 void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(TicketReg, L);
   EXPORT(ProcessorReg, L);
   EXPORT(SegmentorReg, L);
   EXPORT(TranslatorReg, L);
   EXPORT(FilterReg, L);
-  EXPORT(DictionaryReg, L);
-  EXPORT(UserDictionaryReg, L);
   EXPORT(ReverseLookupDictionaryReg, L);
   EXPORT(DbAccessorReg, L);
   EXPORT(LevelDbReg, L);
+  translator_options_init(L);
   ComponentReg::init(L);
 }
