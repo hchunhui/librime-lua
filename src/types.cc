@@ -316,12 +316,13 @@ namespace SegmentationReg {
   bool empty(T &t){
     return t.empty();
   }
-  
-  // clone Segments to table
-  vector<Segment> get_segments(T &t) {
-    return t;
+
+  vector<Segment *> get_segments(T &t) {
+    vector<Segment *> ret(t.size());
+    std::transform(t.begin(), t.end(), ret.begin(),[](Segment &s) { return &s;});
+    return ret;
   }
-  
+
   optional<Segment &> get_at(T &t, const int idx) {
     size_t size = t.size();
     int index = (idx < 0) ? size + idx : idx;
