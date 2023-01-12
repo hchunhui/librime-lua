@@ -95,7 +95,6 @@ expand_translator = require("expand_translator")
 -- switch_processor: 通过选择自定义的候选项来切换开关（以简繁切换和下一方案为例）
 -- 详见 `lua/switch.lua`
 switch_processor = require("switch")
-
 -- 由lua 導入 engine/下的組件 processor segmentor translator filters
 -- 生成一個processor 於自己 schema speller 取得 config
 -- processor=Component.Processor(env.engine,"","speller")
@@ -106,3 +105,7 @@ switch_processor = require("switch")
 -- 配合 test.schema.yaml
 --require 'component_test'
 
+
+-- 配合 lua_test.schema.yaml 
+-- 可使用 luaunit test librime-lua api   librime-lua script
+test_proc = require('test_proc')
