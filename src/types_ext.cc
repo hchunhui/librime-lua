@@ -162,58 +162,6 @@ namespace SegmentorReg{
   };
 
 }
-/*
-// Language
-namespace LanguageReg {
-  typedef rime::Language T;
-
-  an<T> make(const string &s){
-    return New<T>(s);
-  }
-  string get_language_component(const string &s){
-    return T::get_language_component(s);
-  }
-  string get_language_name(T &t){
-    return t.name();
-  }
-  int raw_get_language_name(lua_State *L) {
-    T &t = LuaType<T &>::todata(L,1);
-    LuaType<string>::pushdata(L, t.name());
-    return 1;
-  }
-  T* get_ptr(T &t) {
-    return &t;
-  }
-  const T* get_cptr(T &t) {
-    return &t;
-  }
-
-  static const luaL_Reg funcs[] = {
-    {"Language", WRAP(make)},
-    {"Get_language_component",WRAP(T::get_language_component)},
-    //{"Get_language_name",WRAP(T,name)},
-    {"Get_language_name",raw_get_language_name},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg methods[] = {
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_get[] = {
-    {"name",WRAPMEM(T::name)},
-    {"language",WRAP(get_ptr)},
-    {"ptr",WRAP(get_ptr)},
-    {"cptr",WRAP(get_cptr)},
-    { NULL, NULL },
-  };
-
-  static const luaL_Reg vars_set[] = {
-    { NULL, NULL },
-  };
-
-}
-*/
 
 // TableTranslator of options
 namespace TableTranslatorOptionsReg {
@@ -940,7 +888,6 @@ namespace ComponentReg{
 
 void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(TicketReg, L);
-  //EXPORT(LanguageReg, L);
   EXPORT(ProcessorReg, L);
   EXPORT(SegmentorReg, L);
   EXPORT(TranslatorReg, L);
