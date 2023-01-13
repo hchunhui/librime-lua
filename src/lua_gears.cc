@@ -23,7 +23,7 @@ bool LuaTranslation::Next() {
 
 //---
 static void raw_init(lua_State *L, const Ticket &t,
-                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini) {
+                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini, an<LuaObj> *tags_match= NULL) {
   lua_newtable(L);
   Engine *e = t.engine;
   LuaType<Engine *>::pushdata(L, e);
@@ -70,6 +70,14 @@ static void raw_init(lua_State *L, const Ticket &t,
       *fini = LuaObj::todata(L, -1);
     }
     lua_pop(L, 1);
+    
+    if (tags_match) {
+      lua_getfield(L, -1, "fini");
+      if (lua_type(L, -1) == LUA_TFUNCTION) {
+        *tags_match = LuaObj::todata(L, -1);
+      }
+      lua_pop(L, 1);
+    }
 
     lua_getfield(L, -1, "func");
   }
@@ -85,27 +93,10 @@ static void raw_init(lua_State *L, const Ticket &t,
   lua_pop(L, 1);
 }
 
-static void raw_tags_match(lua_State *L, const Ticket &t, an<LuaObj> *tags_match) {
-  lua_getglobal(L, t.klass.c_str());
-  if (lua_type(L, -1) == LUA_TTABLE) {
-    lua_getfield(L, -1, "tags_match");
-    if (lua_type(L, -1) == LUA_TFUNCTION) {
-      *tags_match = LuaObj::todata(L, -1);
-    }
-    else {
-      *tags_match = nullptr;
-    }
-    lua_pop(L, 1);
-  }
-  lua_pop(L, 1);
-}
-
 //--- LuaFilter
 LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
   : Filter(ticket), TagMatching(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
-  // initilize lua function  : tags_match( segment, env)
-  lua->to_state([&](lua_State *L) {raw_tags_match(L, ticket, &tags_match_);});
+  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, &tags_match_);});
 }
 
 an<Translation> LuaFilter::Apply(
