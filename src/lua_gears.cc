@@ -72,7 +72,7 @@ static void raw_init(lua_State *L, const Ticket &t,
     lua_pop(L, 1);
     
     if (tags_match) {
-      lua_getfield(L, -1, "fini");
+      lua_getfield(L, -1, "tags_match");
       if (lua_type(L, -1) == LUA_TFUNCTION) {
         *tags_match = LuaObj::todata(L, -1);
       }
