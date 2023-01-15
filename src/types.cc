@@ -317,6 +317,23 @@ namespace SegmentationReg {
     return t.empty();
   }
 
+  vector<Segment *> get_segments(T &t) {
+    vector<Segment *> ret(t.size());
+    std::transform(t.begin(), t.end(), ret.begin(),[](Segment &s) { return &s;});
+    return ret;
+  }
+
+  optional<Segment &> get_at(T &t, const int idx) {
+    size_t size = t.size();
+    int index = (idx < 0) ? size + idx : idx;
+    if (index >=0 && index < size)
+      return t.at(index);
+
+    LOG(WARNING) << "the index(" << idx <<")"
+      << " is out of range(-size .. size-1); size: "<< size ;
+    return {};
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -334,11 +351,14 @@ namespace SegmentationReg {
     { "get_current_end_position", WRAPMEM(T::GetCurrentEndPosition) },
     { "get_current_segment_length", WRAPMEM(T::GetCurrentSegmentLength) },
     { "get_confirmed_position", WRAPMEM(T::GetConfirmedPosition) },
+    { "get_segments", WRAP(get_segments) },
+    { "get_at", WRAP(get_at) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
     { "input", WRAPMEM(T::input) },
+    { "size", WRAPMEM(T, size) },
     { NULL, NULL },
   };
 
