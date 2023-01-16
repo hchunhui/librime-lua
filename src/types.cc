@@ -236,6 +236,20 @@ namespace TranslationReg {
     lua_pushvalue(L, 1);
     return 2;
   }
+  
+  // tran:transform(func,...) --> tran.transform(tran,func, ...)
+  // lua_call(L, n, 1); func(tran[,...])
+  int raw_transform(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( 2 > n )
+      return 0;
+    
+    lua_pushcfunction(L, raw_make); // ...,raw_make
+    lua_rotate(L, 2, -1);  // tran, ... raw_make, func
+    lua_rotate(L, 1, 2);  // raw_make, func, tarn,...
+    lua_call(L, n, 1);
+    return 1;
+  }
 
   static const luaL_Reg funcs[] = {
     { "Translation", raw_make },
@@ -244,6 +258,7 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+    { "transform", raw_transform },
     { NULL, NULL },
   };
 
