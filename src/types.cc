@@ -1054,25 +1054,64 @@ namespace ConfigItemReg {
 
 namespace ProjectionReg{
   typedef Projection T;
-  an<T> make(){
-    return New<T>();
+
+  //  an<T>, ... return bool
+  int raw_load(lua_State *L) {
+    int n = lua_gettop(L);
+    bool res = false;
+    if (1 < n) {
+      an<T> t = LuaType<an<T>>::todata(L,1);
+      an<ConfigList> cl;
+      if ( lua_isstring(L, 2) ){
+        //load from strings
+        cl = New<ConfigList>();
+        for (int i = 2; i<=n ; i++){
+          cl->Append(
+              New<ConfigValue>( lua_tostring(L,i) ) );
+        }
+      }
+      else {
+        cl = LuaType<an<ConfigList>>::todata(L,2);
+      }
+      res= t->Load(cl);
+    }
+    lua_pop(L, n);
+    lua_pushboolean(L, res);
+    return 1;
   }
 
-  string apply(T &t, const string &s){
-    string res= s;
-    if (t.Apply(&res))
-      return res;
-    else
-      return "";
+  // return an<T>, bool(loaded success)
+  int raw_make(lua_State *L) {
+    int n = lua_gettop(L);
+    an<T> t = New<T>();
+    if ( 1 > n ) {
+      LuaType<an<T>>::pushdata(L, t);
+      lua_pushboolean(L, false);
+      return 2;
+    }
+    else {
+      //  raw_load(t,...)
+      LuaType<an<T>>::pushdata(L, t);
+      lua_rotate(L, 1, 1);
+      raw_load(L);
+      LuaType<an<T>>::pushdata(L, t);
+      lua_rotate(L, 1, 1);
+      return 2;
+    }
+  }
+
+  string apply(T &t, const string &s) {
+    string res(s);
+    return (t.Apply(&res)) ? res : "";
   }
 
   static const luaL_Reg funcs[] = {
-    {"Projection",WRAP(make)},
+    {"Projection",raw_make},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"load",WRAPMEM(T::Load)},
+    {"load", raw_load},
     {"apply",WRAP(apply)},
     { NULL, NULL },
   };
