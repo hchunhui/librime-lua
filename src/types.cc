@@ -1066,6 +1066,13 @@ namespace ProjectionReg{
         //load from strings
         cl = New<ConfigList>();
         for (int i = 2; i<=n ; i++){
+          if (!lua_isstring(L,i)){
+            // fixed NULL will (core dumped) error.
+            LOG(ERROR) << "bad argument #" << i << " to'?' string expected";
+            lua_pop(L, n);
+            lua_pushboolean(L, false);
+            return 1;
+          }
           cl->Append(
               New<ConfigValue>( lua_tostring(L,i) ) );
         }
