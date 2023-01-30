@@ -1090,7 +1090,7 @@ namespace ConfigReg {
   typedef Config T;
 
   the<T> make(const string &type, const string &filename) {
-    auto c = T::require(type);
+    auto c = T::Require(type);
     if (!c) 
       return {};
     return the<T>(c->Create(filename));
