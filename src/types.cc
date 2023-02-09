@@ -237,14 +237,15 @@ namespace TranslationReg {
     return 2;
   }
   
-  // tran:transform(func,...) --> tran.transform(tran,func, ...)
+  // tran:transform(func,...) ==> tran.transform(tran,func, ...) 
+  // --> Translation(func,tran,...) -- replace args and call Translation(args...)
   // lua_call(L, n, 1); func(tran[,...])
   int raw_transform(lua_State *L) {
     int n = lua_gettop(L);
     if ( 2 > n )
       return 0;
     
-    lua_pushcfunction(L, raw_make); // ...,raw_make
+    lua_pushcfunction(L, raw_make); // tran,func,...,raw_make
     lua_rotate(L, 2, -1);  // tran, ... raw_make, func
     lua_rotate(L, 1, 2);  // raw_make, func, tarn,...
     lua_call(L, n, 1);
