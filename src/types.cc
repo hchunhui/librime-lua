@@ -153,6 +153,7 @@ namespace CandidateReg {
   {
     return New<UniquifiedCandidate>(item, type, text, comment);
   }
+
   bool append(an<T> self, an<T> item) {
     if (auto cand=  As<UniquifiedCandidate>(self) ) {
       cand->Append(item);
@@ -237,17 +238,99 @@ namespace TranslationReg {
     return 2;
   }
 
+  int raw_append(lua_State *L) {
+    int n = lua_gettop(L);
+    if (n < 1)
+      return 0;
+    else if ( n == 1)
+      return 1;
+
+    an<T> t = LuaType<an<T>>::todata(L, 1);
+    if (! t)
+      return 0;
+
+    if ( auto ft = std::dynamic_pointer_cast<FifoTranslation>(t) ) {
+        for (int i=2; i <= n ; i++)
+          ft->Append( LuaType<an<Candidate>>::todata(L, i));
+    }
+    else if ( auto ut = std::dynamic_pointer_cast<UnionTranslation>(t)) {
+        for (int i=2; i <= n ; i++)
+          *ut += LuaType<an<T>>::todata(L, i);
+    }
+    else if ( auto mt = std::dynamic_pointer_cast<MergedTranslation>(t)) {
+        for (int i=2; i <= n ; i++)
+          *mt += LuaType<an<T>>::todata(L, i);
+    }
+
+    // keep first : an<Translatation>
+    lua_pop(L, n-1);
+    return 1;
+  }
+
+  int raw_merged_translation(lua_State *L) {
+    CandidateList clp;
+    an<T> t = (an<T>) New<MergedTranslation>(clp);
+
+    LuaType<an<T>>::pushdata(L, t);
+    lua_insert(L, 1);
+    return raw_append(L);
+  }
+
+  int raw_union_translation(lua_State *L) {
+    an<T> t = (an<T>) New<UnionTranslation>();
+
+    LuaType<an<T>>::pushdata(L, t);
+    lua_insert(L, 1);
+    return raw_append(L);
+  }
+
+  int raw_fifo_translation(lua_State *L) {
+    an<T> t = (an<T>) New<FifoTranslation>();
+
+    LuaType<an<T>>::pushdata(L, t);
+    lua_insert(L, 1);
+    return raw_append(L);
+  }
+  string dynamic_type(T &t) {
+    if (dynamic_cast<LuaTranslation *>(&t))
+      return "LuaTranslation";
+    if (dynamic_cast<UnionTranslation *>(&t))
+      return "UnionTranslation";
+    if (dynamic_cast<MergedTranslation *>(&t))
+      return "MergedTranslation";
+    if (dynamic_cast<FifoTranslation *>(&t))
+      return "FifoTranslation";
+    if (dynamic_cast<UniqueTranslation *>(&t))
+      return "UniqueTranslation";
+    if (dynamic_cast<DistinctTranslation *>(&t))
+      return "DistinctTranslation";
+    if (dynamic_cast<PrefetchTranslation *>(&t))
+      return "PrefetchTranslation";
+    if (dynamic_cast<CacheTranslation *>(&t))
+      return "CacheTranslation";
+    //if (dynamic_cast<TableTranslation *>(&t))
+      //return "TableTranslation";
+    //if (dynamic_cast<ScriptTranslation *>(&t))
+      //return "ScriptTranslation";
+    return "other";
+  }
+
   static const luaL_Reg funcs[] = {
     { "Translation", raw_make },
+    { "MergedTranslation", raw_merged_translation },
+    { "UnionTranslation", raw_union_translation },
+    { "FifoTranslation", raw_fifo_translation },
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+    { "append", raw_append },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    { "type", WRAP(dynamic_type) },
     { NULL, NULL },
   };
 

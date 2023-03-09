@@ -53,11 +53,13 @@ public:
   }
 
 private:
+  an<Translation> LuaApply(an<Translation>, CandidateList*);
   Lua *lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
   an<LuaObj> fini_;
   an<LuaObj> tags_match_;
+  an<LuaObj> apply_;
 };
 
 class LuaTranslator : public Translator {
@@ -69,10 +71,12 @@ public:
                                 const Segment& segment);
 
 private:
+  an<Translation> LuaQuery(const string&, const Segment&);
   Lua *lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
   an<LuaObj> fini_;
+  an<LuaObj> query_;
 };
 
 class LuaSegmentor : public Segmentor {

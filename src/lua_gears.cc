@@ -100,8 +100,24 @@ LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
   lua->to_state( [&](lua_State *L) { raw_init(L, ticket, env_, table); } );
 }
 
+an<Translation> LuaFilter::LuaApply(
+    an<Translation> translation, CandidateList* candidates) {
+  //  apply(inp, cands, env) return translation
+  auto r= lua_->call<an<Translation>, an<LuaObj>, an<Translation>, an<LuaObj>, CandidateList*>
+    (apply_, translation, env_, candidates);
+  if (!r.ok()) {
+    auto e = r.get_err();
+    LOG(ERROR) << "LuaFilter::LuaApply of "<< name_space_ << " error(" << e.status << "): " << e.e;
+    return an<Translation>();
+  }
+  else
+    return r.get();
+}
+
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
+  if (apply_)
+    return LuaApply(translation, candidates);
 
   auto f = lua_->newthread<an<LuaObj>, an<Translation>,
                            an<LuaObj>, CandidateList *>(func_, translation, env_, candidates);
@@ -124,12 +140,29 @@ LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
   InitMap table= {
     {"func", &func_},
     {"fini", &fini_},
+    {"query", &query_},
   };
   lua->to_state( [&](lua_State *L) { raw_init(L, ticket, env_, table); } );
 }
 
+an<Translation> LuaTranslator::LuaQuery(const string& input,
+    const Segment& segment) {
+  //  query(inp, seg, env) return translation
+  auto r= lua_->call<an<Translation>, an<LuaObj>, const string &, const Segment &, an<LuaObj> >
+    (query_, input, segment, env_);
+  if (!r.ok()) {
+    auto e = r.get_err();
+    LOG(ERROR) << "LuaTranslator::LuaQuery of "<< name_space_ << " error(" << e.status << "): " << e.e;
+    return an<Translation>();
+  }
+  else
+    return r.get();
+}
+
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
+  if (query_)
+    return LuaQuery(input, segment);
 
   auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &,
                            an<LuaObj>>(func_, input, segment, env_);
