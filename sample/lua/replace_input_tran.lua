@@ -10,7 +10,7 @@
 --
 -- query(input,seg,env) return translation
 
-local M={}
+local T={}
 
 function T.init(env)
   local cl=ConfigList()
