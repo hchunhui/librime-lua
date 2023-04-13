@@ -11,7 +11,7 @@
 #include <rime/translator.h>
 #include <rime/filter.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
-#include <rime/dict/level_db.h>
+#include <rime/dict/user_db.h>
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
@@ -236,44 +236,71 @@ namespace DbAccessorReg{
     { NULL, NULL },
   };
 }
-namespace LevelDbReg{
-  typedef LevelDb T;
+namespace UserDbReg{
+  typedef Db T;
   typedef DbAccessor A;
 
-  //
-  an<T> make(const string& file_name, const string& db_name){
-    return New<LevelDb>(file_name,db_name,"userdb");
+  an<T> make(const string& db_name, const string& db_class) {
+    if (auto comp= UserDb::Require(db_class)){
+      return an<T>( comp->Create(db_name)) ;
+    }
+    else {
+      return {};
+    }
   }
-  optional<string> fetch(an<T> t, const string& key){
+
+  an<T> make_leveldb(const string& db_name) {
+    return make(db_name, "userdb");
+  }
+  
+  an<T> make_tabledb(const string& db_name) {
+    return make(db_name, "plain_userdb");
+  }
+  
+  optional<string> fetch(an<T> t, const string& key) {
     string res;
     if ( t->Fetch(key,&res) )
       return res;
     return {};
   }
 
-  bool loaded(an<T> t){
-    return t->loaded();
+  bool Open(T &t) { return t.Open(); }
+  bool Close(T &t) { return t.Close(); }
+  bool OpenReadOnly(T &t) { return t.OpenReadOnly(); }
+  bool Erase(T &t, const string &key) { return t.Erase(key); }
+  bool Update(T &t, const string &key, const string &value) {
+    return t.Update(key, value);
   }
 
+  an<A> Query(T &t, const string& key) { return t.Query(key); }
+  
   static const luaL_Reg funcs[] = {
-    {"LevelDb", WRAP(make)},
+    {"UserDb", WRAP(make)},// an<Db> LevelDb( db_file, db_name)
+    {"LevelDb", WRAP(make_leveldb)},// an<Db> LevelDb( db_file, db_name)
+    {"TableDb", WRAP(make_tabledb)},// Db UserDb( db_name, db_type:userdb|plain_userdb)
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"open", WRAPMEM(T::Open)},
-    {"open_read_only", WRAPMEM(T::OpenReadOnly)},
-    {"close", WRAPMEM(T::Close)},
-    {"query", WRAPMEM(T::Query)}, // query(prefix_key) return DbAccessor
+    {"open", WRAP(Open)},
+    {"open_read_only", WRAP(OpenReadOnly)},
+    {"close", WRAP(Close)},
+    {"query", WRAP(Query)}, // query(prefix_key) return DbAccessor
     {"fetch", WRAP(fetch)},  //   fetch(key) return value
-    {"update", WRAPMEM(T::Update)}, // update(key,value) return bool
-    {"erase", WRAPMEM(T::Erase)}, // erase(key) return bool
-    {"loaded",WRAPMEM(T,loaded)},
+    {"update", WRAP(Update)}, // update(key,value) return bool
+    {"erase", WRAP(Erase)}, // erase(key) return bool
 
+    {"disable", WRAPMEM(T, disable)},
+    {"enable", WRAPMEM(T, enable)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    {"loaded",WRAPMEM(T, loaded)},
+    {"read_only",WRAPMEM(T, readonly)},
+    {"disabled",WRAPMEM(T, disabled)},
+    {"name", WRAPMEM(T, name)},
+    {"file_name", WRAPMEM(T, file_name)},
     { NULL, NULL },
   };
 
@@ -338,6 +365,6 @@ void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(FilterReg, L);
   EXPORT(ReverseLookupDictionaryReg, L);
   EXPORT(DbAccessorReg, L);
-  EXPORT(LevelDbReg, L);
+  EXPORT(UserDbReg, L);
   ComponentReg::init(L);
 }
