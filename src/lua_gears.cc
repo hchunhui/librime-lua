@@ -67,8 +67,8 @@ static void raw_init(lua_State *L, const Ticket &t, an<LuaObj> &env, InitMap &ta
           << " status: " << status
           << " ): " << e;
       }
-      lua_pop(L, 1);
     }
+    lua_pop(L, 1);
   } else if (lua_type(L, -1) == LUA_TFUNCTION) {
     // create table { func = func}
     lua_newtable(L);
