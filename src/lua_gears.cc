@@ -52,13 +52,13 @@ static void raw_init(lua_State *L, const Ticket &t, an<LuaObj> &env, InitMap &ta
     lua_getglobal(L, t.klass.c_str());
   }
 
-  // try to init(env) function
+  // try to call init(env) function
   if (lua_type(L, -1) == LUA_TTABLE) {
     // call init(env) if exist  init function
     lua_getfield(L, -1, "init");
     if (lua_type(L, -1) == LUA_TFUNCTION) {
       LuaObj::pushdata(L, env);
-      int status = lua_pcall(L, 1, 0, 0);
+      int status = lua_pcall(L, 1, 1, 0);
       if (status != LUA_OK) {
         const char *e = lua_tostring(L, -1);
         LOG(ERROR) << "Lua Compoment of initialize  error:("
@@ -67,6 +67,7 @@ static void raw_init(lua_State *L, const Ticket &t, an<LuaObj> &env, InitMap &ta
           << " status: " << status
           << " ): " << e;
       }
+      lua_pop(L, 1);
     }
   } else if (lua_type(L, -1) == LUA_TFUNCTION) {
     // create table { func = func}
