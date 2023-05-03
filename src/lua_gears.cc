@@ -81,8 +81,14 @@ static void raw_init(lua_State *L, const Ticket &t, an<LuaObj> &env, InitMap &ta
 
   // init  nadel of func
   for (auto it: table) {
-    if ( lua_getfield(L, -1, it.first.c_str()) == LUA_TFUNCTION){
-      *it.second = LuaObj::todata(L, -1);
+    if ( lua_getfield(L, -1, it.first.c_str()) == LUA_TFUNCTION ) {
+      *(it.second) = LuaObj::todata(L, -1);
+    }
+    else {
+      LOG(INFO) << "Lua Compoment of initialize warning :"
+        << " module: "<< t.klass
+        << ", name_space: " << t.name_space
+        << ", function: " << it.first << " is " <<  lua_typename(L, -1) << " (function expected)." ;
     }
     lua_pop(L,1);
   }
@@ -99,6 +105,11 @@ LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
     {"apply", &apply_ },
   };
   lua->to_state( [&](lua_State *L) { raw_init(L, ticket, env_, table); } );
+  if (! func_ && apply_ ){
+    LOG(ERROR) <<  "LuaFilterr initialize failed of " << ticket.klass + "@" + ticket.name_space
+      << " : function not found (func or query).";
+  }
+
 }
 
 an<Translation> LuaFilter::LuaApply(
@@ -108,8 +119,8 @@ an<Translation> LuaFilter::LuaApply(
     (apply_, translation, env_, candidates);
   if (!r.ok()) {
     auto e = r.get_err();
-    LOG(ERROR) << "LuaFilter::LuaApply of "<< name_space_ << " error(" << e.status << "): " << e.e;
-    return an<Translation>();
+    LOG(ERROR) << "LuaFilter::LuaApply(apply) of "<< name_space_ << " error(" << e.status << "): " << e.e;
+    return New<CacheTranslation>(nullptr);
   }
   else
     return r.get();
@@ -117,12 +128,18 @@ an<Translation> LuaFilter::LuaApply(
 
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
-  if (apply_)
+  if (apply_){
     return LuaApply(translation, candidates);
-
-  auto f = lua_->newthread<an<LuaObj>, an<Translation>,
-                           an<LuaObj>, CandidateList *>(func_, translation, env_, candidates);
-  return New<LuaTranslation>(lua_, f);
+  }
+  else if (func_){
+    auto f = lua_->newthread<an<LuaObj>, an<Translation>,
+         an<LuaObj>, CandidateList *>(func_, translation, env_, candidates);
+    return New<LuaTranslation>(lua_, f);
+  }
+  else {
+    LOG(ERROR) << "LuaFilter of " << name_space_ << " function not found ( apply or func ).";
+    return New<CacheTranslation>(nullptr);
+  }
 }
 
 LuaFilter::~LuaFilter() {
@@ -144,6 +161,10 @@ LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
     {"query", &query_},
   };
   lua->to_state( [&](lua_State *L) { raw_init(L, ticket, env_, table); } );
+  if (! func_ && !query_ ){
+    LOG(ERROR) <<  "LuaTranslator initialize failed of " << ticket.klass + "@" + ticket.name_space
+      << ": function not found (func or apply).";
+  }
 }
 
 an<Translation> LuaTranslator::LuaQuery(const string& input,
@@ -153,7 +174,7 @@ an<Translation> LuaTranslator::LuaQuery(const string& input,
     (query_, input, segment, env_);
   if (!r.ok()) {
     auto e = r.get_err();
-    LOG(ERROR) << "LuaTranslator::LuaQuery of "<< name_space_ << " error(" << e.status << "): " << e.e;
+    LOG(ERROR) << "LuaTranslator::LuaQuery(query) of "<< name_space_ << " error(" << e.status << "): " << e.e;
     return an<Translation>();
   }
   else
@@ -162,12 +183,19 @@ an<Translation> LuaTranslator::LuaQuery(const string& input,
 
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
-  if (query_)
-    return LuaQuery(input, segment);
-
-  auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &,
-                           an<LuaObj>>(func_, input, segment, env_);
-  an<Translation> t = New<LuaTranslation>(lua_, f);
+  an<Translation> t;
+  if (query_){
+    t = LuaQuery(input, segment);
+  }
+  else if (func_) {
+    auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &,
+      an<LuaObj>>(func_, input, segment, env_);
+    t = New<LuaTranslation>(lua_, f);
+  }
+  else {
+    LOG(ERROR) <<  "LuaTranslator namespace of " << name_space_
+      << " : function not found (func or apply).";
+  }
   if (t->exhausted())
     return an<Translation>();
   else
@@ -192,14 +220,23 @@ LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
     {"fini", &fini_},
   };
   lua->to_state( [&](lua_State *L) { raw_init(L, ticket, env_, table); } );
+  if (! func_ ){
+    LOG(ERROR) <<  "LuaSegmentor initialize failed of " << ticket.klass + "@" + ticket.name_space
+      << ": function not found ( func ).";
+  }
 }
 
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
+  if (! func_ ){
+    LOG(ERROR) <<  "LuaSegmentor::Processed of " << name_space_
+      << ": function not found ( func ).";
+    return true;
+  }
   auto r = lua_->call<bool, an<LuaObj>, Segmentation &,
                       an<LuaObj>>(func_, *segmentation, env_);
   if (!r.ok()) {
     auto e = r.get_err();
-    LOG(ERROR) << "LuaSegmentor::Proceed of "<< name_space_ << " error(" << e.status << "): " << e.e;
+    LOG(ERROR) << "LuaSegmentor::Proceed(func) of "<< name_space_ << " error(" << e.status << "): " << e.e;
     return true;
   } else
     return r.get();
@@ -223,9 +260,18 @@ LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
     {"fini", &fini_},
   };
   lua->to_state( [&](lua_State *L) { raw_init(L, ticket, env_, table); } );
+  if (! func_ ){
+    LOG(ERROR) <<  "LuaProcessor initialize failed of " << ticket.klass + "@" + ticket.name_space
+      << ": function not found ( func ).";
+  }
 }
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
+  if (! func_ ){
+    LOG(ERROR) <<  "LuaProcessorr::ProcessKeyEvent of " << name_space_
+      << ": function not found ( func ).";
+    return kNoop;
+  }
   auto r = lua_->call<int, an<LuaObj>, const KeyEvent&,
                       an<LuaObj>>(func_, key_event, env_);
   if (!r.ok()) {
