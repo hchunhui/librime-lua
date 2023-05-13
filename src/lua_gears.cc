@@ -195,6 +195,7 @@ an<Translation> LuaTranslator::Query(const string& input,
   else {
     LOG(ERROR) <<  "LuaTranslator namespace of " << name_space_
       << " : function not found (func or apply).";
+    return an<Translation>();
   }
   if (t->exhausted())
     return an<Translation>();
