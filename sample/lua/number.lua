@@ -94,14 +94,14 @@ local function read_number(conf, n)
 end
 
 local function translator(input, seg)
-   if string.sub(input, 1, 1) == "/" then
-      local n = string.sub(input, 2)
-      if tonumber(n) ~= nil then
-         for _, conf in ipairs(confs) do
-            local r = read_number(conf, n)
-            yield(Candidate("number", seg.start, seg._end, r, conf.comment))
-         end
+  if string.sub(input, 1, 1) == "/" then
+    local n = string.sub(input, 2)
+    if tonumber(n) ~= nil then
+      for _, conf in ipairs(confs) do
+        local r = read_number(conf, n)
+        yield(Candidate("number", seg.start, seg._end, r, conf.comment))
       end
+    end
    end
 end
 
