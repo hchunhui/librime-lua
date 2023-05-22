@@ -102,7 +102,7 @@ local function translator(input, seg)
         yield(Candidate("number", seg.start, seg._end, r, conf.comment))
       end
     end
-   end
+  end
 end
 
 return translator
