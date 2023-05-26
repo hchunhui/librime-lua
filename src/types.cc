@@ -376,7 +376,7 @@ namespace MenuReg {
   }
   
   void add_filter(T& t, Filter& f) {
-    T.AddFilter(&f);
+    t.AddFilter(&f);
   }
 
   static const luaL_Reg funcs[] = {
