@@ -386,7 +386,7 @@ namespace MenuReg {
 
   static const luaL_Reg methods[] = {
     { "add_translation", WRAPMEM(T::AddTranslation) },
-    { "add_filter", WRAP(add_filter}, // AddFilter
+    { "add_filter", WRAP(add_filter) }, // AddFilter
     { "prepare", WRAPMEM(T::Prepare) },
     //{ }, // CreatePage
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
