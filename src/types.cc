@@ -374,6 +374,10 @@ namespace MenuReg {
   an<T> make() {
     return New<T>();
   }
+  
+  void add_filter(T& t, Filter& f) {
+    T.AddFilter(&f);
+  }
 
   static const luaL_Reg funcs[] = {
     { "Menu", WRAP(make) },
@@ -382,7 +386,7 @@ namespace MenuReg {
 
   static const luaL_Reg methods[] = {
     { "add_translation", WRAPMEM(T::AddTranslation) },
-    //{ }, // AddFilter
+    { "add_filter", WRAP(add_filter}, // AddFilter
     { "prepare", WRAPMEM(T::Prepare) },
     //{ }, // CreatePage
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
@@ -392,6 +396,7 @@ namespace MenuReg {
   };
 
   static const luaL_Reg vars_get[] = {
+    { "count", WRAPMEM(T::candidate_count) },
     { NULL, NULL },
   };
 
