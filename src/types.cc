@@ -1697,6 +1697,9 @@ namespace RimeApiReg {
     RimeApi* rime = rime_get_api();
     return string(rime->get_version());
   }
+  string get_librime_lua_version() {
+    return LIBRIME_LUA_VERSION;
+  }
 
   string get_shared_data_dir() {
     RimeApi* rime = rime_get_api();
@@ -1762,6 +1765,7 @@ namespace RimeApiReg {
 
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
+    { "get_librime_lua_version", WRAP(get_librime_lua_version) },
     { "get_shared_data_dir", WRAP(get_shared_data_dir) },
     { "get_user_data_dir", WRAP(get_user_data_dir) },
     { "get_sync_dir", WRAP(get_sync_dir) },

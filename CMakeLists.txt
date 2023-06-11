@@ -46,3 +46,7 @@ set(plugin_name "rime-lua" PARENT_SCOPE)
 set(plugin_objs $<TARGET_OBJECTS:rime-lua-objs> PARENT_SCOPE)
 set(plugin_deps ${LUA_LIBRARIES} ${rime_library} ${rime_gears_library} PARENT_SCOPE)
 set(plugin_modules "lua" PARENT_SCOPE)
+
+set(librime-lua-version 1.0)
+set(librime-lua-subversion 222)
+add_definitions(-DLIBRIME_LUA_VERSION="${librime-lua-version}.${librime-lua_subversion}")
