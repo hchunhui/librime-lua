@@ -46,7 +46,7 @@ local function read_seg(conf, n)
     local d = tonumber(string.sub(n, -1, -1))
     if conf.place == nil then
       s = conf.numeral[d] .. s
-    elseif d == 1 and string.len(n) == 1 then
+    elseif d == 1 and i == 1 and string.len(n) == 1 then
       s = conf.place[i] .. s
     elseif d ~= 0 then
       s = conf.numeral[d] .. conf.place[i] .. s
