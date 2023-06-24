@@ -47,6 +47,16 @@ set(plugin_objs $<TARGET_OBJECTS:rime-lua-objs> PARENT_SCOPE)
 set(plugin_deps ${LUA_LIBRARIES} ${rime_library} ${rime_gears_library} PARENT_SCOPE)
 set(plugin_modules "lua" PARENT_SCOPE)
 
+
+find_package(Git REQUIRED)
+execute_process(
+   COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+   RESULT_VARIABLE result
+   OUTPUT_VARIABLE GIT_HASH )
+
 set(librime-lua-version 1.0)
-set(librime-lua-subversion 222)
-add_definitions(-DLIBRIME_LUA_VERSION="${librime-lua-version}.${librime-lua_subversion}")
+if(result EQUAL 0)
+  set(librime-lua-version ${librime-lua-version}.${GIT_HASH})
+endif()
+add_definitions(-DLIBRIME_LUA_VERSION="${librime-lua-version}")
+message("Librime-lua Version: ${librime-lua-version}")
