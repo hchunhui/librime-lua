@@ -289,14 +289,15 @@ namespace UserDbReg{
     {"fetch", WRAP(fetch)},  //   fetch(key) return value
     {"update", WRAP(Update)}, // update(key,value) return bool
     {"erase", WRAP(Erase)}, // erase(key) return bool
-
+    
+    {"loaded",WRAPMEM(T, loaded)},
     {"disable", WRAPMEM(T, disable)},
     {"enable", WRAPMEM(T, enable)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
-    {"loaded",WRAPMEM(T, loaded)},
+    {"_loaded",WRAPMEM(T, loaded)},
     {"read_only",WRAPMEM(T, readonly)},
     {"disabled",WRAPMEM(T, disabled)},
     {"name", WRAPMEM(T, name)},
