@@ -50,7 +50,7 @@ local function is_cjk_ext(c)
       is_charset("ExtC")(c) or is_charset("ExtD")(c) or
       is_charset("ExtE")(c) or is_charset("ExtF")(c) or
       is_charset("ExtG")(c) or is_charset("Compat")(c) or
-      is_charset("CompatSupp")
+      is_charset("CompatSupp")(c)
 end
 
 --[[
