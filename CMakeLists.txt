@@ -55,7 +55,7 @@ execute_process(
    OUTPUT_VARIABLE GIT_HASH )
 
 set(librime_lua_version 1.0)
-if(result EQUAL 0)
+if(result AND result EQUAL 0)
   set(librime_lua_version ${librime_lua_version}.${GIT_HASH})
 endif()
 add_definitions(-DLIBRIME_LUA_VERSION="${librime_lua_version}")
