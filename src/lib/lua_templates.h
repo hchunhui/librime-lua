@@ -595,20 +595,7 @@ struct LuaWrapper<S(*)(T...), f> {
   }
 
   static int wrap(lua_State *L) {
-    char room[sizeof(C_State)];
-    C_State *C = new (&room) C_State();
-    lua_pushcfunction(L, wrap_helper);
-    lua_insert(L, 1);
-    lua_pushlightuserdata(L, (void *) C);
-    lua_insert(L, 2);
-    int status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
-    if (status != LUA_OK) {
-      C->~C_State();
-      lua_error(L);
-      abort(); // unreachable
-    }
-    C->~C_State();
-    return lua_gettop(L);
+    return LuaImpl::wrap_common(L, wrap_helper);
   }
 };
 
