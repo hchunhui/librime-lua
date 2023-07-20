@@ -2,19 +2,14 @@
 #include <rime/common.h>
 #include <rime/registry.h>
 #include <rime_api.h>
+#include <boost/filesystem.hpp>
+#include <boost/regex.hpp>
 #include "lib/lua_templates.h"
 #include "lua_gears.h"
 
-void types_init(lua_State *L);
+namespace fs = boost::filesystem;
 
-static bool file_exists(const char *fname) noexcept {
-    FILE * const fp = fopen(fname, "r");
-    if (fp) {
-        fclose(fp);
-        return true;
-    }
-    return false;
-}
+void types_init(lua_State *L);
 
 static void lua_init(lua_State *L) {
   const auto user_dir = std::string(RimeGetUserDataDir());
@@ -35,24 +30,34 @@ static void lua_init(lua_State *L) {
   lua_setfield(L, -2, "path");
   lua_pop(L, 1);
 
-  const auto user_file = user_dir + LUA_DIRSEP "rime.lua";
-  const auto shared_file = shared_dir + LUA_DIRSEP "rime.lua";
-
-  // use the user_file first
-  // use the shared_file if the user_file doesn't exist
-  if (file_exists(user_file.c_str())) {
-    if (luaL_dofile(L, user_file.c_str())) {
-      const char *e = lua_tostring(L, -1);
-      LOG(ERROR) << "rime.lua error: " << e;
-      lua_pop(L, 1);
-    }
-  } else if (file_exists(shared_file.c_str())) {
-    if (luaL_dofile(L, shared_file.c_str())) {
-      const char *e = lua_tostring(L, -1);
-      LOG(ERROR) << "rime.lua error: " << e;
-      lua_pop(L, 1);
-    }
-  } else {
+  boost::regex pattern("rime(\\..*)*\\.lua");
+  bool find_file_in_user_dir = false;
+  // search in user_dir
+  for(const auto& entry : fs::directory_iterator(user_dir)){
+	if(boost::regex_match(entry.path().filename().string(), pattern)){
+		find_file_in_user_dir = true;
+		if(luaL_dofile(L, entry.path().string().c_str())){
+			const char *e = lua_tostring(L, -1);
+			LOG(ERROR) << entry.path().string() << " error: " << e;
+			lua_pop(L, 1);
+		}
+	}
+  }
+  // search in shared_dir
+  if(!find_file_in_user_dir){
+	  for(const auto& entry : fs::directory_iterator(shared_dir)){
+		  if(boost::regex_match(entry.path().filename().string(), pattern)){
+			  find_file_in_user_dir = true;
+			  if (luaL_dofile(L, entry.path().string().c_str())) {
+				  const char *e = lua_tostring(L, -1);
+				  LOG(ERROR) << entry.path().string() << " error: " << e;
+				  lua_pop(L, 1);
+			  }
+		  }
+	  }
+  }
+  // error if "rime(\\..*)*\\.lua" not found in either user_dir and shared_dir
+  if(!find_file_in_user_dir){
     LOG(INFO) << "rime.lua info: rime.lua should be either in the "
                  "rime user data directory or in the rime shared "
                  "data directory";
