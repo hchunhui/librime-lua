@@ -88,7 +88,7 @@ static void raw_init(lua_State *L, const Ticket &t, an<LuaObj> &env, InitMap &ta
       LOG(INFO) << "Lua Compoment of initialize warning :"
         << " module: "<< t.klass
         << ", name_space: " << t.name_space
-        << ", function: " << it.first << " is " <<  lua_typename(L, -1) << " (function expected)." ;
+        << ", function: " << it.first << " is " <<  luaL_typename(L, -1) << " (function expected)." ;
     }
     lua_pop(L,1);
   }
