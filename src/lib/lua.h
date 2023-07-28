@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 #include "result.h"
+#include <iostream>
 
 struct lua_State;
 
@@ -21,7 +22,16 @@ private:
   int id_;
 };
 
-struct LuaErr { int status; std::string e; };
+struct LuaErr {
+  int status;
+  std::string e;
+  friend std::ostream& operator<<(std::ostream &os, const LuaErr &e) {
+    if (e.e != "")
+      os << " error(" << e.status << "): " << e.e;
+    return os;
+  }
+};
+
 template <typename T>
 using LuaResult = Result<T, LuaErr>;
 

@@ -1209,14 +1209,10 @@ static int raw_connect(lua_State *L) {
   T & t = LuaType<T &>::todata(L, 1);
   an<LuaObj> o = LuaObj::todata(L, 2);
 
-  auto c = t.connect
-    ([lua, o](I... i) {
+  auto c = t.connect([lua, o](I... i) {
        auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
-     });
+       LOG_IF(ERROR, !r.ok()) << "Context::Notifier" << r.get_err();
+       });
 
   LuaType<boost::signals2::connection>::pushdata(L, c);
   return 1;
@@ -1483,12 +1479,8 @@ namespace MemoryReg {
       return false;
 
     auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
-      return false;
-    } else
-      return r.get();
+    LOG_IF(ERROR, !r.ok()) << "LuaMemory::Memorize" << r.get_err();
+    return (r.ok()) ? r.get() : false;
   }
 
   // XXX: Currently the WRAP macro is not generic enough,
