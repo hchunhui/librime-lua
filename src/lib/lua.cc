@@ -281,6 +281,49 @@ std::shared_ptr<LuaObj> LuaObj::todata(lua_State *L, int i) {
   return std::shared_ptr<LuaObj>(new LuaObj(L, i));
 }
 
+std::string LuaObj::type_name() {
+  return lua_typename(L_, type_);
+}
+
+std::shared_ptr<LuaObj> LuaObj::getfield(int key) {
+  if (type_ != LUA_TTABLE )
+    return {};
+  if (lua_rawgeti(L_, LUA_REGISTRYINDEX, id_) != LUA_TTABLE){
+    lua_pop(L_, 1);
+    return {};
+  }
+  lua_pushinteger(L_, key);
+  lua_gettable(L_, -2);
+  std::shared_ptr<LuaObj> res= LuaObj::todata(L_, -1);
+  lua_pop(L_, 2);
+  return res;
+}
+
+std::shared_ptr<LuaObj> LuaObj::getfield(const char *key) {
+  if (type_ != LUA_TTABLE )
+    return {};
+  if (lua_rawgeti(L_, LUA_REGISTRYINDEX, id_) != LUA_TTABLE){
+    lua_pop(L_, 1);
+    return {};
+  }
+  lua_pushstring(L_, key);
+  lua_gettable(L_, -2);
+  std::shared_ptr<LuaObj> res= LuaObj::todata(L_, -1);
+  lua_pop(L_, 2);
+  return res;
+};
+
+std::shared_ptr<LuaObj> LuaObj::getfield(const std::string& key){
+  return getfield( key.c_str() );
+};
+
+std::shared_ptr<LuaObj> LuaObj::clone(){
+  lua_rawgeti(L_, LUA_REGISTRYINDEX, id_);
+  std::shared_ptr<LuaObj> res = LuaObj::todata(L_, -1);
+  lua_pop(L_, 1);
+  return res;
+};
+
 void lua_export_type(lua_State *L,
                      const LuaTypeInfo *type, lua_CFunction gc,
                      const luaL_Reg *funcs, const luaL_Reg *methods,
