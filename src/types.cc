@@ -217,7 +217,7 @@ namespace TranslationReg {
       return 0;
 
     auto o = lua->newthreadx(L, n);
-    an<Translation> r = New<LuaTranslation>(lua, o);
+    an<Translation> r = New<LuaTranslation>(lua, o,"=lua=");
     LuaType<an<Translation>>::pushdata(L, r);
     return 1;
   }
@@ -236,6 +236,20 @@ namespace TranslationReg {
     lua_pushvalue(L, 1);
     return 2;
   }
+  bool set_name_space(T &t, const string &ns) {
+    if (auto tp = dynamic_cast<LuaTranslation *>(&t)) {
+      tp->set_name_space(ns);
+      return true;
+    }
+    return false;
+  }
+
+  string name_space(T &t) {
+    if (auto tp = dynamic_cast<LuaTranslation *>(&t)) {
+      return tp->name_space();
+    }
+    return "";
+  }
 
   static const luaL_Reg funcs[] = {
     { "Translation", raw_make },
@@ -244,14 +258,17 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+    { "set_name_space", WRAP(set_name_space)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    { "name_space", WRAP(name_space)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
+    { "name_space", WRAP(set_name_space)},
     { NULL, NULL },
   };
 }
@@ -1212,10 +1229,7 @@ static int raw_connect(lua_State *L) {
   auto c = t.connect
     ([lua, o](I... i) {
        auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
+       LOG_IF(ERROR, !r.ok()) << "Context::Notifier" << r.get_err();
      });
 
   LuaType<boost::signals2::connection>::pushdata(L, c);
@@ -1484,8 +1498,7 @@ namespace MemoryReg {
 
     auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
     if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "LuaMemory::Memorize" << r.get_err();
       return false;
     } else
       return r.get();

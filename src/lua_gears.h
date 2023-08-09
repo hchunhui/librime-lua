@@ -11,10 +11,14 @@
 
 namespace rime {
 
+std::ostream& operator<<(std::ostream &os, const LuaErr &e);
+
 class LuaTranslation : public Translation {
 public:
   LuaTranslation(Lua *lua, an<LuaObj> f)
-    : lua_(lua), f_(f) {
+    : LuaTranslation(lua, f, "") {};
+  LuaTranslation(Lua *lua, an<LuaObj> f, string name_space)
+    : lua_(lua), f_(f), name_space_(name_space) {
     Next();
   }
 
@@ -23,11 +27,14 @@ public:
   an<Candidate> Peek() {
     return c_;
   }
+  string name_space() const { return name_space_; }
+  void set_name_space(const string& ns) { name_space_ = ns;}
 
 private:
   Lua *lua_;
   an<Candidate> c_;
   an<LuaObj> f_;
+  string name_space_;
 };
 
 class LuaFilter : public Filter, TagMatching {
@@ -38,19 +45,7 @@ public:
   virtual an<Translation> Apply(an<Translation> translation,
                                 CandidateList* candidates);
 
-  virtual bool AppliesToSegment(Segment* segment) {
-    if ( ! tags_match_ )
-      return TagsMatch(segment);
-
-    auto r = lua_->call<bool, an<LuaObj>, Segment *, an<LuaObj>>(tags_match_, segment,  env_);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaFilter::AppliesToSegment of " << name_space_ << " error(" << e.status << "): " << e.e;
-      return false;
-    }
-    else
-      return  r.get();
-  }
+  virtual bool AppliesToSegment(Segment* segment);
 
 private:
   Lua *lua_;
