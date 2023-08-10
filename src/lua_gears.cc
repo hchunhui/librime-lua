@@ -27,7 +27,7 @@ bool LuaTranslation::Next() {
     return true;
   }
 }
-//(-0,+1,+m)
+//(-0,+0,+m)
 static void raw_init_env(lua_State *L, const Ticket &t, an<LuaObj> *env) {
   lua_newtable(L);
   Engine *e = t.engine;
