@@ -1058,12 +1058,12 @@ namespace ProjectionReg{
     return New<T>();
   }
 
-  string apply(T &t, const string &s){
+  string apply(T &t, const string &s, bool ret_org_str= false){
     string res= s;
     if (t.Apply(&res))
       return res;
     else
-      return "";
+      return (ret_org_str) ? res : "";
   }
 
   static const luaL_Reg funcs[] = {
