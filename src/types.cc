@@ -1058,8 +1058,8 @@ namespace ProjectionReg{
     return New<T>();
   }
 
-  string apply(T &t, const string &s, bool ret_org_str= false){
-    string res= s;
+  string apply(T &t, const string &s, bool ret_org_str = false){
+    string res = s;
     if (t.Apply(&res))
       return res;
     else
