@@ -1208,16 +1208,15 @@ static int raw_connect(lua_State *L) {
   Lua *lua = Lua::from_state(L);
   T & t = LuaType<T &>::todata(L, 1);
   an<LuaObj> o = LuaObj::todata(L, 2);
+  auto f = [lua, o](I... i) {
+    auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
+    if (!r.ok()) {
+                 auto e = r.get_err();
+      LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+    }
+  };
 
-  auto c = t.connect
-    ([lua, o](I... i) {
-       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
-     });
-
+  auto c = (lua_gettop(L) > 2) ? t.connect(lua_tointeger(L, 3), f) : t.connect(f);
   LuaType<boost::signals2::connection>::pushdata(L, c);
   return 1;
 }
