@@ -244,10 +244,13 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+    { "_peek", WRAPMEM(T, Peek)},
+    { "_next", WRAPMEM(T, Next)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    { "exhausted", WRAPMEM(T, exhausted)},
     { NULL, NULL },
   };
 
@@ -1820,6 +1823,7 @@ namespace SwitcherReg {
 
 void types_ext_init(lua_State *L);
 void opencc_init(lua_State *L);
+void translation_init(lua_State *L);
 
 void types_init(lua_State *L) {
   EXPORT(SegmentReg, L);
@@ -1858,8 +1862,8 @@ void types_init(lua_State *L) {
   RimeApiReg::init(L);
 #ifdef ENABLE_TYPES_EXT
   types_ext_init(L);
+  translation_init(L);
 #endif
-
   EXPORT_UPTR_TYPE(SchemaReg, L);
 
   opencc_init(L);
