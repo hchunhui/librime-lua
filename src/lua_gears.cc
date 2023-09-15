@@ -70,11 +70,11 @@ static void raw_init(lua_State *L, const Ticket &t,
   *env = LuaObj::todata(L, -1);
   lua_pop(L, 1);
 
-  std::vector<std::string>* _vec_klass;
+  std::vector<std::string> _vec_klass;
   if (t.klass.size() > 1 && t.klass[0] == '*') {
-    *_vec_klass = split_string(t.klass.substr(1), "*");
+    _vec_klass = split_string(t.klass.substr(1), "*");
     lua_getglobal(L, "require");
-    lua_pushstring(L, _vec_klass->at(0).c_str());
+    lua_pushstring(L, _vec_klass.at(0).c_str());
     int status = lua_pcall(L, 1, 1, 0); // call module file
     if (status != LUA_OK) {
       const char *e = lua_tostring(L, -1);
@@ -85,12 +85,12 @@ static void raw_init(lua_State *L, const Ticket &t,
                  << " ): " << e;
     }
   } else {
-    *_vec_klass = split_string(t.klass, "*");
-    lua_getglobal(L, _vec_klass->at(0).c_str());
+    _vec_klass = split_string(t.klass, "*");
+    lua_getglobal(L, _vec_klass.at(0).c_str());
   }
 
-  if (_vec_klass->size() > 1) {
-    sub_module_init(L, t.name_space, *_vec_klass);
+  if (_vec_klass.size() > 1) {
+    sub_module_init(L, t.name_space, _vec_klass);
   }
 
   if (lua_type(L, -1) == LUA_TTABLE) {
