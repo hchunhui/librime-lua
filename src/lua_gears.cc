@@ -54,25 +54,28 @@ static void raw_init(lua_State *L, const Ticket &t,
     lua_pushstring(L, _vec_klass.at(0).c_str());
     int status = lua_pcall(L, 1, 1, 0); // call module file
     bool parse_ok = true;
-    if (status == LUA_OK && _vec_klass_sz > 2) {
-      for (auto i = 1; i < _vec_klass_sz - 1; i++) {
-        if (lua_type(L, -1) == LUA_TTABLE) {
-          lua_getfield(L, -1, _vec_klass.at(i).c_str());
-          if (lua_type(L, -1) != LUA_TTABLE) {
-            parse_ok = false;
-            LOG(ERROR) << "Lua Compoment of initialize  error:("
+    if (status == LUA_OK && _vec_klass_sz > 2 && lua_type(L, -1) == LUA_TTABLE ) {
+      for (auto i = 1; i <= _vec_klass_sz - 1; i++) {
+        lua_getfield(L, -1, _vec_klass.at(i).c_str());
+        int sub_type = lua_type(L, -1);
+        if ( sub_type == LUA_TTABLE )
+          continue;
+        else if (i >= vec_klass_sz -1 && sub_type == LUA_TFUNCTION )
+          break;
+        else       
+          parse_ok = false;
+      }
+    }
+    else {
+      parse_ok = false;
+    }
+    if (!parse_ok) {
+      LOG(ERROR) << "Lua Compoment of initialize  error:("
               << " module: "<< _vec_klass.at(0)
               << ", name_space: " << t.name_space
               << ", sub-table \"" << _vec_klass.at(i) << "\" type: " << luaL_typename(L, -1)
               << " ): " << "type error expect table ";
-            break;
-          }
-        }
-      }
     }
-    if (_vec_klass.size() >= 2 && status == LUA_OK && parse_ok)
-      _sub_func = _vec_klass.at(_vec_klass_sz - 1);
-
     if (status != LUA_OK) {
       const char *e = lua_tostring(L, -1);
       LOG(ERROR) << "Lua Compoment of autoload error:("
