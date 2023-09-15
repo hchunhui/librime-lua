@@ -1058,12 +1058,15 @@ namespace ProjectionReg{
     return New<T>();
   }
 
-  string apply(T &t, const string &s, bool ret_org_str = false){
-    string res = s;
-    if (t.Apply(&res))
-      return res;
-    else
-      return (ret_org_str) ? res : "";
+  int raw_apply(lua_State* L) {
+    an<T> t = LuaType<an<T>>::todata(L, 1);
+    string res(lua_tostring(L, 2));
+    bool ret_org_str = lua_gettop(L)>2 && lua_toboolean(L, 3);
+    if (!t->Apply(&res) && !ret_org_str)
+      res.clear();
+
+    LuaType<string>::pushdata(L, res);
+    return 1;
   }
 
   static const luaL_Reg funcs[] = {
@@ -1073,7 +1076,7 @@ namespace ProjectionReg{
 
   static const luaL_Reg methods[] = {
     {"load",WRAPMEM(T::Load)},
-    {"apply",WRAP(apply)},
+    {"apply", raw_apply},
     { NULL, NULL },
   };
 
