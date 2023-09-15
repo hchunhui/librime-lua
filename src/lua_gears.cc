@@ -33,7 +33,31 @@ static std::vector<std::string> split_string(const std::string& str, const std::
     result.push_back(str.substr(pos));
     return result;
 }
+static void sub_module_init(lua_State *L, const string& name_space, const std::vector<std::string>& vec_klass) {
+    bool parse_ok = true;
+    int index = 0;
+    size_t vec_klass_sz= vec_klass.size();
+    if (lua_type(L, -1) == LUA_TTABLE) {
+      while ( vec_klass_sz > index++ ) {
+        int sub_type= lua_getfield(L, -1, vec_klass.at(index).c_str() );
+        if ( index < vec_klass_sz-1 && sub_type != LUA_TTABLE ) {
+          parse_ok = false;
+          break;
+        }
+      }
+    }
+    else
+      parse_ok = false;
 
+    if (!parse_ok) {
+      LOG(ERROR) << "Lua Compoment of initialize  error:("
+              << " module: "<< vec_klass.at(0)
+              << ", name_space: " << name_space
+              << ", sub-table \"" << vec_klass.at(index) << "\" type: " << luaL_typename(L, -1)
+              << " ): " << "type error expect table ";
+    }
+
+}
 //---
 static void raw_init(lua_State *L, const Ticket &t,
                      an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini, an<LuaObj> *tags_match= NULL) {
@@ -46,36 +70,12 @@ static void raw_init(lua_State *L, const Ticket &t,
   *env = LuaObj::todata(L, -1);
   lua_pop(L, 1);
 
-  std::string _sub_func = "";
+  std::vector<std::string>* _vec_klass;
   if (t.klass.size() > 1 && t.klass[0] == '*') {
+    *_vec_klass = split_string(t.klass.substr(1), "*");
     lua_getglobal(L, "require");
-    std::vector<std::string> _vec_klass = split_string(t.klass.substr(1), "*");
-    int _vec_klass_sz = _vec_klass.size();
-    lua_pushstring(L, _vec_klass.at(0).c_str());
+    lua_pushstring(L, _vec_klass->at(0).c_str());
     int status = lua_pcall(L, 1, 1, 0); // call module file
-    bool parse_ok = true;
-    if (status == LUA_OK && _vec_klass_sz > 2 && lua_type(L, -1) == LUA_TTABLE ) {
-      for (auto i = 1; i <= _vec_klass_sz - 1; i++) {
-        lua_getfield(L, -1, _vec_klass.at(i).c_str());
-        int sub_type = lua_type(L, -1);
-        if ( sub_type == LUA_TTABLE )
-          continue;
-        else if (i >= vec_klass_sz -1 && sub_type == LUA_TFUNCTION )
-          break;
-        else       
-          parse_ok = false;
-      }
-    }
-    else {
-      parse_ok = false;
-    }
-    if (!parse_ok) {
-      LOG(ERROR) << "Lua Compoment of initialize  error:("
-              << " module: "<< _vec_klass.at(0)
-              << ", name_space: " << t.name_space
-              << ", sub-table \"" << _vec_klass.at(i) << "\" type: " << luaL_typename(L, -1)
-              << " ): " << "type error expect table ";
-    }
     if (status != LUA_OK) {
       const char *e = lua_tostring(L, -1);
       LOG(ERROR) << "Lua Compoment of autoload error:("
@@ -85,11 +85,15 @@ static void raw_init(lua_State *L, const Ticket &t,
                  << " ): " << e;
     }
   } else {
-    lua_getglobal(L, t.klass.c_str());
+    *_vec_klass = split_string(t.klass, "*");
+    lua_getglobal(L, _vec_klass->at(0).c_str());
+  }
+
+  if (_vec_klass->size() > 1) {
+    sub_module_init(L, t.name_space, *_vec_klass);
   }
 
   if (lua_type(L, -1) == LUA_TTABLE) {
-repeat_check:
     lua_getfield(L, -1, "init");
     if (lua_type(L, -1) == LUA_TFUNCTION) {
       LuaObj::pushdata(L, *env);
@@ -119,16 +123,7 @@ repeat_check:
       lua_pop(L, 1);
     }
 
-    if (_sub_func.empty()) {
-      lua_getfield(L, -1, "func");
-    } else {
-      lua_getfield(L, -1, _sub_func.c_str());
-      // if last key is table, repeat_check without _sub_func
-      if (lua_type(L, -1) == LUA_TTABLE) {
-        _sub_func.clear();
-        goto repeat_check;
-      }
-    }
+    lua_getfield(L, -1, "func");
   }
 
   if (lua_type(L, -1) != LUA_TFUNCTION) {
