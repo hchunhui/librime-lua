@@ -1,6 +1,7 @@
 #include "lib/lua_templates.h"
 #include "lua_gears.h"
 #include <vector>
+#include <sstream>
 
 namespace rime {
 
@@ -33,20 +34,27 @@ static std::vector<std::string> split_string(const std::string& str, const std::
     result.push_back(str.substr(pos));
     return result;
 }
-static void sub_module_init(lua_State *L, const string& name_space,
+static bool sub_module_init(lua_State *L, const Ticket &t,
                             const std::vector<std::string>& vec_klass) {
   size_t vec_klass_sz= vec_klass.size();
   for (size_t index=1 ;index < vec_klass_sz; index++) {
     int sub_type= lua_getfield(L, -1, vec_klass.at(index).c_str() );
     if ( index < vec_klass_sz-1 && sub_type != LUA_TTABLE ) {
-      LOG(ERROR) << "Lua Compoment of initialize  error:("
+      std::ostringstream ostr;
+      ostr << "Lua Compoment of initialize  error:("
+        << " klass: " << t.klass
         << " module: "<< vec_klass.at(0)
-        << ", name_space: " << name_space
-        << ", sub-table \"" << vec_klass.at(index) << "\" type: " << luaL_typename(L, -1)
+        << ", name_space: " << t.name_space
+        << ", sub-table(" <<index << ") "
+        << "\"" << vec_klass.at(index) << "\" type: " << luaL_typename(L, -1)
         << " ): " << "type error expect table ";
-      break;
+      LOG(ERROR) << ostr.str();
+
+      LuaType<string>::pushdata(L, ostr.str());
+      return false;
     }
   }
+  return true;
 }
 //---
 static void raw_init(lua_State *L, const Ticket &t,
@@ -79,7 +87,7 @@ static void raw_init(lua_State *L, const Ticket &t,
   }
 
   if (_vec_klass.size() > 1) {
-    sub_module_init(L, t.name_space, _vec_klass);
+    sub_module_init(L, t, _vec_klass);
   }
 
   if (lua_type(L, -1) == LUA_TTABLE) {
