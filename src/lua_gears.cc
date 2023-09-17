@@ -38,8 +38,8 @@ static bool sub_module_init(lua_State *L, const Ticket &t,
                             const std::vector<std::string>& vec_klass) {
   size_t vec_klass_sz= vec_klass.size();
   for (size_t index=1 ;index < vec_klass_sz; index++) {
-    int sub_type= lua_getfield(L, -1, vec_klass.at(index).c_str() );
-    if ( index < vec_klass_sz-1 && sub_type != LUA_TTABLE ) {
+    lua_getfield(L, -1, vec_klass.at(index).c_str() );
+    if ( index < vec_klass_sz-1 && lua_type(L, -1) != LUA_TTABLE ) {
       std::ostringstream ostr;
       ostr << "Lua Compoment of initialize  error:("
         << " klass: " << t.klass
