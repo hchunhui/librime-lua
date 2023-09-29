@@ -1055,61 +1055,69 @@ namespace ConfigItemReg {
 namespace ProjectionReg{
   typedef Projection T;
 
-  //  an<T>, ... return bool
+  // load([an<ConfigList>| table of stirngs | args of strings] )
   int raw_load(lua_State *L) {
-    int n = lua_gettop(L);
-    bool res = false;
-    if (1 < n) {
-      an<T> t = LuaType<an<T>>::todata(L,1);
-      an<ConfigList> cl;
-      if ( lua_isstring(L, 2) ){
-        //load from strings
-        cl = New<ConfigList>();
-        for (int i = 2; i<=n ; i++){
-          if (!lua_isstring(L,i)){
-            // fixed NULL will (core dumped) error.
-            LOG(ERROR) << "bad argument #" << i << " to'?' string expected";
-            lua_pop(L, n);
-            lua_pushboolean(L, false);
-            return 1;
-          }
-          cl->Append(
-              New<ConfigValue>( lua_tostring(L,i) ) );
-        }
-      }
-      else {
-        cl = LuaType<an<ConfigList>>::todata(L,2);
-      }
-      res= t->Load(cl);
+    if (2 > lua_gettop(L)) {
+      lua_pushboolean(L, false);
+      return 1;
     }
-    lua_pop(L, n);
-    lua_pushboolean(L, res);
+
+    an<T> t = LuaType<an<T>>::todata(L,1);
+    an<ConfigList> cl;
+    // :lad( an<ConfigList> )
+    if ( lua_isuserdata(L, 2)) {
+      cl= LuaType<an<ConfigList>>::todata(L, 2);
+    }
+    // :load( table of strings )
+    else if (lua_istable(L, 2)) {
+      cl = New<ConfigList>();
+      size_t len = lua_objlen(L, 2);
+      for (int i = 1; i <= len; i++) {
+        lua_rawgeti(L, 2, i);
+        if ( lua_isstring(L, -1))
+          cl->Append( New<ConfigValue>(lua_tostring(L, -1)));
+      }
+    }
+    // load(args... of strings)
+    else {
+      cl = New<ConfigList>();
+      size_t len = lua_gettop(L);
+      for (int i = 2; i <= len; i++) {
+        if (lua_isstring(L, i))
+          cl->Append( New<ConfigValue>( lua_tostring(L, i)));
+      }
+    }
+    lua_pushboolean(L, t->Load(cl));
     return 1;
   }
 
-  // return an<T>, bool(loaded success)
+  // raw_make(
   int raw_make(lua_State *L) {
-    int n = lua_gettop(L);
     an<T> t = New<T>();
-    if ( 1 > n ) {
+    if (1 > lua_gettop(L)) {
       LuaType<an<T>>::pushdata(L, t);
       lua_pushboolean(L, false);
       return 2;
     }
-    else {
-      //  raw_load(t,...)
-      LuaType<an<T>>::pushdata(L, t);
-      lua_rotate(L, 1, 1);
-      raw_load(L);
-      LuaType<an<T>>::pushdata(L, t);
-      lua_rotate(L, 1, 1);
-      return 2;
-    }
+    LuaType<an<T>>::pushdata(L, t);
+    lua_insert(L, 1); // an<T>, ...
+    lua_pushvalue(L, 1);
+    lua_insert(L, 2); // an<T>, an<T>, ...
+    lua_pushcfunction(L, raw_load);
+    lua_insert(L, 2); // an<T>, raw_load, an<T>,...
+    lua_call(L, lua_gettop(L) - 2 , 1); // an<T>, res
+    return 2; // an<T>, loaded of  success
   }
 
-  string apply(T &t, const string &s) {
-    string res(s);
-    return (t.Apply(&res)) ? res : "";
+  int raw_apply(lua_State* L) {
+    an<T> t = LuaType<an<T>>::todata(L, 1);
+    string res(lua_tostring(L, 2));
+    bool ret_org_str = lua_gettop(L)>2 && lua_toboolean(L, 3);
+    if (!t->Apply(&res) && !ret_org_str)
+      res.clear();
+
+    LuaType<string>::pushdata(L, res);
+    return 1;
   }
 
   static const luaL_Reg funcs[] = {
@@ -1119,7 +1127,7 @@ namespace ProjectionReg{
 
   static const luaL_Reg methods[] = {
     {"load", raw_load},
-    {"apply",WRAP(apply)},
+    {"apply", raw_apply},
     { NULL, NULL },
   };
 
@@ -1254,16 +1262,15 @@ static int raw_connect(lua_State *L) {
   Lua *lua = Lua::from_state(L);
   T & t = LuaType<T &>::todata(L, 1);
   an<LuaObj> o = LuaObj::todata(L, 2);
+  auto f = [lua, o](I... i) {
+    auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
+    if (!r.ok()) {
+                 auto e = r.get_err();
+      LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+    }
+  };
 
-  auto c = t.connect
-    ([lua, o](I... i) {
-       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
-     });
-
+  auto c = (lua_gettop(L) > 2) ? t.connect(lua_tointeger(L, 3), f) : t.connect(f);
   LuaType<boost::signals2::connection>::pushdata(L, c);
   return 1;
 }

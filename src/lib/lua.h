@@ -53,4 +53,8 @@ private:
   lua_State *L_;
 };
 
+namespace LuaImpl {
+  int wrap_common(lua_State *L, int (*cfunc)(lua_State *));
+}
+
 #endif  // LIB_LUA_H_
