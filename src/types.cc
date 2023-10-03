@@ -31,7 +31,7 @@ namespace {
 
 //--- wrappers for Segment
 namespace SegmentReg {
-  typedef Segment T;
+  using T = Segment;
 
   T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
@@ -102,7 +102,7 @@ namespace SegmentReg {
 
 //--- wrappers for an<Candidate>
 namespace CandidateReg {
-  typedef Candidate T;
+  using T = Candidate;
 
   string dynamic_type(T &c) {
     if (dynamic_cast<Phrase *>(&c))
@@ -207,7 +207,7 @@ namespace CandidateReg {
 
 //--- wrappers for an<Translation>
 namespace TranslationReg {
-  typedef Translation T;
+  using T = Translation;
 
   int raw_make(lua_State *L) {
     Lua *lua = Lua::from_state(L);
@@ -257,7 +257,7 @@ namespace TranslationReg {
 }
 
 namespace ReverseDbReg {
-  typedef ReverseDb T;
+  using T = ReverseDb;
 
   an<T> make(const string &file) {
     an<T> db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
@@ -293,7 +293,7 @@ namespace ReverseDbReg {
 }
 
 namespace SegmentationReg {
-  typedef Segmentation T;
+  using T = Segmentation;
 
   optional<Segment &> back(T &t) {
     if (t.empty())
@@ -369,7 +369,7 @@ namespace SegmentationReg {
 }
 
 namespace MenuReg {
-  typedef Menu T;
+  using T = Menu;
 
   an<T> make() {
     return New<T>();
@@ -401,7 +401,7 @@ namespace MenuReg {
 }
 
 namespace KeyEventReg {
-  typedef KeyEvent T;
+  using T = KeyEvent;
 
   int keycode(const T &t) {
     return t.keycode();
@@ -445,7 +445,7 @@ namespace KeyEventReg {
 }
 
 namespace EngineReg {
-  typedef Engine T;
+  using T = Engine;
 
   static void apply_schema(T *engine, the<Schema> &schema) {
     engine->ApplySchema(schema.release());
@@ -477,7 +477,7 @@ namespace EngineReg {
 }
 
 namespace CommitRecordReg {
-  typedef CommitRecord T;
+  using T = CommitRecord;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -502,9 +502,9 @@ namespace CommitRecordReg {
 }
 
 namespace CommitHistoryReg {
-  typedef CommitHistory T;
-  typedef CommitRecord CR;
-  typedef T::reverse_iterator R_ITER;
+  using T = CommitHistory;
+  using CR = CommitRecord;
+  using R_ITER = T::reverse_iterator;
 
   int raw_push(lua_State *L){
     C_State C;
@@ -606,7 +606,7 @@ namespace CommitHistoryReg {
 }
 
 namespace ContextReg {
-  typedef Context T;
+  using T = Context;
 
   Composition &get_composition(T &t) {
     return t.composition();
@@ -683,7 +683,7 @@ namespace ContextReg {
 }
 
 namespace PreeditReg {
-  typedef Preedit T;
+  using T = Preedit;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -711,7 +711,7 @@ namespace PreeditReg {
 }
 
 namespace CompositionReg {
-  typedef Composition T;
+  using T = Composition;
 
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
@@ -761,7 +761,7 @@ namespace CompositionReg {
 }
 
 namespace SchemaReg {
-  typedef Schema T;
+  using T = Schema;
 
   the<T> make(const string &schema_id) {
     return std::unique_ptr<T>(new T(schema_id));
@@ -793,8 +793,8 @@ namespace SchemaReg {
 }
 
 namespace ConfigValueReg {
-  typedef ConfigValue T;
-  typedef ConfigItem E;
+  using T = ConfigValue;
+  using E = ConfigItem;
 
   // an<T> make(){
   //  return New<T>();
@@ -883,8 +883,8 @@ namespace ConfigValueReg {
   };
 }
 namespace ConfigListReg {
-  typedef ConfigList T;
-  typedef ConfigItem E;
+  using T = ConfigList;
+  using E = ConfigItem;
 
   an<T> make(){
     return New<T>();
@@ -935,8 +935,8 @@ namespace ConfigListReg {
 
 
 namespace ConfigMapReg {
-  typedef ConfigMap T;
-  typedef ConfigItem E;
+  using T = ConfigMap;
+  using E = ConfigItem;
 
   an<T> make(){
     return New<T>();
@@ -999,10 +999,10 @@ namespace ConfigMapReg {
 }
 
 namespace ConfigItemReg {
-  typedef ConfigItem T;
-  typedef ConfigMap M;
-  typedef ConfigList L;
-  typedef ConfigValue V;
+  using T = ConfigItem;
+  using M = ConfigMap;
+  using L = ConfigList;
+  using V = ConfigValue;
 
   string type(T &t){
     switch (t.type()) {
@@ -1053,7 +1053,7 @@ namespace ConfigItemReg {
 }
 
 namespace ProjectionReg{
-  typedef Projection T;
+  using T = Projection;
   an<T> make(){
     return New<T>();
   }
@@ -1090,7 +1090,7 @@ namespace ProjectionReg{
 }
 
 namespace ConfigReg {
-  typedef Config T;
+  using T = Config;
 
   optional<bool> get_bool(T &t, const string &path) {
     bool v;
@@ -1225,7 +1225,7 @@ static int raw_connect(lua_State *L) {
 }
 
 namespace ConnectionReg {
-  typedef boost::signals2::connection T;
+  using T = boost::signals2::connection;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -1267,7 +1267,7 @@ namespace NotifierReg {
 }
 
 namespace OptionUpdateNotifierReg {
-  typedef Context::OptionUpdateNotifier T;
+  using T = Context::OptionUpdateNotifier;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -1288,7 +1288,7 @@ namespace OptionUpdateNotifierReg {
 }
 
 namespace PropertyUpdateNotifierReg {
-  typedef Context::PropertyUpdateNotifier T;
+  using T = Context::PropertyUpdateNotifier;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -1309,7 +1309,7 @@ namespace PropertyUpdateNotifierReg {
 }
 
 namespace KeyEventNotifierReg {
-  typedef Context::KeyEventNotifier T;
+  using T = Context::KeyEventNotifier;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -1356,7 +1356,7 @@ namespace LogReg {
   }
 }
 namespace CommitEntryReg {
-  typedef CommitEntry T;
+  using T = CommitEntry;
 
   vector<const rime::DictEntry*> get(const T& ce) {
     return ce.elements;
@@ -1380,7 +1380,7 @@ namespace CommitEntryReg {
   };
 }
 namespace DictEntryReg {
-  typedef DictEntry T;
+  using T = DictEntry;
   an<T> make() {
     return an<T>(new T());
   }
@@ -1419,8 +1419,7 @@ namespace DictEntryReg {
   };
 }
 namespace CodeReg {
-
-  typedef Code T;
+  using T = Code;
 
   an<T> make() {
     return an<T>(new Code());
@@ -1478,7 +1477,7 @@ namespace MemoryReg {
       uter = UserDictEntryIterator();
     }
   };
-  typedef LuaMemory T;
+  using T = LuaMemory;
 
   bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
     if (!memorize_callback)
@@ -1602,7 +1601,7 @@ namespace MemoryReg {
 
 //--- wrappers for Phrase
 namespace PhraseReg {
-  typedef Phrase T;
+  using T = Phrase;
 
   an<T> make(MemoryReg::LuaMemory& memory,
     const string& type,
@@ -1660,7 +1659,7 @@ namespace PhraseReg {
 }// Phrase work with Translator
 
 namespace KeySequenceReg {
-  typedef KeySequence T;
+  using T = KeySequence;
 
   int raw_make(lua_State *L){
     an<T> t = (0<lua_gettop(L)) ? New<T>((  lua_tostring(L,1) )) : New<T>();
@@ -1785,7 +1784,7 @@ namespace RimeApiReg {
 }
 
 namespace SwitcherReg {
-  typedef Switcher T;
+  using T = Switcher;
 
   an<T> make(Engine *engine) {
     return New<T>(engine);
