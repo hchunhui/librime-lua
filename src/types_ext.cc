@@ -5,6 +5,7 @@
  * Distributed under terms of the MIT license.
  */
 
+#include <cstddef>
 #include <rime/common.h>
 #include <rime/processor.h>
 #include <rime/segmentor.h>
@@ -27,7 +28,7 @@ template<typename> using void_t = void;
 template<typename T, typename = void>
 struct COMPAT {
   // fallback version of name_space() if librime is old
-  static nullptr_t name_space(T &t) {
+  static std::nullptr_t name_space(T &t) {
     return nullptr;
   }
 };
