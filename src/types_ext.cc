@@ -5,6 +5,7 @@
  * Distributed under terms of the MIT license.
  */
 
+#include <cstddef>
 #include <rime/common.h>
 #include <rime/processor.h>
 #include <rime/segmentor.h>
@@ -27,7 +28,7 @@ template<typename> using void_t = void;
 template<typename T, typename = void>
 struct COMPAT {
   // fallback version of name_space() if librime is old
-  static nullptr_t name_space(T &t) {
+  static std::nullptr_t name_space(T &t) {
     return nullptr;
   }
 };
@@ -40,7 +41,7 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().name_space())>> {
 };
 
 namespace ProcessorReg{
-  typedef Processor T;
+  using T = Processor;
 
   int process_key_event(T &t, const KeyEvent &key){
     switch (t.ProcessKeyEvent(key) ){
@@ -71,7 +72,7 @@ namespace ProcessorReg{
 }
 
 namespace SegmentorReg{
-  typedef Segmentor T;
+  using T = Segmentor;
 
   bool proceed(T &t, Segmentation & s) {
     return t.Proceed(&s);
@@ -97,7 +98,7 @@ namespace SegmentorReg{
 }
 
 namespace TranslatorReg{
-  typedef Translator T;
+  using T = Translator;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -119,7 +120,7 @@ namespace TranslatorReg{
 }
 
 namespace FilterReg{
-  typedef Filter T;
+  using T = Filter;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -142,8 +143,8 @@ namespace FilterReg{
 }
 // ReverseDictionary
 namespace ReverseLookupDictionaryReg {
-  typedef ReverseLookupDictionary T;
-  typedef ReverseLookupDictionaryComponent C;
+  using T = ReverseLookupDictionary;
+  using C = ReverseLookupDictionaryComponent;
 
   an<T> make(const string& dict_name) {
     if ( auto c = (C *) T::Require("reverse_lookup_dictionary")){
@@ -186,7 +187,7 @@ namespace ReverseLookupDictionaryReg {
 
 // leveldb
 namespace DbAccessorReg{
-  typedef DbAccessor T;
+  using T = DbAccessor;
 
   // return key , value or nil
   int raw_next(lua_State* L){
@@ -237,8 +238,8 @@ namespace DbAccessorReg{
   };
 }
 namespace UserDbReg{
-  typedef Db T;
-  typedef DbAccessor A;
+  using T = Db;
+  using A = DbAccessor;
 
   an<T> make(const string& db_name, const string& db_class) {
     if (auto comp= UserDb::Require(db_class)){
@@ -311,10 +312,10 @@ namespace UserDbReg{
 }
 
 namespace ComponentReg{
-  typedef Processor P;
-  typedef Segmentor S;
-  typedef Translator T;
-  typedef Filter F;
+  using P = Processor;
+  using S = Segmentor;
+  using T = Translator;
+  using F = Filter;
 
   template <typename O>
   int raw_create(lua_State *L){
