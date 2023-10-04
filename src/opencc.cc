@@ -13,9 +13,16 @@
 #include <opencc/Dict.hpp>
 #include <opencc/DictEntry.hpp>
 #include <opencc/Common.hpp>
-#include <boost/filesystem.hpp>
 #include <rime/common.h>
 #include <rime_api.h>
+
+#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
+  #include <filesystem>
+  namespace ns = std::filesystem;
+#else
+  #include <boost/filesystem.hpp>
+  namespace ns = boost::filesystem;
+#endif
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
@@ -131,8 +138,7 @@ vector<string> Opencc::convert_word(const string& text){
 };
 
 namespace OpenccReg {
-  typedef Opencc T;
-  namespace ns = boost::filesystem;
+  using T = Opencc;
 
   optional<T> make(const string &filename) {
     string user_path( RimeGetUserDataDir());
