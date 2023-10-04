@@ -13,7 +13,7 @@
 #include <opencc/Dict.hpp>
 #include <opencc/DictEntry.hpp>
 #include <opencc/Common.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <rime/common.h>
 #include <rime_api.h>
 
@@ -129,8 +129,8 @@ vector<string> Opencc::convert_word(const string& text){
 };
 
 namespace OpenccReg {
-  typedef Opencc T;
-  namespace ns = boost::filesystem;
+  using T = Opencc;
+  namespace ns = std::filesystem;
 
   optional<T> make(const string &filename) {
     string user_path( RimeGetUserDataDir());
