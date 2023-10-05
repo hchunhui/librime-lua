@@ -629,7 +629,7 @@ struct MemberWrapper<R (C::*)(T...) const, f> {
   }
 };
 
-#if __cplusplus >= 201703L
+#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
 template<typename R, typename C, typename... T, R (C::*f)(T...) noexcept>
 struct MemberWrapper<R (C::*)(T...) noexcept, f> {
   template<typename D>

@@ -20,7 +20,9 @@
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::list;
 using boost::optional;
 
 namespace {
