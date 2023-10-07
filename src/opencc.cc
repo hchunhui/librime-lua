@@ -13,16 +13,8 @@
 #include <opencc/Dict.hpp>
 #include <opencc/DictEntry.hpp>
 #include <opencc/Common.hpp>
-#include <rime/common.h>
 #include <rime_api.h>
-
-#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
-  #include <filesystem>
-  namespace ns = std::filesystem;
-#else
-  #include <boost/filesystem.hpp>
-  namespace ns = boost::filesystem;
-#endif
+#include <rime/common.h>
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
@@ -31,6 +23,7 @@ using std::string;
 using std::vector;
 using std::list;
 using boost::optional;
+using namespace rime;
 
 namespace {
 
@@ -51,23 +44,6 @@ private:
   opencc::DictPtr dict_;
 };
 
-/*
-shared_ptr<Opencc> Opencc::create(const string &config_path) {
-  try {
-    return make_shared<Opencc>(config_path);
-  }
-  catch (opencc::FileNotFound &ex) {
-    LOG(ERROR) << config_path << " : onpecc file not found";// << ex.what();
-  }
-  catch (opencc::InvalidFormat &ex) {
-    LOG(ERROR) << config_path << " : opencc file InvalidFormat";// << ex.what();
-  }
-  catch (...){
-    LOG(ERROR) << config_path << "Opencc ininialize faild" ;
-  }
-  return {};
-}
-*/
 Opencc::Opencc(const string& config_path) {
   opencc::Config config;
   converter_ = config.NewFromFile(config_path);
@@ -143,24 +119,21 @@ namespace OpenccReg {
   optional<T> make(const string &filename) {
     string user_path( RimeGetUserDataDir());
     string shared_path(RimeGetSharedDataDir());
-    user_path += "/opencc/" + filename;
-    shared_path += "/opencc/" + filename;
-    const string *path;
-    if (ns::exists(user_path))
-      path = &user_path;
-    else if (ns::exists(shared_path))
-      path = &shared_path;
-    else
-      path = &filename;
-
     try{
-      return T(*path);
+      return T(user_path + "/opencc/" + filename);
     }
     catch(...) {
-      LOG(ERROR) << *path  << " File not found or InvalidFormat";
-      return {};
+      try{
+        return T(shared_path + "/opencc/" + filename);
+      }
+      catch(...) {
+        LOG(ERROR) << " [" << user_path << "|" << shared_path << "]/opencc/"
+          << filename  << ": File not found or InvalidFormat";
+        return {};
+      }
     }
   }
+
   optional<vector<string>> convert_word(T &t,const string &s) {
     vector<string> res;
     if (t.ConvertWord(s,&res))
