@@ -13,6 +13,10 @@
 #include <rime/filter.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/dict/user_db.h>
+#include "table_translator.h"
+
+#include <rime/gear/poet.h>
+#include <rime/gear/unity_table_encoder.h>
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
@@ -253,11 +257,11 @@ namespace UserDbReg{
   an<T> make_leveldb(const string& db_name) {
     return make(db_name, "userdb");
   }
-  
+
   an<T> make_tabledb(const string& db_name) {
     return make(db_name, "plain_userdb");
   }
-  
+
   optional<string> fetch(an<T> t, const string& key) {
     string res;
     if ( t->Fetch(key,&res) )
@@ -274,7 +278,7 @@ namespace UserDbReg{
   }
 
   an<A> Query(T &t, const string& key) { return t.Query(key); }
-  
+
   static const luaL_Reg funcs[] = {
     {"UserDb", WRAP(make)},// an<Db> LevelDb( db_file, db_name)
     {"LevelDb", WRAP(make_leveldb)},// an<Db> LevelDb( db_file, db_name)
@@ -290,7 +294,7 @@ namespace UserDbReg{
     {"fetch", WRAP(fetch)},  //   fetch(key) return value
     {"update", WRAP(Update)}, // update(key,value) return bool
     {"erase", WRAP(Erase)}, // erase(key) return bool
-    
+
     {"loaded",WRAPMEM(T, loaded)},
     {"disable", WRAPMEM(T, disable)},
     {"enable", WRAPMEM(T, enable)},
@@ -310,8 +314,156 @@ namespace UserDbReg{
     { NULL, NULL },
   };
 }
+#define Set_WMEM(name) {#name, WRAPMEM(T, set_##name)}
+#define WMEM(name) {#name, WRAPMEM(T, name)}
+#define Get_WMEM(name) {#name, WRAPMEM(T, name)}
+
+#if LUA_VERSION_NUM < 502
+#default lua_absindex(L, i) abs_index((L), (i))
+#endif
+
+namespace TableTranslatorReg {
+  using T = LTableTranslator;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+  int raw_get_table(lua_State* L) {
+    if (lua_gettop(L) < 1)
+      return 0;
+
+    if (!luaL_getmetafield(L, 1,"vars_get"))// obj, ...  mt['vars_get']
+      return 0;
+    if (lua_type(L, -1) != LUA_TTABLE)
+      return 0;
+
+    lua_newtable(L); // 
+    lua_pushnil(L);//obj,...mt['vars_get'], restab, key(nil)
+    while (lua_next(L, -2)) { //next , va_index, key
+      if (lua_type(L, -2) == LUA_TSTRING && lua_type(L, -1) == LUA_TFUNCTION) {
+        lua_pushvalue(L, 1);// restab, key , func , obj
+        if (lua_pcall(L, 1, 1, 0)) { // restab, key, value  
+          lua_setfield(L, -3, lua_tostring(L, -2));// restab key
+          continue;
+        }
+      }
+      lua_pop(L, 1); //remove dont carevalue
+    }// end of while : obj, .. mt[vars_get'] , res_table
+    return 1;
+  }// raw_get_table
+
+  int raw_set_table(lua_State* L) {
+    if (lua_gettop(L) < 2)
+      return 0;
+    if (lua_type(L, 2) != LUA_TTABLE)
+      return 0;
+    if (!luaL_getmetafield(L, 1,"vars_set"))// +mt['vars_set']
+      return 0;
+
+    int vs_index = lua_absindex(L, -1);
+    lua_pushnil(L); // obj, set_tab,... mt['vars_set'], key(nil)
+    while(lua_next(L, 2)) {// next ,set_tab...key
+      if (lua_type(L, -2) == LUA_TSTRING) {// mt['vars_set'],skey, svalue
+        //char* key= lua_tostring(L, -2);
+        lua_getfield(L, vs_index, lua_tostring(L, -2)); 
+        if (lua_type(L, -1) == LUA_TFUNCTION) { // mt['vars_set'] skey, svalue  vset_func
+           lua_pushvalue(L, 1);
+           lua_pushvalue(L, -3);// skey, svalue, vset_func, obj, svalue
+           if (lua_pcall(L, 3, 1, 0) != LUA_OK) { // mt['vars_set'], skey svalue, donet_care
+             LOG(WARNING) << lua_tostring(L, -1);
+           }
+        }
+        lua_pop(L, 1);//skey svalue remove ( vsvalue or donet_care) 
+      }
+      lua_pop(L, 1); // skey remove (svalue)
+    }//end of while
+    return 0;
+  }//raw_set_table
+
+  int raw_set_table1(lua_State* L) {
+    if (lua_gettop(L) >= 2 && lua_type(L, 2) == LUA_TTABLE &&
+        luaL_getmetafield(L, 1,"vars_set")){// +mt['vars_set']
+
+      int vs_index = lua_absindex(L, -1);
+      lua_pushnil(L); // obj, set_tab,... mt['vars_set'], key(nil)
+      while (lua_next(L, 2)) {// next ,set_tab...key
+        if (lua_type(L, -2) == LUA_TSTRING) { // mt['vars_set'],skey, svalue
+          //char* key= lua_tostring(L, -2);
+          lua_getfield(L, vs_index, lua_tostring(L, -2));
+          if (lua_type(L, -1) != LUA_TFUNCTION) { // mt['vars_set'] skey, svalue  vset_func
+            lua_pop(L, 2); 
+            continue;
+          }
+          lua_pushvalue(L, 1);
+          lua_pushvalue(L, -3);// skey, svalue, vset_func, obj, svalue
+                               // 
+          if (lua_pcall(L, 3, 1, 0) != LUA_OK) { // mt['vars_set'], skey svalue, donet_care
+            LOG(WARNING) << lua_tostring(L, -1);
+          }
+        }
+        lua_pop(L, 1); // skey remove (svalue)
+      }//end of while
+    }// end of if
+    return 0;
+  }//raw_set_table
+  static const luaL_Reg methods[] = {
+    {"query", WRAPMEM(T, Query)},// string, segment
+    WMEM(reload),//none
+    WMEM(set_callback_func),//function memorize_callback, function memorize_chk
+
+    // ex: {enable_encoder=true, max_phrese_length=4}
+    Get_WMEM(table),//hash table {key=value..}
+    Set_WMEM(table),//hash table {key=value..}
+    {"Get_table", raw_get_table},//hash table {key=value..}
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"name_space",WRAP(COMPAT<T>::name_space)},//string
+
+    Get_WMEM(enable_charset_filter),//bool
+    Get_WMEM(enable_encoder),//bool
+    Get_WMEM(enable_sentence),//bool
+    Get_WMEM(sentence_over_completion),//bool
+    Get_WMEM(encode_commit_history),//int
+    Get_WMEM(max_phrase_length),//int
+    Get_WMEM(max_homographs),//bool
+    // TranslatorOptions
+    Get_WMEM(delimiters),//string&
+    Get_WMEM(tag),//string
+    Get_WMEM(enable_completion),//bool
+    Get_WMEM(contextual_suggestions),//bool
+    Get_WMEM(strict_spelling),// bool
+    Get_WMEM(initial_quality),//double
+                              //
+    Get_WMEM(preedit_formatter),//Projection&
+    Get_WMEM(comment_formatter),//Projection&
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    Set_WMEM(enable_charset_filter),
+    Set_WMEM(enable_encoder),
+    Set_WMEM(enable_sentence),
+    Set_WMEM(sentence_over_completion),
+    Set_WMEM(encode_commit_history),
+    Set_WMEM(max_phrase_length),
+    Set_WMEM(max_homographs),//
+    // TranslatorOptions
+    Set_WMEM(tag),//string
+    Set_WMEM(enable_completion),//bool
+    Set_WMEM(contextual_suggestions),//bool
+    Set_WMEM(strict_spelling),//bool
+    Set_WMEM(initial_quality),//double
+    { NULL, NULL },
+  };
+}// namespace Table_translatorReg
+#undef Get_WMEM
+#undef WMEM
+#undef Set_WMEM
 
 namespace ComponentReg{
+  //using LTableTranslator = rime::TableTranslatorReg::LTableTranslator;
   using P = Processor;
   using S = Segmentor;
   using T = Translator;
@@ -343,11 +495,39 @@ namespace ComponentReg{
     }
   };
 
+  template <typename O>
+  int raw_make(lua_State *L){
+    int n = lua_gettop(L);
+    if (3 > n || 4 < n)
+      return 0;
+
+    C_State C;
+    Ticket ticket(
+      LuaType<Engine *>::todata(L, 1),
+      LuaType<string>::todata(L, -2, &C),
+      LuaType<string>::todata(L, -1, &C)
+      );
+    if ( n == 4 )
+      ticket.schema = &(LuaType<Schema &>::todata(L, 2) ); //overwrite schema
+    Lua* lua= Lua::from_state(L);
+    //an<O> obj = New<O>(Lua::from_state(L), ticket);
+    an<O> obj = New<O>(lua, ticket);
+    if (obj) {
+      LuaType<an<O>>::pushdata(L, obj);
+      return 1;
+    }
+    else {
+      LOG(ERROR) << "error creating " << typeid(O).name() << ": '" << ticket.klass << "'";
+      return 0;
+    }
+  };
+
   static const luaL_Reg funcs[] = {
     {"Processor",  raw_create<P>},
     {"Segmentor"   , raw_create<S>},
     {"Translator", raw_create<T>},
     {"Filter", raw_create<F>},
+    {"TableTranslator", raw_make<LTableTranslator>},
     { NULL, NULL },
   };
 
@@ -360,6 +540,8 @@ namespace ComponentReg{
 
 }
 
+
+
 void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(ProcessorReg, L);
   EXPORT(SegmentorReg, L);
@@ -368,5 +550,6 @@ void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(ReverseLookupDictionaryReg, L);
   EXPORT(DbAccessorReg, L);
   EXPORT(UserDbReg, L);
+  EXPORT(TableTranslatorReg, L);
   ComponentReg::init(L);
 }
