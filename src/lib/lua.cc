@@ -273,6 +273,10 @@ LuaObj::~LuaObj() {
   luaL_unref(L_, LUA_REGISTRYINDEX, id_);
 }
 
+int LuaObj::type() {
+  return lua_type(L_, -1);
+}
+
 void LuaObj::pushdata(lua_State *L, std::shared_ptr<LuaObj> &o) {
   lua_rawgeti(L, LUA_REGISTRYINDEX, o->id_);
 }

@@ -14,6 +14,7 @@ public:
 
   static void pushdata(lua_State *L, std::shared_ptr<LuaObj> &o);
   static std::shared_ptr<LuaObj> todata(lua_State *L, int i);
+  int type();
 
 private:
   LuaObj(lua_State *L, int i);
