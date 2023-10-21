@@ -14,11 +14,12 @@ public:
 
   static void pushdata(lua_State *L, std::shared_ptr<LuaObj> &o);
   static std::shared_ptr<LuaObj> todata(lua_State *L, int i);
-  int type();
+  int type() { return type_; }
 
 private:
   LuaObj(lua_State *L, int i);
   lua_State *L_;
+  int type_;
   int id_;
 };
 
