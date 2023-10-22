@@ -25,7 +25,11 @@
 #define ENABLE_TYPES_EXT
 
 using namespace rime;
+#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
+using std::optional;
+#else
 using boost::optional;
+#endif
 
 namespace {
 
