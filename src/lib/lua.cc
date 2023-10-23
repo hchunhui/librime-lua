@@ -268,7 +268,12 @@ LuaObj::LuaObj(lua_State *L, int i) : L_(L) {
   lua_pushvalue(L, i);
   id_ = luaL_ref(L, LUA_REGISTRYINDEX);
 }
-
+int LuaObj::type() {
+  lua_rawgeti(L_, LUA_REGISTRYINDEX, id_);
+  int type = lua_type(L_, -1);
+  lua_pop(L_, 1);
+  return type;
+}
 LuaObj::~LuaObj() {
   luaL_unref(L_, LUA_REGISTRYINDEX, id_);
 }

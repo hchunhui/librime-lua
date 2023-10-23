@@ -1059,10 +1059,10 @@ namespace ProjectionReg{
   }
 
   int raw_apply(lua_State* L) {
-    an<T> t = LuaType<an<T>>::todata(L, 1);
+    T& t = LuaType<T&>::todata(L, 1);
     string res(lua_tostring(L, 2));
     bool ret_org_str = lua_gettop(L)>2 && lua_toboolean(L, 3);
-    if (!t->Apply(&res) && !ret_org_str)
+    if (!t.Apply(&res) && !ret_org_str)
       res.clear();
 
     LuaType<string>::pushdata(L, res);
