@@ -20,6 +20,7 @@
 #include <utility>
 
 using namespace rime;
+using boost::optional;
 
 namespace {
 
