@@ -23,7 +23,7 @@ using namespace rime;
 using boost::optional;
 
 namespace {
-
+using optional ns::optional;
 template<typename> using void_t = void;
 
 template<typename T, typename = void>
