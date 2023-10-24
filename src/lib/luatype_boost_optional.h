@@ -14,7 +14,7 @@ namespace ns {
 #if __cplusplug >= 201703L || _MSVC_VER >=201703L
   using std::optional;
 #else
-  using boost::optionl;
+  using boost::optional;
 #endif// C++17
 
 }// namespace
