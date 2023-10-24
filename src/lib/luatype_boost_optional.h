@@ -1,22 +1,23 @@
 #ifndef LUATYPE_BOOST_OPTIONAL_H
 #define LUATYPE_BOOST_OPTIONAL_H
 
-#include "lua_templates.h"
-#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
+#if __cplusplug >= 201703L || _MSVC_VER >=201703L
 #include <optional>
 #else
 #include <boost/optional.hpp>
 #endif // C++17
+#include "lua_templates.h"
+
+
 
 namespace ns {
-#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
-using std::optional;
-
+#if __cplusplug >= 201703L || _MSVC_VER >=201703L
+  using std::optional;
 #else
-using boost::optional;
+  using boost::optionl;
+#endif// C++17
 
-#endif // C++17
-
+}// namespace
 
 template<typename T>
 struct LuaType<ns::optional<T>> {
