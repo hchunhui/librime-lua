@@ -1,10 +1,56 @@
-#include "table_translator.h"
+#include <rime/gear/table_translator.h>
+#include <rime/gear/poet.h>
+#include <rime/gear/unity_table_encoder.h>
+#include "translator.h"
 #include <rime/schema.h>
 #include <rime/engine.h>
 
 #include <boost/regex.hpp>
-#include "lib/lua_export_type.h"
-#include "lib/luatype_boost_optional.h"
+
+
+namespace {
+using namespace rime;
+
+class LTableTranslator : public TableTranslator {
+ public:
+  LTableTranslator(const Ticket& ticket, Lua* lua);
+  virtual bool Memorize(const CommitEntry& commit_entry);
+  bool memorize(const CommitEntry& commit_entry);
+  bool update_entry(const DictEntry& index,
+                    int commits,
+                    const string& new_entory_prefix);
+  void set_disable_userdict(bool);
+  GET_(disable_userdict, bool);
+  GET_(engine, Engine*);
+  ACCESS_(memorize_callback, an<LuaObj>);
+
+  // TableTranslator member
+  ACCESS_(enable_charset_filter, bool);  // ok
+                                         //
+  GET_(enable_encoder, bool);            // ok
+  void set_enable_encoder(bool);         // bool
+                                  //
+  GET_(enable_sentence, bool);
+  void set_enable_sentence(bool);
+  // ACCESS_(enable_sentence, bool);//ok
+  GET_(sentence_over_completion, bool);
+  void set_sentence_over_completion(bool);
+  // ACCESS_(sentence_over_completion, bool);
+  void set_contextual_suggestions(bool);
+
+  ACCESS_(encode_commit_history, bool);
+  ACCESS_(max_phrase_length, int);
+  ACCESS_(max_homographs, int);
+
+  // TranslatorOptions
+  SET_(delimiters, string&)
+
+ protected:
+  Lua* lua_;
+  an<LuaObj> memorize_callback_ = {};
+  bool disable_userdict_ = false;
+  string schema_id_;
+};
 
 bool LTableTranslator::Memorize(const CommitEntry& commit_entry) {
   if (!memorize_callback_ || memorize_callback_->type() != LUA_TFUNCTION) {
@@ -36,25 +82,21 @@ bool LTableTranslator::memorize(const CommitEntry& commit_entry) {
 }
 
 LTableTranslator::LTableTranslator(const Ticket& ticket, Lua* lua)
-    : lua_(lua), TableTranslator(ticket) {
+    : lua_(lua), TableTranslator(ticket), schema_id_(ticket.schema->schema_id()){
   bool disable_userdict;
   Config* config = ticket.schema->config();
   config->GetBool(name_space_ + "/disable_userdict", &disable_userdict);
   set_disable_userdict(disable_userdict);
 }
+
 void LTableTranslator::set_enable_encoder(bool enable_encoder) {
   enable_encoder_ = enable_encoder;
   if (encoder_ || !user_dict_ || !enable_encoder_)
     return;
-  // create   "__" ns "__/dictionary"  for lLoad()
-  // load encode
   encoder_.reset(new UnityTableEncoder(user_dict_.get()));
-  Schema* schema = engine_->schema();
-  Config* config = schema->config();
-  string ns = "__" + name_space_ + "__";
-  config->SetString(ns + "/dictionary", dict_->name());
-  Ticket ticket(schema, ns);
-  encoder_->Load(ticket);
+  Schema schema = Schema(schema_id_);
+  Ticket ticket( &schema, name_space_);
+  encoder_->Load(dict_->name());
 }
 
 void LTableTranslator::set_enable_sentence(bool enable) {
@@ -90,23 +132,6 @@ void LTableTranslator::set_disable_userdict(bool disable_userdict) {
     user_dict_disabling_patterns_.pop_back();
 }
 
-template <typename I>
-void pushkeyvalue(lua_State* L, int index, const string& key, I& value) {
-  LuaType<I>::pushdata(L, value);
-  lua_setfield(L, index - 1, key.c_str());
-};
-
-#define Set_WMEM(name) \
-  { #name, WRAPMEM(T, set_##name) }
-#define WMEM(name) \
-  { #name, WRAPMEM(T, name) }
-#define Get_WMEM(name) \
-  { #name, WRAPMEM(T, name) }
-
-#if LUA_VERSION_NUM < 502
-#define lua_absindex(L, i) abs_index((L), (i))
-#endif
-namespace {
 namespace TableTranslatorReg {
 using T = LTableTranslator;
 
@@ -171,13 +196,24 @@ static const luaL_Reg vars_set[] = {
     Set_WMEM(initial_quality),         // double
     {NULL, NULL},
 };
-#undef Get_WMEM
-#undef WMEM
-#undef Set_WMEM
-}  // namespace TableTranslatorReg
 
+void reg_Component(lua_State* L) {
+  lua_getglobal(L, "Component");
+  if (lua_type(L, -1) != LUA_TTABLE) {
+    LOG(ERROR) << "table of _G[\"Component\"] not found."; 
+  }
+  else {
+    int index = lua_absindex(L, -1);
+    lua_pushcfunction(L, raw_make_translator<LTableTranslator>);
+    lua_setfield(L, index, "TableTranslator");
+  }
+  lua_pop(L, 1);
+}
+
+}  // namespace TableTranslatorReg
 }  // namespace
 
 void LUAWRAPPER_LOCAL table_translator_init(lua_State* L) {
   EXPORT(TableTranslatorReg, L);
+  TableTranslatorReg::reg_Component(L);
 }
