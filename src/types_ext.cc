@@ -14,14 +14,16 @@
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/dict/user_db.h>
 #include "table_translator.h"
+#include "script_translator.h"
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
-
+#include "translator.h"
 #include <utility>
 using namespace rime;
-
 namespace {
+
+using ns::optional;
 
 template<typename> using void_t = void;
 
@@ -312,7 +314,6 @@ namespace UserDbReg{
 }
 
 namespace ComponentReg{
-  using LT= LTableTranslator;
   using P = Processor;
   using S = Segmentor;
   using T = Translator;
@@ -344,40 +345,12 @@ namespace ComponentReg{
     }
   };
 
-  template <typename O>
-  int raw_make(lua_State *L){
-    int n = lua_gettop(L);
-    if (3 > n || 4 < n)
-      return 0;
-
-    C_State C;
-    Ticket ticket(
-      LuaType<Engine *>::todata(L, 1),
-      LuaType<string>::todata(L, -2, &C),
-      LuaType<string>::todata(L, -1, &C)
-      );
-    DLOG(INFO) << "check Ticket:" << ticket.klass << "@" <<ticket.name_space ;
-    if ( n == 4 )
-      ticket.schema = &(LuaType<Schema &>::todata(L, 2) ); //overwrite schema
-    Lua* lua= Lua::from_state(L);
-    //an<O> obj = New<O>(Lua::from_state(L), ticket);
-    an<O> obj = New<O>(ticket, lua);
-    if (obj) {
-      LuaType<an<O>>::pushdata(L, obj);
-      return 1;
-    }
-    else {
-      //LOG(ERROR) << "error creating " << typeid(O).name() << ": '" << ticket.klass << "'";
-      return 0;
-    }
-  };
 
   static const luaL_Reg funcs[] = {
     {"Processor",  raw_create<P>},
     {"Segmentor"   , raw_create<S>},
     {"Translator", raw_create<T>},
     {"Filter", raw_create<F>},
-    {"TableTranslator", raw_make<LT>},
     { NULL, NULL },
   };
 
@@ -391,6 +364,7 @@ namespace ComponentReg{
 }
 
 void table_translator_init(lua_State *L);
+void script_translator_init(lua_State *L);
 
 void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(ProcessorReg, L);
@@ -400,6 +374,8 @@ void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(ReverseLookupDictionaryReg, L);
   EXPORT(DbAccessorReg, L);
   EXPORT(UserDbReg, L);
-  table_translator_init(L);
   ComponentReg::init(L);
+  // add LtableTranslator ScriptTranslator in Component
+  table_translator_init(L);
+  script_translator_init(L);
 }
