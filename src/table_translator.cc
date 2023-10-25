@@ -83,6 +83,8 @@ bool LTableTranslator::memorize(const CommitEntry& commit_entry) {
 
 LTableTranslator::LTableTranslator(const Ticket& ticket, Lua* lua)
     : lua_(lua), TableTranslator(ticket), schema_id_(ticket.schema->schema_id()){
+
+      memorize_callback_ = lua_->getglobal("___");
   bool disable_userdict;
   Config* config = ticket.schema->config();
   config->GetBool(name_space_ + "/disable_userdict", &disable_userdict);

@@ -44,7 +44,7 @@ class LScriptTranslator : public ScriptTranslator {
 
  protected:
   Lua* lua_;
-  an<LuaObj> memorize_callback_ = {};
+  an<LuaObj> memorize_callback_;
   string schema_id_;
 };
 
@@ -71,6 +71,7 @@ bool LScriptTranslator::memorize(const CommitEntry& commit_entry) {
 
 LScriptTranslator::LScriptTranslator(const Ticket& ticket, Lua* lua)
     : lua_(lua), ScriptTranslator(ticket), schema_id_(ticket.schema->schema_id()){
+      memorize_callback_ = lua_->getglobal("___");
 }
 
 void LScriptTranslator::set_enable_correction(bool enable) {

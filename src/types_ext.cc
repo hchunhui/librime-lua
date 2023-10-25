@@ -13,8 +13,6 @@
 #include <rime/filter.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/dict/user_db.h>
-#include "table_translator.h"
-#include "script_translator.h"
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
