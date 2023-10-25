@@ -98,7 +98,7 @@ void LTableTranslator::set_enable_encoder(bool enable_encoder) {
   encoder_.reset(new UnityTableEncoder(user_dict_.get()));
   Schema schema = Schema(schema_id_);
   Ticket ticket( &schema, name_space_);
-  encoder_->Load(dict_->name());
+  encoder_->Load(ticket);
 }
 
 void LTableTranslator::set_enable_sentence(bool enable) {
