@@ -22,7 +22,7 @@ using namespace rime;
 
 class LScriptTranslator : public ScriptTranslator {
  public:
-   LScriptTranslator(const Ticket& ticket, Lua* lua);
+  LScriptTranslator(const Ticket& ticket, Lua* lua);
   virtual bool Memorize(const CommitEntry& commit_entry);
   bool memorize(const CommitEntry& commit_entry);
   bool update_entry(const DictEntry& index,
@@ -32,15 +32,14 @@ class LScriptTranslator : public ScriptTranslator {
   ACCESS_(memorize_callback, an<LuaObj>);
 
   // ScriptTranslator member
-  ACCESS_(spelling_hints, int);  // ok 
-  ACCESS_(always_show_comments, bool);  // ok 
-  ACCESS_(max_homophones, int);  // ok 
-  GET_(enable_correction, bool);  // ok 
+  ACCESS_(spelling_hints, int);         // ok
+  ACCESS_(always_show_comments, bool);  // ok
+  ACCESS_(max_homophones, int);         // ok
+  GET_(enable_correction, bool);        // ok
   void set_enable_correction(bool);
   // TranslatorOptions
   void set_contextual_suggestions(bool);
   SET_(delimiters, string&);
-  
 
  protected:
   Lua* lua_;
@@ -64,14 +63,15 @@ bool LScriptTranslator::Memorize(const CommitEntry& commit_entry) {
   return r.get();
 }
 
-
 bool LScriptTranslator::memorize(const CommitEntry& commit_entry) {
   return ScriptTranslator::Memorize(commit_entry);
 }
 
 LScriptTranslator::LScriptTranslator(const Ticket& ticket, Lua* lua)
-    : lua_(lua), ScriptTranslator(ticket), schema_id_(ticket.schema->schema_id()){
-      memorize_callback_ = lua_->getglobal("___");
+    : lua_(lua),
+      ScriptTranslator(ticket),
+      schema_id_(ticket.schema->schema_id()) {
+  memorize_callback_ = lua_->getglobal("___");
 }
 
 void LScriptTranslator::set_enable_correction(bool enable) {
@@ -81,7 +81,7 @@ void LScriptTranslator::set_enable_correction(bool enable) {
 
   if (auto* corrector = Corrector::Require("corrector")) {
     Schema schema = Schema(schema_id_);
-    Ticket ticket( &schema, name_space_);
+    Ticket ticket(&schema, name_space_);
     corrector_.reset(corrector->Create(ticket));
   }
 }
@@ -93,16 +93,14 @@ void LScriptTranslator::set_contextual_suggestions(bool enable) {
   poet_.reset(new Poet(language(), config, Poet::LeftAssociateCompare));
 }
 
-
 bool LScriptTranslator::update_entry(const DictEntry& entry,
-                                    int commits,
-                                    const string& new_entory_prefix) {
+                                     int commits,
+                                     const string& new_entory_prefix) {
   if (user_dict_ && user_dict_->loaded())
     return user_dict_->UpdateEntry(entry, commits, new_entory_prefix);
 
   return false;
 }
-
 
 namespace ScriptTranslatorReg {
 using T = LScriptTranslator;
@@ -125,10 +123,10 @@ static const luaL_Reg vars_get[] = {
     Get_WMEM(memorize_callback),  // an<LuaObj> callback
 
     // ScriptTranslator member
-    Get_WMEM(max_homophones),            // int
-    Get_WMEM(spelling_hints),          // int
-    Get_WMEM(always_show_comments),     // bool
-    Get_WMEM(enable_correction),       // bool
+    Get_WMEM(max_homophones),        // int
+    Get_WMEM(spelling_hints),        // int
+    Get_WMEM(always_show_comments),  // bool
+    Get_WMEM(enable_correction),     // bool
     // TranslatorOptions
     Get_WMEM(delimiters),              // string&
     Get_WMEM(tag),                     // string
@@ -143,10 +141,10 @@ static const luaL_Reg vars_set[] = {
     Set_WMEM(memorize_callback),  // an<LuaObj> callback
 
     // ScriptTranslator member
-    Set_WMEM(max_homophones),            // int
-    Set_WMEM(spelling_hints),          // int
-    Set_WMEM(always_show_comments),     // bool
-    Set_WMEM(enable_correction),       // bool
+    Set_WMEM(max_homophones),        // int
+    Set_WMEM(spelling_hints),        // int
+    Set_WMEM(always_show_comments),  // bool
+    Set_WMEM(enable_correction),     // bool
     // TranslatorOptions
     Set_WMEM(delimiters),              // string&
     Set_WMEM(tag),                     // string
@@ -160,9 +158,8 @@ static const luaL_Reg vars_set[] = {
 void reg_Component(lua_State* L) {
   lua_getglobal(L, "Component");
   if (lua_type(L, -1) != LUA_TTABLE) {
-    LOG(ERROR) << "table of _G[\"Component\"] not found."; 
-  }
-  else {
+    LOG(ERROR) << "table of _G[\"Component\"] not found.";
+  } else {
     int index = lua_absindex(L, -1);
     lua_pushcfunction(L, raw_make_translator<LScriptTranslator>);
     lua_setfield(L, index, "ScriptTranslator");
@@ -170,7 +167,7 @@ void reg_Component(lua_State* L) {
   lua_pop(L, 1);
 }
 
-} // namespace StriptTranslatorReg
+}  // namespace ScriptTranslatorReg
 }  // namespace
 
 void LUAWRAPPER_LOCAL script_translator_init(lua_State* L) {

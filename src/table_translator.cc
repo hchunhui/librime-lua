@@ -7,7 +7,6 @@
 
 #include <boost/regex.hpp>
 
-
 namespace {
 using namespace rime;
 
@@ -29,13 +28,11 @@ class LTableTranslator : public TableTranslator {
                                          //
   GET_(enable_encoder, bool);            // ok
   void set_enable_encoder(bool);         // bool
-                                  //
+                                         //
   GET_(enable_sentence, bool);
   void set_enable_sentence(bool);
-  // ACCESS_(enable_sentence, bool);//ok
   GET_(sentence_over_completion, bool);
   void set_sentence_over_completion(bool);
-  // ACCESS_(sentence_over_completion, bool);
   void set_contextual_suggestions(bool);
 
   ACCESS_(encode_commit_history, bool);
@@ -47,7 +44,7 @@ class LTableTranslator : public TableTranslator {
 
  protected:
   Lua* lua_;
-  an<LuaObj> memorize_callback_ = {};
+  an<LuaObj> memorize_callback_;
   bool disable_userdict_ = false;
   string schema_id_;
 };
@@ -82,9 +79,10 @@ bool LTableTranslator::memorize(const CommitEntry& commit_entry) {
 }
 
 LTableTranslator::LTableTranslator(const Ticket& ticket, Lua* lua)
-    : lua_(lua), TableTranslator(ticket), schema_id_(ticket.schema->schema_id()){
-
-      memorize_callback_ = lua_->getglobal("___");
+    : lua_(lua),
+      TableTranslator(ticket),
+      schema_id_(ticket.schema->schema_id()) {
+  memorize_callback_ = lua_->getglobal("___");
   bool disable_userdict;
   Config* config = ticket.schema->config();
   config->GetBool(name_space_ + "/disable_userdict", &disable_userdict);
@@ -97,7 +95,7 @@ void LTableTranslator::set_enable_encoder(bool enable_encoder) {
     return;
   encoder_.reset(new UnityTableEncoder(user_dict_.get()));
   Schema schema = Schema(schema_id_);
-  Ticket ticket( &schema, name_space_);
+  Ticket ticket(&schema, name_space_);
   encoder_->Load(ticket);
 }
 
@@ -202,9 +200,8 @@ static const luaL_Reg vars_set[] = {
 void reg_Component(lua_State* L) {
   lua_getglobal(L, "Component");
   if (lua_type(L, -1) != LUA_TTABLE) {
-    LOG(ERROR) << "table of _G[\"Component\"] not found."; 
-  }
-  else {
+    LOG(ERROR) << "table of _G[\"Component\"] not found.";
+  } else {
     int index = lua_absindex(L, -1);
     lua_pushcfunction(L, raw_make_translator<LTableTranslator>);
     lua_setfield(L, index, "TableTranslator");
