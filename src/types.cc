@@ -105,6 +105,8 @@ namespace CandidateReg {
   using T = Candidate;
 
   string dynamic_type(T &c) {
+    if (dynamic_cast<Sentence *>(&c))
+      return "Sentence";
     if (dynamic_cast<Phrase *>(&c))
       return "Phrase";
     if (dynamic_cast<SimpleCandidate *>(&c))
@@ -161,6 +163,9 @@ namespace CandidateReg {
     LOG(WARNING) << "Can\'t append candidate.  args #1 expected an<UniquifiedCandidate> " ;
     return false;
   };
+  an<Phrase> phrase_candidate(an<T> c) {
+     return std::dynamic_pointer_cast<Phrase> (c);
+  }
 
 
   static const luaL_Reg funcs[] = {
@@ -176,6 +181,7 @@ namespace CandidateReg {
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
     { "to_shadow_candidate", WRAP(shadow_candidate) },
     { "to_uniquified_candidate", WRAP(uniquified_candidate) },
+    { "to_phrase", WRAP(phrase_candidate) },
     { "append", WRAP(append)},
     { NULL, NULL },
   };

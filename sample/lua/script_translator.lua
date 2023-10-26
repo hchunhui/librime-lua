@@ -59,13 +59,13 @@ end
 local function callback(self, commits) -- self : env.tran commits : list  
   local context = self.engine.context
   for i, entry in ipairs(commits:get()) do
-		self:update_entry(dictentry,0,"") -- do nothing to userdict
-		-- self:update_entry(dictentry,1,"") -- update entry to userdict
-		-- self:update_entry(dictentry,-1,"") -- delete entry to userdict
+		self:update_entry(entry,0,"") -- do nothing to userdict
+		-- self:update_entry(entry,1,"") -- update entry to userdict
+		-- self:update_entry(entry,-1,"") -- delete entry to userdict
   end
 end
 function M.init(env)
-  env.tran = Component.TableTranslator(env.engine, env.name_space, "table")
+  env.tran = Component.ScriptTranslator(env.engine, env.name_space, "table")
   env.tran.memorize_callback = simple_callback
 end
 
