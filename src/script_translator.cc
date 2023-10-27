@@ -120,6 +120,7 @@ static const luaL_Reg methods[] = {
 };
 
 static const luaL_Reg vars_get[] = {
+    Get_WMEM(engine),      // engine*
     Get_WMEM(memorize_callback),  // an<LuaObj> callback
 
     // ScriptTranslator member
