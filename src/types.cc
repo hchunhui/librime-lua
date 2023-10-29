@@ -295,10 +295,10 @@ namespace ReverseDbReg {
 namespace SegmentationReg {
   using T = Segmentation;
 
-  optional<Segment &> back(T &t) {
+  Segment *back(T &t) {
     if (t.empty())
-      return {};
-    return t.back();
+      return nullptr;
+    return &t.back();
   }
 
   void pop_back(T &t) {
@@ -323,15 +323,15 @@ namespace SegmentationReg {
     return ret;
   }
 
-  optional<Segment &> get_at(T &t, const int idx) {
+  Segment *get_at(T &t, const int idx) {
     size_t size = t.size();
     int index = (idx < 0) ? size + idx : idx;
     if (index >=0 && index < size)
-      return t.at(index);
+      return &t.at(index);
 
     LOG(WARNING) << "the index(" << idx <<")"
       << " is out of range(-size .. size-1); size: "<< size ;
-    return {};
+    return nullptr;
   }
 
   static const luaL_Reg funcs[] = {
@@ -536,10 +536,10 @@ namespace CommitHistoryReg {
     return 0;
   }
 
-  optional<CR &> back(T &t) {
+  CR *back(T &t) {
     if (t.empty())
-      return {};
-    return t.back();
+      return nullptr;
+    return &t.back();
   }
 
   vector<CR> to_table(T &t) {
@@ -717,10 +717,10 @@ namespace CompositionReg {
     return dynamic_cast<Segmentation *>(&t);
   }
 
-  optional<Segment &> back(T &t) {
+  Segment *back(T &t) {
     if (t.empty())
-      return {};
-    return t.back();
+      return nullptr;
+    return &t.back();
   }
 
   void push_back(T &t, Segment &seg) {
