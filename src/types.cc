@@ -20,11 +20,12 @@
 #include <boost/regex.hpp>
 
 #include "lib/lua_export_type.h"
-#include "optional.h"
+#include "lib/luatype_boost_optional.h"
 
 #define ENABLE_TYPES_EXT
 
 using namespace rime;
+using boost::optional;
 
 namespace {
 
@@ -1356,9 +1357,32 @@ namespace LogReg {
 }
 namespace CommitEntryReg {
   using T = CommitEntry;
+  using D = DictEntry;
 
   vector<const rime::DictEntry*> get(const T& ce) {
     return ce.elements;
+  }
+  bool update_entry(const T &t, const D& entry, int commit, const string& prefix_str) {
+    if (!t.memory)
+      return false;
+    auto user_dict = t.memory->user_dict();
+    if (!user_dict || !user_dict->loaded())
+      return false;
+
+    return user_dict->UpdateEntry(entry, commit, prefix_str);
+  }
+
+  bool update(const T& t, int commit) {
+    if (!t.memory)
+      return false;
+    auto user_dict = t.memory->user_dict();
+    if (!user_dict || !user_dict->loaded())
+      return false;
+
+    for (const DictEntry* e : t.elements) {
+      user_dict->UpdateEntry(*e, commit);
+    }
+    return true;
   }
 
   static const luaL_Reg funcs[] = {
@@ -1367,6 +1391,8 @@ namespace CommitEntryReg {
 
   static const luaL_Reg methods[] = {
     {"get",WRAP(get)},
+    {"update_entry",WRAP(update_entry)},
+    {"update",WRAP(update)},
     { NULL, NULL },
   };
 
@@ -1380,12 +1406,17 @@ namespace CommitEntryReg {
 }
 namespace DictEntryReg {
   using T = DictEntry;
-  an<T> make() {
-    return an<T>(new T());
+
+  int raw_make(lua_State* L) {
+    an<T> t = (lua_gettop(L)>0)
+      ? New<T>(LuaType<const T&>::todata(L,1)) : New<T>();
+
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   static const luaL_Reg funcs[] = {
-    {"DictEntry",WRAP(make)},
+    {"DictEntry",raw_make},
     { NULL, NULL },
   };
 
