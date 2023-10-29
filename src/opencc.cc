@@ -17,12 +17,11 @@
 #include <rime/common.h>
 
 #include "lib/lua_export_type.h"
-#include "lib/luatype_boost_optional.h"
+#include "optional.h"
 
 using std::string;
 using std::vector;
 using std::list;
-using boost::optional;
 using namespace rime;
 
 namespace {
