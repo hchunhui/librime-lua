@@ -20,12 +20,11 @@
 #include <boost/regex.hpp>
 
 #include "lib/lua_export_type.h"
-#include "lib/luatype_boost_optional.h"
+#include "optional.h"
 
 #define ENABLE_TYPES_EXT
 
 using namespace rime;
-using boost::optional;
 
 namespace {
 
