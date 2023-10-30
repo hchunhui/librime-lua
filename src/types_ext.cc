@@ -15,13 +15,11 @@
 #include <rime/dict/user_db.h>
 
 #include "lib/lua_export_type.h"
-#include "lib/luatype_boost_optional.h"
-#include "translator.h"
+#include "optional.h"
 #include <utility>
+
 using namespace rime;
 namespace {
-
-using ns::optional;
 
 template<typename> using void_t = void;
 
