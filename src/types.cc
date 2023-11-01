@@ -1458,6 +1458,82 @@ namespace CodeReg {
   };
 }
 
+namespace DictionaryReg {
+  using T = Dictionary;
+  using I = DictEntryIterator;
+  using D = DictEntry;
+
+  an<I> lookup_words(T& t, const string& code, bool predictive , size_t limit) {
+    an<I> ret=New<I>();
+    t.LookupWords(ret.get(),code, predictive, limit);
+    return ret;
+  }
+
+  vector<string> decode(T& t, const Code& code) {
+    vector<string> ret;
+    t.Decode(code, &ret);
+    return ret;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "lookup_words", WRAP(lookup_words)},
+    //{ "lookup", WRAPMEM(T, Lookup)},
+    { "decode", WRAP(decode)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "name", WRAPMEM(T, name)},
+    { "loaded", WRAPMEM(T, loaded)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace UserDictionaryReg {
+  using T = UserDictionary;
+  using I = UserDictEntryIterator;
+  using D = DictEntry;
+
+  an<I> lookup_words(T& t, const string& code, bool predictive , size_t limit) {
+    an<I> ret=New<I>();
+    t.LookupWords(ret.get(),code, predictive, limit);
+    return ret;
+  }
+  bool update_entry(T& t, const D& entry, int commits, const string& prefix) {
+    return t.UpdateEntry(entry, commits, prefix);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "lookup_words", WRAP(lookup_words)},
+    //{ "lookup", WRAPMEM(T, Lookup)},
+    { "update_entry", WRAP(update_entry)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "name", WRAPMEM(T, name)},
+    { "loaded", WRAPMEM(T, loaded)},
+    { "tick", WRAPMEM(T, tick)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 namespace DictEntryIteratorReg {
   using T = DictEntryIterator;
   using D = DictEntry;
@@ -1683,6 +1759,8 @@ namespace MemoryReg {
   };
 
   static const luaL_Reg vars_get[] = {
+      { "dict", WRAPMEM(T, dict)},
+      { "user_dict", WRAPMEM(T, user_dict)},
       {NULL, NULL},
   };
 
@@ -1941,6 +2019,8 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(MemoryReg, L);
+  EXPORT(DictionaryReg, L);
+  EXPORT(UserDictionaryReg, L);
   EXPORT(DictEntryIteratorReg, L);
   EXPORT(UserDictEntryIteratorReg, L);
   EXPORT(DictEntryReg, L);
