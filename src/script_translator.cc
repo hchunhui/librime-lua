@@ -135,6 +135,9 @@ static const luaL_Reg vars_get[] = {
     Get_WMEM(contextual_suggestions),  // bool
     Get_WMEM(strict_spelling),         // bool
     Get_WMEM(initial_quality),         // double
+    // Memory
+    { "dict", WRAPMEM(T, dict)},
+    { "user_dict", WRAPMEM(T, user_dict)},
     {NULL, NULL},
 };
 

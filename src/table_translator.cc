@@ -172,6 +172,9 @@ static const luaL_Reg vars_get[] = {
     Get_WMEM(initial_quality),         // double
     Get_WMEM(preedit_formatter),       // Projection&
     Get_WMEM(comment_formatter),       // Projection&
+    // Memory
+    { "dict", WRAPMEM(T, dict)},
+    { "user_dict", WRAPMEM(T, user_dict)},
     {NULL, NULL},
 };
 
