@@ -11,6 +11,7 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
+#include <rime/language.h>
 #include <rime/gear/memory.h>
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
@@ -104,6 +105,8 @@ namespace CandidateReg {
   using T = Candidate;
 
   string dynamic_type(T &c) {
+    if (dynamic_cast<Sentence *>(&c))
+      return "Sentence";
     if (dynamic_cast<Phrase *>(&c))
       return "Phrase";
     if (dynamic_cast<SimpleCandidate *>(&c))
@@ -161,6 +164,10 @@ namespace CandidateReg {
     return false;
   };
 
+  template<class OT>
+  an<OT> candidate_to_(an<T> t) {
+    return std::dynamic_pointer_cast<OT>(t);
+  };
 
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
@@ -175,6 +182,8 @@ namespace CandidateReg {
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
     { "to_shadow_candidate", WRAP(shadow_candidate) },
     { "to_uniquified_candidate", WRAP(uniquified_candidate) },
+    { "to_phrase", WRAP(candidate_to_<Phrase>)},
+    { "to_sentence", WRAP(candidate_to_<Sentence>)},
     { "append", WRAP(append)},
     { NULL, NULL },
   };
@@ -1615,6 +1624,10 @@ namespace PhraseReg {
     return phrase;
   }
 
+  string lang_name(T &t){
+    return t.language()->name();
+  }
+
   static const luaL_Reg funcs[] = {
     { "Phrase", WRAP(make) },
     { NULL, NULL },
@@ -1627,6 +1640,7 @@ namespace PhraseReg {
 
   static const luaL_Reg vars_get[] = {
     { "language", WRAPMEM(T, language)},
+    { "lang_name", WRAP(lang_name)},
     { "type", WRAPMEM(T, type) },
     { "start", WRAPMEM(T, start) },
     { "_start", WRAPMEM(T, start) },
@@ -1656,6 +1670,72 @@ namespace PhraseReg {
     { NULL, NULL },
   };
 }// Phrase work with Translator
+//--- wrappers for Phrase
+namespace SentenceReg {
+  using T = Sentence;
+
+  an<Candidate> toCandidate(an<T> t) {
+    return t;
+  }
+
+  string lang_name(T& t){
+    return t.language()->name();
+  }
+
+  vector<DictEntry> components(T& t) {
+    return t.components();
+  }
+
+  vector<size_t> word_lengths(T& t) {
+    return t.word_lengths();
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "toCandidate", WRAP(toCandidate)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "language", WRAPMEM(T, language)},
+    { "lang_name", WRAP(lang_name)},
+    { "type", WRAPMEM(T, type) },
+    { "start", WRAPMEM(T, start) },
+    { "_start", WRAPMEM(T, start) },
+    { "_end", WRAPMEM(T, end) }, // end is keyword in Lua...
+    { "quality", WRAPMEM(T, quality) },
+    { "text", WRAPMEM(T, text) },
+    { "comment", WRAPMEM(T, comment) },
+    { "preedit", WRAPMEM(T, preedit) },
+    { "weight", WRAPMEM(T, weight)},
+    { "code", WRAPMEM(T, code)},
+    { "entry", WRAPMEM(T, entry)},
+    //span
+    //language doesn't wrap yet, so Wrap it later
+    // Sentence membors
+    { "word_lengths", WRAP(word_lengths)},
+    { "entrys", WRAP(components)},
+    { "entrys_size", WRAPMEM(T, size)},
+    { "entrys_empty", WRAPMEM(T, empty)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "type", WRAPMEM(T, set_type) },
+    { "start", WRAPMEM(T, set_start) },
+    { "_start", WRAPMEM(T, set_start) },
+    { "_end", WRAPMEM(T, set_end) },
+    { "quality", WRAPMEM(T, set_quality) },
+    { "comment", WRAPMEM(T, set_comment) },
+    { "preedit", WRAPMEM(T, set_preedit) },
+    { "weight", WRAPMEM(T, set_weight)},
+    // set_syllabifier
+    { NULL, NULL },
+  };
+}// Sentence work with Translator
 
 namespace KeySequenceReg {
   using T = KeySequence;
@@ -1852,6 +1932,7 @@ void types_init(lua_State *L) {
   EXPORT(CodeReg, L);
   EXPORT(CommitEntryReg, L);
   EXPORT(PhraseReg, L);
+  EXPORT(SentenceReg, L);
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
   LogReg::init(L);
