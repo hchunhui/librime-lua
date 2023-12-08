@@ -390,7 +390,7 @@ namespace MenuReg {
     { "add_translation", WRAPMEM(T::AddTranslation) },
     //{ }, // AddFilter
     { "prepare", WRAPMEM(T::Prepare) },
-    { "create_page", WRAP(create_page}, // CreatePage : return table of candidates
+    { "create_page", WRAP(create_page)}, // CreatePage : return table of candidates
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
     { "candidate_count", WRAPMEM(T::candidate_count) },
     { "empty", WRAPMEM(T::empty) },
