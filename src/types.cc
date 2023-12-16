@@ -118,6 +118,8 @@ namespace CandidateReg {
   void set_text(T &c, const string &v) {
     if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_text(v);
+    else 
+      LOG(WARNING) << "The text of " << dynamic_type(c) << " Candidate is unchangeable.";
   }
 
   void set_comment(T &c, const string &v) {
@@ -125,6 +127,8 @@ namespace CandidateReg {
       p->set_comment(v);
     else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_comment(v);
+    else
+      LOG(WARNING) << "The comment of " << dynamic_type(c) << " Candidate is unchangeable.";
   }
 
   void set_preedit(T &c, const string &v) {
@@ -132,6 +136,8 @@ namespace CandidateReg {
       p->set_preedit(v);
     else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_preedit(v);
+    else
+      LOG(WARNING) << "The preedit of " << dynamic_type(c) << " Candidate is unchangeable.";
   }
 
   an<T> make(const string type,
