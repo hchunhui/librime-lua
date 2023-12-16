@@ -142,9 +142,32 @@ namespace CandidateReg {
   }
 
   an<T> shadow_candidate(const an<T> item,
-      const string& type, const string& text, const string& comment)
+      const string& type, const string& text, const string& comment,
+      const bool inherit_comment)
   {
     return New<ShadowCandidate>(item, type, text, comment);
+  }
+
+  int raw_shadow_candidate(lua_State* L) {
+    size_t n = lua_gettop(L);
+    if (2 > n) {
+      return (1 == n) ?
+        luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
+        luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+    }
+    // init args(2-5) ( an<Candidate>, type [,text, comment,  inherit_comment])
+    if (5 < n)
+      lua_pop(L, n-5);
+    else if (4 == n)
+      lua_pushboolean(L, true);
+    else if (4 > n) {
+      for (int i=n; 4 > i ; i++)
+        lua_pushstring(L, "");
+      lua_pushboolean(L, true);
+    }
+    lua_pushcfunction(L, WRAP(shadow_candidate));
+    lua_insert(L, 1);
+    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
   }
 
   an<T> uniquified_candidate(const an<T> item,
@@ -152,6 +175,25 @@ namespace CandidateReg {
   {
     return New<UniquifiedCandidate>(item, type, text, comment);
   }
+  int raw_uniquified_candidate(lua_State* L) {
+    size_t n = lua_gettop(L);
+    if (2 > n) {
+      return (1 == n) ?
+        luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
+        luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+    }
+    // init args(2-4) ( an<Candidate>, type [,text, comment])
+    if (4 < n)
+      lua_pop(L, n-4);
+    else if (4 > n) {
+      for (int i=n; 4 > i ; i++)
+        lua_pushstring(L, "");
+    }
+    lua_pushcfunction(L, WRAP(uniquified_candidate));
+    lua_insert(L, 1);
+    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+  }
+
   bool append(an<T> self, an<T> item) {
     if (auto cand=  As<UniquifiedCandidate>(self) ) {
       cand->Append(item);
@@ -164,8 +206,8 @@ namespace CandidateReg {
 
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
-    { "ShadowCandidate", WRAP(shadow_candidate) },
-    { "UniquifiedCandidate", WRAP(uniquified_candidate) },
+    { "ShadowCandidate", (raw_shadow_candidate) },
+    { "UniquifiedCandidate", (raw_uniquified_candidate) },
     { NULL, NULL },
   };
 
@@ -173,8 +215,8 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
-    { "to_shadow_candidate", WRAP(shadow_candidate) },
-    { "to_uniquified_candidate", WRAP(uniquified_candidate) },
+    { "to_shadow_candidate", (raw_shadow_candidate) },
+    { "to_uniquified_candidate", (raw_uniquified_candidate) },
     { "append", WRAP(append)},
     { NULL, NULL },
   };
