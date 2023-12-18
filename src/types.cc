@@ -101,6 +101,31 @@ namespace SegmentReg {
 
 //--- wrappers for an<Candidate>
 namespace CandidateReg {
+  class WrapShadow : public ShadowCandidate {
+     private:
+        WrapShadow(const an<Candidate>& item,
+                   const string& type,
+                   const string& text = string(),
+                   const string& comment = string(),
+                   const bool inherit_comment = true)
+          : ShadowCandidate(item, type, text, comment, inherit_comment) {}
+     public:
+       void set_text(const string &s) { text_ = s; }
+       void set_comment(const string &s) { comment_ = s;}
+  };
+
+  class WrapUniquified : public UniquifiedCandidate {
+     private:
+        WrapShadow(const an<Candidate>& item,
+                   const string& type,
+                   const string& text = string(),
+                   const string& comment = string())
+          : UniquifiedCandidate(item, type, text, comment) {}
+     public:
+       void set_text(const string &s) { text_ = s; }
+       void set_comment(const string &s) { comment_ = s;}
+  };
+
   using T = Candidate;
 
   string dynamic_type(T &c) {
@@ -118,6 +143,10 @@ namespace CandidateReg {
   void set_text(T &c, const string &v) {
     if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_text(v);
+    else if (auto p = (WrapShadow *) dynamic_cast<ShadowCandidate *>(&c))
+      p->set_text(v);
+    else if (auto p = (WrapUniquified *) dynamic_cast<UniquifiedCandidate *>(&c))
+      p->set_text(v);
     else 
       LOG(WARNING) << "The text of " << dynamic_type(c) << " Candidate is unchangeable.";
   }
@@ -126,6 +155,10 @@ namespace CandidateReg {
     if (auto p = dynamic_cast<Phrase *>(&c))
       p->set_comment(v);
     else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
+      p->set_comment(v);
+    else if (auto p = (WrapShadow *) dynamic_cast<ShadowCandidate *>(&c))
+      p->set_comment(v);
+    else if (auto p = (WrapUniquified *) dynamic_cast<UniquifiedCandidate *>(&c))
       p->set_comment(v);
     else
       LOG(WARNING) << "The comment of " << dynamic_type(c) << " Candidate is unchangeable.";
