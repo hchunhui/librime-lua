@@ -116,7 +116,7 @@ namespace CandidateReg {
 
   class WrapUniquified : public UniquifiedCandidate {
      private:
-        WrapShadow(const an<Candidate>& item,
+        WrapUniquified(const an<Candidate>& item,
                    const string& type,
                    const string& text = string(),
                    const string& comment = string())
