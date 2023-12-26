@@ -46,25 +46,27 @@ local function init(env)
 end
 
 
-local function translate(inp,seg,env)
-	if string.match(inp,env.wildcard) then
+local function translate(inp, seg, env)
+	if string.match(inp, env.wildcard) then
+		local inp_len = string.len(inp)
 		local tail = string.match(inp,  '[^'.. env.wildcard .. ']+$') or ''
 		inp = string.match(inp, '^[^' ..env.wildcard .. ']+')
-		env.mem:dict_lookup(inp,true, 100)  -- expand_search
-		for dictentry in env.mem:iter_dict()
-		do
-			local codetail = string.match(dictentry.comment,tail .. '$') or ''
-			if tail ~= nil and codetail == tail then	
-				local code = env.mem:decode(dictentry.code)
-				codeComment = table.concat(code, ",")
-				local ph = Phrase(env.mem,"expand_translator", seg.start, seg._end, dictentry)
-				ph.comment = codeComment
-				yield(ph:toCandidate())
-				-- you can also use Candidate Simply, but it cannot be recognized by memorize, memorize callback won't be called
-				-- yield(Candidate("type",seg.start,seg.end,dictentry.text, codeComment	))
+		env.mem:dict_lookup(inp, true, 100)  -- expand_search
+		for dictentry in env.mem:iter_dict() do
+			if string.len(dictentry.comment) == inp_len then
+				local codetail = string.match(dictentry.comment, tail .. '$') or ''
+				if tail ~= nil and codetail == tail then
+					local code = env.mem:decode(dictentry.code)
+					codeComment = table.concat(code, ",")
+					local ph = Phrase(env.mem, "expand_translator", seg.start, seg._end, dictentry)
+					ph.comment = codeComment
+					yield(ph:toCandidate())
+					-- you can also use Candidate Simply, but it cannot be recognized by memorize, memorize callback won't be called
+					-- yield(Candidate("type",seg.start,seg.end,dictentry.text, codeComment	))
+				end
 			end
 		end
 	end
-end	
+end		
 
 return {init = init, func = translate}
