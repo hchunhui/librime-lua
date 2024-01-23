@@ -13,116 +13,118 @@
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
 
-#include <boost/regex.hpp>
+//#include <boost/regex.hpp>
 
 #include "translator.h"
-namespace {
 
 using namespace rime;
 
-class LScriptTranslator : public ScriptTranslator {
- public:
-  LScriptTranslator(const Ticket& ticket, Lua* lua);
-  virtual bool Memorize(const CommitEntry& commit_entry);
-  bool memorize(const CommitEntry& commit_entry);
-  bool update_entry(const DictEntry& index,
-                    int commits,
-                    const string& new_entory_prefix);
-  GET_(engine, Engine*);
-  ACCESS_(memorize_callback, an<LuaObj>);
+namespace {
+namespace ScriptTranslatorReg {
 
-  // ScriptTranslator member
-  ACCESS_(spelling_hints, int);         // ok
-  ACCESS_(always_show_comments, bool);  // ok
-  ACCESS_(max_homophones, int);         // ok
-  GET_(enable_correction, bool);        // ok
-  void set_enable_correction(bool);
-  // TranslatorOptions
-  void set_contextual_suggestions(bool);
-  SET_(delimiters, string&);
+  class LScriptTranslator : public ScriptTranslator {
+    public:
+      LScriptTranslator(const Ticket& ticket, Lua* lua)
+        : ScriptTranslator(ticket), lua_(lua) {};
 
- protected:
-  Lua* lua_;
-  an<LuaObj> memorize_callback_;
-  string schema_id_;
-};
+      virtual bool Memorize(const CommitEntry& commit_entry);
+      bool memorize(const CommitEntry& commit_entry);
+      bool update_entry(const DictEntry& index,
+          int commits,
+          const string& new_entory_prefix);
 
-bool LScriptTranslator::Memorize(const CommitEntry& commit_entry) {
-  if (!memorize_callback_ || memorize_callback_->type() != LUA_TFUNCTION) {
+      SET_(memorize_callback, an<LuaObj>);
+      bool memorize_callback();
+
+      // ScriptTranslator member
+      ACCESS_(spelling_hints, int);         // ok
+      ACCESS_(always_show_comments, bool);  // ok
+      ACCESS_(max_homophones, int);         // ok
+      GET_(enable_correction, bool);        // ok
+      void set_enable_correction(bool);     // ok
+      // TranslatorOptions
+      SET_(contextual_suggestions, bool);
+      SET_(delimiters, string&);
+      SET_(preedit_formatter, Projection&);
+      SET_(comment_formatter, Projection&);
+      //--method--------
+      bool reload_user_dict_disabling_patterns(an<ConfigList>);
+
+    protected:
+      Lua* lua_;
+      an<LuaObj> memorize_callback_;
+      void correction_reset();
+  };
+
+  using T = LScriptTranslator;
+
+  bool T::memorize_callback() {
+    return (memorize_callback_) ? true : false;
+  }
+
+  bool T::memorize(const CommitEntry& commit_entry) {
     return ScriptTranslator::Memorize(commit_entry);
   }
 
-  auto r = lua_->call<bool, an<LuaObj>, LScriptTranslator*, const CommitEntry&>(
-      memorize_callback_, this, commit_entry);
-  if (!r.ok()) {
-    auto e = r.get_err();
-    LOG(ERROR) << "LScriptTranslator of " << name_space_
-               << ": memorize_callback error(" << e.status << "): " << e.e;
+  bool T::Memorize(const CommitEntry& commit_entry) {
+    if (!memorize_callback_) {
+      return memorize(commit_entry);
+    }
+
+    auto r = lua_->call<bool, an<LuaObj>, LScriptTranslator*, const CommitEntry&>(
+        memorize_callback_, this, commit_entry);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << "LScriptTranslator of " << name_space_
+        << ": memorize_callback error(" << e.status << "): " << e.e;
+      return false;
+    }
+    return r.get();
+  }
+
+  void T::correction_reset() {
+      if (auto* corrector = Corrector::Require("corrector")) {
+        Ticket ticket(engine_, name_space_);
+        corrector_.reset(corrector->Create(ticket));
+      }
+  }
+
+  void T::set_enable_correction(bool enable) {
+    if (enable_correction_ = enable && !corrector_)
+      correction_reset();
+  }
+
+  bool T::update_entry(const DictEntry& entry,
+      int commits,
+      const string& new_entory_prefix) {
+    if (user_dict_ && user_dict_->loaded())
+      return user_dict_->UpdateEntry(entry, commits, new_entory_prefix);
+
     return false;
   }
-  return r.get();
-}
 
-bool LScriptTranslator::memorize(const CommitEntry& commit_entry) {
-  return ScriptTranslator::Memorize(commit_entry);
-}
-
-LScriptTranslator::LScriptTranslator(const Ticket& ticket, Lua* lua)
-    : lua_(lua),
-      ScriptTranslator(ticket),
-      schema_id_(ticket.schema->schema_id()) {
-  memorize_callback_ = lua_->getglobal("___");
-}
-
-void LScriptTranslator::set_enable_correction(bool enable) {
-  enable_correction_ = enable;
-  if (corrector_ || !enable_correction_)
-    return;
-
-  if (auto* corrector = Corrector::Require("corrector")) {
-    Schema schema = Schema(schema_id_);
-    Ticket ticket(&schema, name_space_);
-    corrector_.reset(corrector->Create(ticket));
+  bool T::reload_user_dict_disabling_patterns(an<ConfigList> cl) {
+    return cl ?  user_dict_disabling_patterns_.Load(cl) : false;
   }
-}
-void LScriptTranslator::set_contextual_suggestions(bool enable) {
-  contextual_suggestions_ = enable;
-  if (poet_ || !contextual_suggestions_)
-    return;
-  Config* config = engine_->schema()->config();
-  poet_.reset(new Poet(language(), config, Poet::LeftAssociateCompare));
-}
 
-bool LScriptTranslator::update_entry(const DictEntry& entry,
-                                     int commits,
-                                     const string& new_entory_prefix) {
-  if (user_dict_ && user_dict_->loaded())
-    return user_dict_->UpdateEntry(entry, commits, new_entory_prefix);
-
-  return false;
-}
-
-namespace ScriptTranslatorReg {
-using T = LScriptTranslator;
-
-static const luaL_Reg funcs[] = {
+  static const luaL_Reg funcs[] = {
     {NULL, NULL},
-};
+  };
 
-static const luaL_Reg methods[] = {
+  static const luaL_Reg methods[] = {
     {"query", WRAPMEM(T, Query)},  // string, segment
     {"start_session", WRAPMEM(T, StartSession)},
     {"finish_session", WRAPMEM(T, FinishSession)},
     {"discard_session", WRAPMEM(T, DiscardSession)},
     WMEM(memorize),      // delegate TableTransaltor::Momorize
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
+    WMEM(reload_user_dict_disabling_patterns),
     {NULL, NULL},
-};
+  };
 
-static const luaL_Reg vars_get[] = {
-    Get_WMEM(engine),      // engine*
-    Get_WMEM(memorize_callback),  // an<LuaObj> callback
-
+  static const luaL_Reg vars_get[] = {
+    Get_WMEM(name_space),  // string
+    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
     // ScriptTranslator member
     Get_WMEM(max_homophones),        // int
     Get_WMEM(spelling_hints),        // int
@@ -135,16 +137,17 @@ static const luaL_Reg vars_get[] = {
     Get_WMEM(contextual_suggestions),  // bool
     Get_WMEM(strict_spelling),         // bool
     Get_WMEM(initial_quality),         // double
-    // Memory
-    { "dict", WRAPMEM(T, dict)},
-    { "user_dict", WRAPMEM(T, user_dict)},
+    Get_WMEM(preedit_formatter),       // Projection&
+    Get_WMEM(comment_formatter),       // Projection&
+     // Memory
+    Get_WMEM(dict),
+    Get_WMEM(user_dict),
     {NULL, NULL},
-};
+  };
 
-static const luaL_Reg vars_set[] = {
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback
-
+  static const luaL_Reg vars_set[] = {
     // ScriptTranslator member
+    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
     Set_WMEM(max_homophones),        // int
     Set_WMEM(spelling_hints),        // int
     Set_WMEM(always_show_comments),  // bool
@@ -156,20 +159,21 @@ static const luaL_Reg vars_set[] = {
     Set_WMEM(contextual_suggestions),  // bool
     Set_WMEM(strict_spelling),         // bool
     Set_WMEM(initial_quality),         // double
+    Set_WMEM(preedit_formatter),       // Projection&
+    Set_WMEM(comment_formatter),       // Projection&
     {NULL, NULL},
-};
+  };
 
-void reg_Component(lua_State* L) {
-  lua_getglobal(L, "Component");
-  if (lua_type(L, -1) != LUA_TTABLE) {
-    LOG(ERROR) << "table of _G[\"Component\"] not found.";
-  } else {
-    int index = lua_absindex(L, -1);
-    lua_pushcfunction(L, raw_make_translator<LScriptTranslator>);
-    lua_setfield(L, index, "ScriptTranslator");
+  void reg_Component(lua_State* L) {
+    lua_getglobal(L, "Component");
+    if (lua_type(L, -1) != LUA_TTABLE) {
+      LOG(ERROR) << "table of _G[\"Component\"] not found.";
+    } else {
+      lua_pushcfunction(L, raw_make_translator<T>);
+      lua_setfield(L, -2, "ScriptTranslator");
+    }
+    lua_pop(L, 1);
   }
-  lua_pop(L, 1);
-}
 
 }  // namespace ScriptTranslatorReg
 }  // namespace

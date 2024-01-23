@@ -14,14 +14,14 @@ patch:
     - lua_translator@*table_translator@translator
     - lua_translator@*script_translator@cangjie
 ````
-------- methods          return  
+------- methods          return
 env.tran:start_session   false   function()
 env.tran:finish_session  false   function()
 env.tran:discard_session false   function()
 env.tran:query   false   function(inp, seg)
 env.tran:memorize        false   function(commit_entrys)
 env.tran:update_entry    false   function(entry, state, prefix_str)
-
+env.tran.memorize_callback      =    function(self, commit_entry)
 ------- vars_set
 env.tran.spelling_hints         =    int >0
 env.tran.initial_quality        =    double
@@ -30,7 +30,6 @@ env.tran.enable_completion      =    boolean
 env.tran.always_show_comments   =    boolean
 env.tran.strict_spelling        =    boolean
 env.tran.max_homophones         =    int
-env.tran.memorize_callback      =    function(self, commit_entry)
 env.tran.enable_correction      =    boolean
 env.tran.tag                    =    string
 env.tran.delimiters             =    string
@@ -43,7 +42,6 @@ res = env.tran.enable_completion        true    boolean
 res = env.tran.always_show_comments     false   boolean
 res = env.tran.strict_spelling          false   boolean
 res = env.tran.max_homophones           1       number
-res = env.tran.memorize_callback        function: 0x557a0c15ef40        function
 res = env.tran.enable_correction        false   boolean
 res = env.tran.tag                      abc     string
 res = env.tran.delimiters               '       string
@@ -56,7 +54,7 @@ local function simple_callback(self, commits)
     return self:memorize(commits)
   end
 end
-local function callback(self, commits) -- self : env.tran commits : list  
+local function callback(self, commits) -- self : env.tran commits : list
   local context = self.engine.context
   for i, entry in ipairs(commits:get()) do
 		self:update_entry(entry,0,"") -- do nothing to userdict
@@ -65,8 +63,8 @@ local function callback(self, commits) -- self : env.tran commits : list
   end
 end
 function M.init(env)
-  env.tran = Component.ScriptTranslator(env.engine, env.name_space, "table")
-  env.tran.memorize_callback = simple_callback
+  env.tran = Component.ScriptTranslator(env.engine, env.name_space, "script_translator")
+  env.tran:memorize_callback(simple_callback)
 end
 
 function M.fini(env)

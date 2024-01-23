@@ -35,11 +35,10 @@ env.tran.initial_quality        =  double
 env.tran.always_show_comments   =  boolean
 env.tran.tag                    =  string
 
-------- vars_get                     取值 
+------- vars_get                     取值
 res = env.tran.max_homophones           1       number
 res = env.tran.spelling_hints           0       number
 res = env.tran.enable_correction        false   boolean
-res = env.tran.memorize_callback        function: 0x562c732947e0        function
 res = env.tran.enable_completion        true    boolean
 res = env.tran.delimiters       '       string
 res = env.tran.strict_spelling false    boolean
@@ -58,7 +57,7 @@ local function simple_callback(self, commits)
     return self:memorize(commits)
   end
 end
-local function callback(self, commits) -- self : env.tran commits : list  
+local function callback(self, commits) -- self : env.tran commits : list
   local context = self.engine.context
   for i, entry in ipairs(commits:get()) do
 		self:update_entry(entry, 0,"") -- do nothing to userdict
@@ -67,8 +66,8 @@ local function callback(self, commits) -- self : env.tran commits : list
   end
 end
 function M.init(env)
-  env.tran = Component.TableTranslator(env.engine, env.name_space, "table")
-  env.tran.memorize_callback = simple_callback
+  env.tran = Component.TableTranslator(env.engine, env.name_space, "table_translator")
+  env.tran:memorize_callback(simple_callback)
 end
 
 function M.fini(env)
