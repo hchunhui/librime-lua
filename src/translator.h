@@ -12,6 +12,8 @@
 #include <rime/engine.h>
 #include <rime/schema.h>
 #include <rime/config.h>
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
 #include "lib/lua_export_type.h"
 
 #define SET_(name, type)             \

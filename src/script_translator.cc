@@ -10,10 +10,6 @@
 #include <rime/dict/corrector.h>
 #include <rime/gear/poet.h>
 
-#include <rime/dict/dictionary.h>
-#include <rime/dict/user_dictionary.h>
-
-//#include <boost/regex.hpp>
 
 #include "translator.h"
 
@@ -30,30 +26,29 @@ namespace ScriptTranslatorReg {
       virtual bool Memorize(const CommitEntry& commit_entry);
       bool memorize(const CommitEntry& commit_entry);
       bool update_entry(const DictEntry& index,
-          int commits,
-          const string& new_entory_prefix);
+          int commits, const string& new_entory_prefix);
 
       SET_(memorize_callback, an<LuaObj>);
       bool memorize_callback();
 
-      // ScriptTranslator member
-      ACCESS_(spelling_hints, int);         // ok
-      ACCESS_(always_show_comments, bool);  // ok
-      ACCESS_(max_homophones, int);         // ok
-      GET_(enable_correction, bool);        // ok
-      void set_enable_correction(bool);     // ok
       // TranslatorOptions
       SET_(contextual_suggestions, bool);
       SET_(delimiters, string&);
       SET_(preedit_formatter, Projection&);
       SET_(comment_formatter, Projection&);
-      //--method--------
       bool reload_user_dict_disabling_patterns(an<ConfigList>);
+
+      // ScriptTranslator member
+      ACCESS_(spelling_hints, int);
+      ACCESS_(always_show_comments, bool);
+      ACCESS_(max_homophones, int);
+      GET_(enable_correction, bool);
+      void set_enable_correction(bool);
 
     protected:
       Lua* lua_;
       an<LuaObj> memorize_callback_;
-      void correction_reset();
+      void init_correction();
   };
 
   using T = LScriptTranslator;
@@ -82,21 +77,20 @@ namespace ScriptTranslatorReg {
     return r.get();
   }
 
-  void T::correction_reset() {
-      if (auto* corrector = Corrector::Require("corrector")) {
-        Ticket ticket(engine_, name_space_);
-        corrector_.reset(corrector->Create(ticket));
-      }
+  void T::init_correction() {
+    if (auto* corrector = Corrector::Require("corrector")) {
+      Ticket ticket(engine_, name_space_);
+      corrector_.reset(corrector->Create(ticket));
+    }
   }
 
   void T::set_enable_correction(bool enable) {
     if (enable_correction_ = enable && !corrector_)
-      correction_reset();
+      init_correction();
   }
 
   bool T::update_entry(const DictEntry& entry,
-      int commits,
-      const string& new_entory_prefix) {
+      int commits, const string& new_entory_prefix) {
     if (user_dict_ && user_dict_->loaded())
       return user_dict_->UpdateEntry(entry, commits, new_entory_prefix);
 
@@ -119,18 +113,19 @@ namespace ScriptTranslatorReg {
     WMEM(memorize),      // delegate TableTransaltor::Momorize
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
+    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
     {NULL, NULL},
   };
 
   static const luaL_Reg vars_get[] = {
     Get_WMEM(name_space),  // string
     Set_WMEM(memorize_callback),  // an<LuaObj> callback function
-    // ScriptTranslator member
+                                  // ScriptTranslator member
     Get_WMEM(max_homophones),        // int
     Get_WMEM(spelling_hints),        // int
     Get_WMEM(always_show_comments),  // bool
     Get_WMEM(enable_correction),     // bool
-    // TranslatorOptions
+    //TranslatorOptions
     Get_WMEM(delimiters),              // string&
     Get_WMEM(tag),                     // string
     Get_WMEM(enable_completion),       // bool
@@ -139,7 +134,7 @@ namespace ScriptTranslatorReg {
     Get_WMEM(initial_quality),         // double
     Get_WMEM(preedit_formatter),       // Projection&
     Get_WMEM(comment_formatter),       // Projection&
-     // Memory
+    // Memory
     Get_WMEM(dict),
     Get_WMEM(user_dict),
     {NULL, NULL},
@@ -147,12 +142,11 @@ namespace ScriptTranslatorReg {
 
   static const luaL_Reg vars_set[] = {
     // ScriptTranslator member
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
     Set_WMEM(max_homophones),        // int
     Set_WMEM(spelling_hints),        // int
     Set_WMEM(always_show_comments),  // bool
     Set_WMEM(enable_correction),     // bool
-    // TranslatorOptions
+                                     // TranslatorOptions
     Set_WMEM(delimiters),              // string&
     Set_WMEM(tag),                     // string
     Set_WMEM(enable_completion),       // bool

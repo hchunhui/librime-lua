@@ -1,12 +1,17 @@
+/*
+ * table_translator.cc
+ * Copyright (C) 2023 Shewer Lu <shewer@gmail.com>
+ *
+ * Distributed under terms of the MIT license.
+ */
+
 #include <rime/gear/table_translator.h>
 #include <rime/gear/poet.h>
 #include <rime/gear/unity_table_encoder.h>
-#include "translator.h"
 #include <rime/schema.h>
 #include <rime/engine.h>
 
-//#include "optional.h"
-//#include <boost/regex.hpp>
+#include "translator.h"
 
 using namespace rime;
 
@@ -21,27 +26,10 @@ namespace TableTranslatorReg {
       virtual bool Memorize(const CommitEntry& commit_entry);
       bool memorize(const CommitEntry& commit_entry);
       bool update_entry(const DictEntry& index,
-          int commits,
-          const string& new_entory_prefix);
+          int commits, const string& new_entory_prefix);
 
       SET_(memorize_callback, an<LuaObj>);
       bool memorize_callback();
-
-
-      // TableTranslator member
-      ACCESS_(enable_charset_filter, bool);  // ok
-                                             //
-      GET_(enable_encoder, bool);            // ok
-      void set_enable_encoder(bool);         // bool
-                                             //
-      GET_(enable_sentence, bool);
-      void set_enable_sentence(bool);
-      GET_(sentence_over_completion, bool);
-      void set_sentence_over_completion(bool);
-
-      ACCESS_(encode_commit_history, bool);
-      ACCESS_(max_phrase_length, int);
-      ACCESS_(max_homographs, int);
 
       // TranslatorOptions
       void set_contextual_suggestions(bool);
@@ -50,6 +38,17 @@ namespace TableTranslatorReg {
       SET_(comment_formatter, Projection&);
       bool reload_user_dict_disabling_patterns(an<ConfigList>);
 
+      // TableTranslator member
+      ACCESS_(encode_commit_history, bool);
+      ACCESS_(max_phrase_length, int);
+      ACCESS_(max_homographs, int);
+      ACCESS_(enable_charset_filter, bool);
+      GET_(sentence_over_completion, bool);
+      void set_sentence_over_completion(bool);
+      GET_(enable_encoder, bool);
+      void set_enable_encoder(bool);
+      GET_(enable_sentence, bool);
+      void set_enable_sentence(bool);
 
     protected:
       Lua* lua_;
@@ -85,26 +84,25 @@ namespace TableTranslatorReg {
   }
 
   bool T::update_entry(const DictEntry& entry,
-      int commits,
-      const string& new_entory_prefix) {
+      int commits, const string& new_entory_prefix) {
     if (user_dict_ && user_dict_->loaded())
       return user_dict_->UpdateEntry(entry, commits, new_entory_prefix);
 
     return false;
   }
 
-  // enable_encoder 
+  // enable_encoder
   bool T::init_encoder() {
-      if (!user_dict_)
-        return false;
-      encoder_.reset(new UnityTableEncoder(user_dict_.get()));
-      Ticket ticket(engine_, name_space_);
-      encoder_->Load(ticket);
-      if (!encoder_) {
-        LOG(WARNING) << "init encoder failed";
-        return false;
-      }
-      return true;
+    if (!user_dict_)
+      return false;
+    encoder_.reset(new UnityTableEncoder(user_dict_.get()));
+    Ticket ticket(engine_, name_space_);
+    encoder_->Load(ticket);
+    if (!encoder_) {
+      LOG(WARNING) << "init encoder failed";
+      return false;
+    }
+    return true;
   }
 
   void T::set_enable_encoder(bool enable) {
@@ -153,6 +151,7 @@ namespace TableTranslatorReg {
     WMEM(memorize),      // delegate TableTransaltor::Momorize
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
+    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
     {NULL, NULL},
   };
 
@@ -178,14 +177,13 @@ namespace TableTranslatorReg {
     Get_WMEM(preedit_formatter),       // Projection&
     Get_WMEM(comment_formatter),       // Projection&
     // Memory
-    { "dict", WRAPMEM(T, dict)},
-    { "user_dict", WRAPMEM(T, user_dict)},
+    Get_WMEM(dict),
+    Get_WMEM(user_dict),
     {NULL, NULL},
   };
 
   static const luaL_Reg vars_set[] = {
     // TableTranslator member
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
     Set_WMEM(enable_charset_filter),     // bool
     Set_WMEM(enable_encoder),            // bool
     Set_WMEM(enable_sentence),           // bool
@@ -193,7 +191,7 @@ namespace TableTranslatorReg {
     Set_WMEM(encode_commit_history),     // bool
     Set_WMEM(max_phrase_length),         // int
     Set_WMEM(max_homographs),            // int
-                                         // TranslatorOptions
+    // TranslatorOptions
     Set_WMEM(delimiters),              // string&
     Set_WMEM(tag),                     // string
     Set_WMEM(enable_completion),       // bool
