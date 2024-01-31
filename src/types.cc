@@ -375,10 +375,12 @@ namespace MenuReg {
   }
 
   CandidateList create_page(T& t, size_t page_size, size_t page_no) {
-    if (auto p = an<Page>( t.CreatePage(page_size, page_no)) ) {
-      return p->candidates;
+    CandidateList res;
+    if (auto p = t.CreatePage(page_size, page_no)) {
+      res = p->candidates;
+      delete p;
     }
-    return {};
+    return res;    
   }
 
   static const luaL_Reg funcs[] = {
