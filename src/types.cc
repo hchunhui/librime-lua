@@ -258,6 +258,7 @@ namespace TranslationReg {
   };
 
   static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
     { NULL, NULL },
   };
 
@@ -1573,6 +1574,8 @@ namespace DictEntryIteratorReg {
   };
 
   static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
+    {"size", WRAPMEM(T, entry_count)},
     { NULL, NULL },
   };
 
@@ -1615,6 +1618,8 @@ namespace UserDictEntryIteratorReg {
   };
 
   static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
+    {"size", WRAPMEM(T, cache_size)},
     { NULL, NULL },
   };
 
