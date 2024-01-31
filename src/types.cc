@@ -1630,9 +1630,16 @@ namespace MemoryReg {
     an<DictEntryIterator> iter;
     an<UserDictEntryIterator> uter;
 
-    an<DictEntryIterator> dictLookup(const string& str_code,
+    bool dictLookup(const string& str_code,
         bool predictive, size_t expand_search_limit);
-    an<UserDictEntryIterator> userLookup(const string& input, const bool isExpand);
+
+    bool userLookup(const string& input, const bool isExpand);
+
+    an<DictEntryIterator> dictiterLookup(const string& str_code,
+        bool predictive, size_t expand_search_limit);
+
+    an<UserDictEntryIterator> useriterLookup(const string& input, const bool isExpand);
+
     vector<string> decode(const Code& code);
     bool update_userdict(const DictEntry& entry, const int commits,
         const string& new_entry_prefix);
@@ -1678,22 +1685,33 @@ namespace MemoryReg {
       return r.get();
   }
 
-  an<DictEntryIterator> LuaMemory::dictLookup(const string& input, const bool isExpand, size_t limit) {
+  bool LuaMemory::dictLookup(const string& input, const bool isExpand, size_t limit) {
     iter = New<DictEntryIterator>();// t= New<DictEntryIterator>();
     limit = limit == 0 ? 0xffffffffffffffff : limit;
     if (dict_ && dict_->loaded()) {
-      dict_->LookupWords(iter.get(), input, isExpand, limit);
+      return dict_->LookupWords(iter.get(), input, isExpand, limit) > 0;
     }
+    return false;
+  }
+
+  bool  LuaMemory::userLookup(const string& input, const bool isExpand) {
+    uter = New<UserDictEntryIterator>();
+    if (user_dict_ && user_dict_->loaded()) {
+      return user_dict_->LookupWords(uter.get(), input, isExpand) > 0;
+    }
+    return false;
+  }
+
+  an<DictEntryIterator> LuaMemory::dictiterLookup(const string& input, const bool isExpand, size_t limit) {
+    dictLookup(input, isExpand, limit);
     return iter;
   }
 
-  an<UserDictEntryIterator> LuaMemory::userLookup(const string& input, const bool isExpand) {
-    uter = New<UserDictEntryIterator>();
-    if (user_dict_ && user_dict_->loaded()) {
-      user_dict_->LookupWords(uter.get(), input, isExpand);
-    }
+  an<UserDictEntryIterator> LuaMemory::useriterLookup(const string& input, const bool isExpand) {
+    userLookup(input, isExpand);
     return uter;
   }
+
 
   bool LuaMemory::update_userdict(const DictEntry& entry, const int commits,
       const string& new_entry_prefix) {
@@ -1792,8 +1810,10 @@ namespace MemoryReg {
   };
 
   static const luaL_Reg methods[] = {
-      { "dict_lookup", WRAPMEM(T::dictLookup)},
-      { "user_lookup", WRAPMEM(T::userLookup)},
+      { "dict_lookup", WRAPMEM(T::dictLookup)}, // bool
+      { "user_lookup", WRAPMEM(T::userLookup)}, // bool
+      { "dictiter_lookup", WRAPMEM(T::dictiterLookup)}, // iter
+      { "useriter_lookup", WRAPMEM(T::useriterLookup)}, // iter
       { "memorize", WRAPMEM(T::memorize)},
       { "decode", WRAPMEM(T::decode)},
       { "iter_dict", raw_iter_dict},
