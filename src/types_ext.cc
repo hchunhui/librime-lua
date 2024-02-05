@@ -16,11 +16,9 @@
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
-
 #include <utility>
 
 using namespace rime;
-
 namespace {
 
 template<typename> using void_t = void;
@@ -253,11 +251,11 @@ namespace UserDbReg{
   an<T> make_leveldb(const string& db_name) {
     return make(db_name, "userdb");
   }
-  
+
   an<T> make_tabledb(const string& db_name) {
     return make(db_name, "plain_userdb");
   }
-  
+
   optional<string> fetch(an<T> t, const string& key) {
     string res;
     if ( t->Fetch(key,&res) )
@@ -274,7 +272,7 @@ namespace UserDbReg{
   }
 
   an<A> Query(T &t, const string& key) { return t.Query(key); }
-  
+
   static const luaL_Reg funcs[] = {
     {"UserDb", WRAP(make)},// an<Db> LevelDb( db_file, db_name)
     {"LevelDb", WRAP(make_leveldb)},// an<Db> LevelDb( db_file, db_name)
@@ -290,7 +288,7 @@ namespace UserDbReg{
     {"fetch", WRAP(fetch)},  //   fetch(key) return value
     {"update", WRAP(Update)}, // update(key,value) return bool
     {"erase", WRAP(Erase)}, // erase(key) return bool
-    
+
     {"loaded",WRAPMEM(T, loaded)},
     {"disable", WRAPMEM(T, disable)},
     {"enable", WRAPMEM(T, enable)},
@@ -343,6 +341,7 @@ namespace ComponentReg{
     }
   };
 
+
   static const luaL_Reg funcs[] = {
     {"Processor",  raw_create<P>},
     {"Segmentor"   , raw_create<S>},
@@ -360,6 +359,9 @@ namespace ComponentReg{
 
 }
 
+void table_translator_init(lua_State *L);
+void script_translator_init(lua_State *L);
+
 void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(ProcessorReg, L);
   EXPORT(SegmentorReg, L);
@@ -369,4 +371,7 @@ void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(DbAccessorReg, L);
   EXPORT(UserDbReg, L);
   ComponentReg::init(L);
+  // add LtableTranslator ScriptTranslator in Component
+  table_translator_init(L);
+  script_translator_init(L);
 }
