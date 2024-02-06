@@ -23,6 +23,10 @@ bool LuaTranslation::Next() {
   }
 }
 
+LuaTranslation::~LuaTranslation() {
+  lua_->gc();
+}
+
 static std::vector<std::string> split_string(const std::string& str, const std::string& delimiter) {
     std::vector<std::string> result;
     size_t pos = 0;

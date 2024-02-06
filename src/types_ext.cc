@@ -38,6 +38,18 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().name_space())>> {
   }
 };
 
+// fallback version of file_path() if librime is old
+template<typename> struct void_t1 { using t = int; };
+template<typename T, typename void_t1<decltype(std::declval<T>().file_name())>::t = 0>
+std::string get_UserDb_file_path_string(const T &t) {
+    return t.file_name();
+}
+
+template<typename T, typename void_t1<decltype(std::declval<T>().file_path())>::t = 0>
+std::string get_UserDb_file_path_string(const T &t) {
+    return t.file_path().string();
+}
+
 namespace ProcessorReg{
   using T = Processor;
 
@@ -263,6 +275,11 @@ namespace UserDbReg{
     return {};
   }
 
+  string file_name(const T& t) {
+    // returns ANSI encoded string on Windows
+    return t.file_path().string();
+  }
+
   bool Open(T &t) { return t.Open(); }
   bool Close(T &t) { return t.Close(); }
   bool OpenReadOnly(T &t) { return t.OpenReadOnly(); }
@@ -300,7 +317,7 @@ namespace UserDbReg{
     {"read_only",WRAPMEM(T, readonly)},
     {"disabled",WRAPMEM(T, disabled)},
     {"name", WRAPMEM(T, name)},
-    {"file_name", WRAPMEM(T, file_name)},
+    {"file_name", WRAP(get_UserDb_file_path_string<T>)},
     { NULL, NULL },
   };
 
