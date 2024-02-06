@@ -1,3 +1,4 @@
+#include <rime_api.h>
 #include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/segmentation.h>
@@ -15,9 +16,9 @@
 #include <rime/gear/memory.h>
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
+#include <rime/service.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
-#include <rime/service.h>
 #include <boost/regex.hpp>
 
 #include "lib/lua_export_type.h"
@@ -28,6 +29,47 @@
 using namespace rime;
 
 namespace {
+
+template<typename> using void_t = void;
+
+template<typename T, typename = void>
+struct COMPAT {
+  // fallback version if librime is old
+  static an<ReverseDb> new_ReverseDb(const std::string &file) {
+    return New<ReverseDb>(std::string(RimeGetUserDataDir()) + "/" + file);
+  }
+
+  static string get_shared_data_dir() {
+    return string(rime_get_api()->get_shared_data_dir());
+  }
+
+  static string get_user_data_dir() {
+    return string(rime_get_api()->get_user_data_dir());
+  }
+
+  static string get_sync_dir() {
+    return string(rime_get_api()->get_sync_dir());
+  }
+};
+
+template<typename T>
+struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
+  static an<ReverseDb> new_ReverseDb(const std::string &file) {
+    return New<ReverseDb>(Service::instance().deployer().user_data_dir / file);
+  }
+
+  static string get_shared_data_dir() {
+    return Service::instance().deployer().shared_data_dir.string();
+  }
+
+  static string get_user_data_dir() {
+    return Service::instance().deployer().user_data_dir.string();
+  }
+
+  static string get_sync_dir() {
+    return Service::instance().deployer().sync_dir.string();
+  }
+};
 
 //--- wrappers for Segment
 namespace SegmentReg {
@@ -308,7 +350,7 @@ namespace ReverseDbReg {
   using T = ReverseDb;
 
   an<T> make(const string &file) {
-    an<T> db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
+    an<T> db = COMPAT<Deployer>::new_ReverseDb(file);
     db->Load();
     return db;
   }
@@ -1844,43 +1886,23 @@ namespace KeySequenceReg {
 
 namespace RimeApiReg {
   string get_rime_version() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_version());
-  }
-
-  string get_shared_data_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_shared_data_dir());
-  }
-
-  string get_user_data_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_user_data_dir());
-  }
-
-  string get_sync_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_sync_dir());
+    return string(rime_get_api()->get_version());
   }
 
   string get_distribution_name(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_name;
+    return Service::instance().deployer().distribution_name;
   }
 
   string get_distribution_code_name(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_code_name;
+    return Service::instance().deployer().distribution_code_name;
   }
 
   string get_distribution_version(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_version;
+    return Service::instance().deployer().distribution_version;
   }
 
   string get_user_id(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.user_id;
+    return Service::instance().deployer().user_id;
   }
 
 // boost::regex api
@@ -1912,9 +1934,9 @@ namespace RimeApiReg {
 
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
-    { "get_shared_data_dir", WRAP(get_shared_data_dir) },
-    { "get_user_data_dir", WRAP(get_user_data_dir) },
-    { "get_sync_dir", WRAP(get_sync_dir) },
+    { "get_shared_data_dir", WRAP(COMPAT<Deployer>::get_shared_data_dir) },
+    { "get_user_data_dir", WRAP(COMPAT<Deployer>::get_user_data_dir) },
+    { "get_sync_dir", WRAP(COMPAT<Deployer>::get_sync_dir) },
     { "get_distribution_name", WRAP(get_distribution_name) },
     { "get_distribution_code_name", WRAP(get_distribution_code_name) },
     { "get_distribution_version", WRAP(get_distribution_version) },
