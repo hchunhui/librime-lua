@@ -1,3 +1,4 @@
+#include <rime_api.h>
 #include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/segmentation.h>
@@ -15,9 +16,9 @@
 #include <rime/gear/memory.h>
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
+#include <rime/service.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
-#include <rime/service.h>
 #include <boost/regex.hpp>
 
 #include "lib/lua_export_type.h"
@@ -1845,43 +1846,35 @@ namespace KeySequenceReg {
 
 namespace RimeApiReg {
   string get_rime_version() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_version());
+    return string(rime_get_api()->get_version());
   }
 
   string get_shared_data_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_shared_data_dir());
+    return Service::instance().deployer().shared_data_dir.string();
   }
 
   string get_user_data_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_user_data_dir());
+    return Service::instance().deployer().user_data_dir.string();
   }
 
   string get_sync_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_sync_dir());
+    return Service::instance().deployer().sync_dir.string();
   }
 
   string get_distribution_name(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_name;
+    return Service::instance().deployer().distribution_name;
   }
 
   string get_distribution_code_name(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_code_name;
+    return Service::instance().deployer().distribution_code_name;
   }
 
   string get_distribution_version(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_version;
+    return Service::instance().deployer().distribution_version;
   }
 
   string get_user_id(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.user_id;
+    return Service::instance().deployer().user_id;
   }
 
 // boost::regex api
