@@ -308,7 +308,8 @@ namespace ReverseDbReg {
   using T = ReverseDb;
 
   an<T> make(const string &file) {
-    an<T> db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
+    an<T> db = New<ReverseDb>(
+        Service::instance().deployer().user_data_dir / file);
     db->Load();
     return db;
   }

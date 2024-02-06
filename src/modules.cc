@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <rime/common.h>
 #include <rime/registry.h>
-#include <rime_api.h>
+#include <rime/service.h>
 #include "lib/lua_templates.h"
 #include "lua_gears.h"
 
@@ -17,8 +17,11 @@ static bool file_exists(const char *fname) noexcept {
 }
 
 static void lua_init(lua_State *L) {
-  const auto user_dir = std::string(RimeGetUserDataDir());
-  const auto shared_dir = std::string(RimeGetSharedDataDir());
+  // path::string() returns native encoding on Windows
+  const auto user_dir =
+      rime::Service::instance().deployer().user_data_dir.string();
+  const auto shared_dir =
+      rime::Service::instance().deployer().shared_data_dir.string();
 
   types_init(L);
   lua_getglobal(L, "package");

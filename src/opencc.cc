@@ -13,8 +13,8 @@
 #include <opencc/Dict.hpp>
 #include <opencc/DictEntry.hpp>
 #include <opencc/Common.hpp>
-#include <rime_api.h>
 #include <rime/common.h>
+#include <rime/service.h>
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
@@ -28,8 +28,8 @@ namespace {
 
 class Opencc {
 public:
-  //static shared_ptr<Opencc> create(const string &config_path);
-  Opencc(const string& config_path);
+  //static shared_ptr<Opencc> create(const path &config_path);
+  Opencc(const path& config_path);
   bool ConvertWord(const string& text, vector<string>* forms);
   bool RandomConvertText(const string& text, string* simplified);
   bool ConvertText(const string& text, string* simplified);
@@ -43,9 +43,10 @@ private:
   opencc::DictPtr dict_;
 };
 
-Opencc::Opencc(const string& config_path) {
+Opencc::Opencc(const path& config_path) {
   opencc::Config config;
-  converter_ = config.NewFromFile(config_path);
+  // OpenCC accepts UTF-8 encoded path.
+  converter_ = config.NewFromFile(config_path.u8string());
   const list<opencc::ConversionPtr> conversions =
     converter_->GetConversionChain()->GetConversions();
   dict_ = conversions.front()->GetDict();
@@ -116,14 +117,14 @@ namespace OpenccReg {
   using T = Opencc;
 
   optional<T> make(const string &filename) {
-    string user_path( RimeGetUserDataDir());
-    string shared_path(RimeGetSharedDataDir());
+    path user_path = Service::instance().deployer().user_data_dir;
+    path shared_path = Service::instance().deployer().shared_data_dir;
     try{
-      return T(user_path + "/opencc/" + filename);
+      return T(user_path / "opencc" / filename);
     }
     catch(...) {
       try{
-        return T(shared_path + "/opencc/" + filename);
+        return T(shared_path / "opencc" / filename);
       }
       catch(...) {
         LOG(ERROR) << " [" << user_path << "|" << shared_path << "]/opencc/"
