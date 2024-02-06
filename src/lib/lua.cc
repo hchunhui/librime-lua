@@ -264,6 +264,10 @@ std::shared_ptr<LuaObj> Lua::getglobal(const std::string &v) {
   return o;
 }
 
+void Lua::gc() {
+  lua_gc(L_, LUA_GCCOLLECT, 0);
+}
+
 LuaObj::LuaObj(lua_State *L, int i) : L_(L) {
   lua_pushvalue(L, i);
   id_ = luaL_ref(L, LUA_REGISTRYINDEX);
