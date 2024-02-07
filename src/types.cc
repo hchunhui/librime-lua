@@ -413,6 +413,8 @@ namespace CandidateReg {
       return p->write_able();
     if (auto p = As<LU>(t))
       return p->write_able();
+    if (Is<SP>(t) || Is<P>(t))
+      return true;
     return false;
   }
 
