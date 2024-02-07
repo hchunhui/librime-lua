@@ -452,6 +452,7 @@ namespace CandidateReg {
     { "preedit", WRAPMEM(T, preedit) },
     { "write_able", WRAP(write_able)},
     { "dynamic_candidate", raw_get_dynamic},
+    { "dynamic_type", WRAP(dynamic_type)},
     { NULL, NULL },
   };
 
