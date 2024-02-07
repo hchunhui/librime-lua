@@ -144,8 +144,14 @@ namespace SegmentReg {
 
 //--- wrappers for an<Candidate>
 namespace CandidateReg {
+  using T  = Candidate;
+  using P  = Phrase;
+  using S  = Sentence;
+  using SP = SimpleCandidate;
+  using SD = ShadowCandidate;
+  using U  = UniquifiedCandidate;
 
-  void set_preedit(Candidate &, const string &);
+  void set_preedit(an<T>, const string &);
 
   class LuaShadowCandidate : public rime::ShadowCandidate {
      public:
@@ -170,12 +176,6 @@ namespace CandidateReg {
         void set_comment(const string &s) {
 	  if (write_able_)
 	    comment_ = s;
-	  else
-	    LOG(WARNING) << "The LuaShadowCandidate of comment are immutable.";
-	}
-        void set_preedit(const string &s) {
-	  if (write_able_ && (Is<Phrase>(item_) || Is<SimpleCandidate>(item_)))
-	    CandidateReg::set_preedit(*item_, s);
 	  else
 	    LOG(WARNING) << "The LuaShadowCandidate of comment are immutable.";
 	}
@@ -209,25 +209,12 @@ namespace CandidateReg {
 	  else
 	    LOG(WARNING) << "The LuaUniquifiedCandidate of comment are immutable.";
 	}
-        void set_preedit(const string &s) {
-	  auto item = items_.front();
-	  if (write_able_ && (Is<Phrase>(item) || Is<SimpleCandidate>(item)))
-	    CandidateReg::set_preedit(*items_.front(), s);
-	  else
-	    LOG(WARNING) << "The LuaUniquifiedCandidate of comment are immutable.";
-	}
         bool write_able() { return write_able_; }
         void set_write_able(bool enable) { write_able_ = enable;}
      protected:
         bool write_able_;
   };
 
-  using T  = Candidate;
-  using P  = Phrase;
-  using S  = Sentence;
-  using SP = SimpleCandidate;
-  using SD = ShadowCandidate;
-  using U  = UniquifiedCandidate;
   using LSD= LuaShadowCandidate;
   using LU = LuaUniquifiedCandidate;
 
@@ -293,17 +280,15 @@ namespace CandidateReg {
       LOG(WARNING) << "The "<< dynamic_type(c) << " of comment are immutable.";
   }
 
-  void set_preedit(T &c, const string &v) {
-    if (auto p = dynamic_cast<Phrase *>(&c))
+  void set_preedit(an<T> c, const string &v) {
+    if (auto p = As<Phrase>(c))
       p->set_preedit(v);
-    else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
+    else if (auto p = As<SimpleCandidate>(c))
       p->set_preedit(v);
-    else if (auto p = dynamic_cast<LSD *>(&c))
-      p->set_comment(v);
-    else if (auto p = dynamic_cast<LU *>(&c))
-      p->set_comment(v);
+    else if (Is<LSD>(c) || Is<LU>(c))
+      set_preedit( T::GetGenuineCandidate(c), v);
     else
-      LOG(WARNING) << "The " << dynamic_type(c) << " of preedit are immutable.";
+      LOG(WARNING) << "The " << dynamic_type(*c) << " of preedit are immutable.";
   }
 
   an<T> make(const string type,
