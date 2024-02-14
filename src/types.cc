@@ -1,3 +1,4 @@
+#include <rime_api.h>
 #include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/segmentation.h>
@@ -15,9 +16,9 @@
 #include <rime/gear/memory.h>
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
+#include <rime/service.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
-#include <rime/service.h>
 #include <boost/regex.hpp>
 
 #include "lib/lua_export_type.h"
@@ -28,6 +29,47 @@
 using namespace rime;
 
 namespace {
+
+template<typename> using void_t = void;
+
+template<typename T, typename = void>
+struct COMPAT {
+  // fallback version if librime is old
+  static an<ReverseDb> new_ReverseDb(const std::string &file) {
+    return New<ReverseDb>(std::string(RimeGetUserDataDir()) + "/" + file);
+  }
+
+  static string get_shared_data_dir() {
+    return string(rime_get_api()->get_shared_data_dir());
+  }
+
+  static string get_user_data_dir() {
+    return string(rime_get_api()->get_user_data_dir());
+  }
+
+  static string get_sync_dir() {
+    return string(rime_get_api()->get_sync_dir());
+  }
+};
+
+template<typename T>
+struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
+  static an<ReverseDb> new_ReverseDb(const std::string &file) {
+    return New<ReverseDb>(Service::instance().deployer().user_data_dir / file);
+  }
+
+  static string get_shared_data_dir() {
+    return Service::instance().deployer().shared_data_dir.string();
+  }
+
+  static string get_user_data_dir() {
+    return Service::instance().deployer().user_data_dir.string();
+  }
+
+  static string get_sync_dir() {
+    return Service::instance().deployer().sync_dir.string();
+  }
+};
 
 //--- wrappers for Segment
 namespace SegmentReg {
@@ -145,9 +187,32 @@ namespace CandidateReg {
   }
 
   an<T> shadow_candidate(const an<T> item,
-      const string& type, const string& text, const string& comment)
+      const string& type, const string& text, const string& comment,
+      const bool inherit_comment)
   {
     return New<ShadowCandidate>(item, type, text, comment);
+  }
+
+  int raw_shadow_candidate(lua_State* L) {
+    size_t n = lua_gettop(L);
+    if (2 > n) {
+      return (1 == n) ?
+        luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
+        luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+    }
+    // init args(2-5) ( an<Candidate>, type [,text, comment,  inherit_comment])
+    if (5 < n)
+      lua_pop(L, n-5);
+    else if (4 == n)
+      lua_pushboolean(L, true);
+    else if (4 > n) {
+      for (int i=n; 4 > i ; i++)
+        lua_pushstring(L, "");
+      lua_pushboolean(L, true);
+    }
+    lua_pushcfunction(L, WRAP(shadow_candidate));
+    lua_insert(L, 1);
+    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
   }
 
   an<T> uniquified_candidate(const an<T> item,
@@ -155,6 +220,25 @@ namespace CandidateReg {
   {
     return New<UniquifiedCandidate>(item, type, text, comment);
   }
+  int raw_uniquified_candidate(lua_State* L) {
+    size_t n = lua_gettop(L);
+    if (2 > n) {
+      return (1 == n) ?
+        luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
+        luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+    }
+    // init args(2-4) ( an<Candidate>, type [,text, comment])
+    if (4 < n)
+      lua_pop(L, n-4);
+    else if (4 > n) {
+      for (int i=n; 4 > i ; i++)
+        lua_pushstring(L, "");
+    }
+    lua_pushcfunction(L, WRAP(uniquified_candidate));
+    lua_insert(L, 1);
+    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+  }
+
   bool append(an<T> self, an<T> item) {
     if (auto cand=  As<UniquifiedCandidate>(self) ) {
       cand->Append(item);
@@ -163,18 +247,16 @@ namespace CandidateReg {
     LOG(WARNING) << "Can\'t append candidate.  args #1 expected an<UniquifiedCandidate> " ;
     return false;
   };
-  an<Phrase> to_phrase_candidate(an<T> c) {
-     return std::dynamic_pointer_cast<Phrase> (c);
-  }
 
-  an<Sentence> to_sentence_candidate(an<T> c) {
-     return std::dynamic_pointer_cast<Sentence> (c);
-  }
+  template<class OT>
+  an<OT> candidate_to_(an<T> t) {
+    return std::dynamic_pointer_cast<OT>(t);
+  };
 
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
-    { "ShadowCandidate", WRAP(shadow_candidate) },
-    { "UniquifiedCandidate", WRAP(uniquified_candidate) },
+    { "ShadowCandidate", (raw_shadow_candidate) },
+    { "UniquifiedCandidate", (raw_uniquified_candidate) },
     { NULL, NULL },
   };
 
@@ -182,10 +264,10 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
-    { "to_shadow_candidate", WRAP(shadow_candidate) },
-    { "to_uniquified_candidate", WRAP(uniquified_candidate) },
-    { "to_phrase", WRAP(to_phrase_candidate) },
-    { "to_sentence", WRAP(to_sentence_candidate) },
+    { "to_shadow_candidate", (raw_shadow_candidate) },
+    { "to_uniquified_candidate", (raw_uniquified_candidate) },
+    { "to_phrase", WRAP(candidate_to_<Phrase>)},
+    { "to_sentence", WRAP(candidate_to_<Sentence>)},
     { "append", WRAP(append)},
     { NULL, NULL },
   };
@@ -271,7 +353,7 @@ namespace ReverseDbReg {
   using T = ReverseDb;
 
   an<T> make(const string &file) {
-    an<T> db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
+    an<T> db = COMPAT<Deployer>::new_ReverseDb(file);
     db->Load();
     return db;
   }
@@ -1368,9 +1450,32 @@ namespace LogReg {
 }
 namespace CommitEntryReg {
   using T = CommitEntry;
+  using D = DictEntry;
 
   vector<const rime::DictEntry*> get(const T& ce) {
     return ce.elements;
+  }
+  bool update_entry(const T &t, const D& entry, int commit, const string& prefix_str) {
+    if (!t.memory)
+      return false;
+    auto user_dict = t.memory->user_dict();
+    if (!user_dict || !user_dict->loaded())
+      return false;
+
+    return user_dict->UpdateEntry(entry, commit, prefix_str);
+  }
+
+  bool update(const T& t, int commit) {
+    if (!t.memory)
+      return false;
+    auto user_dict = t.memory->user_dict();
+    if (!user_dict || !user_dict->loaded())
+      return false;
+
+    for (const DictEntry* e : t.elements) {
+      user_dict->UpdateEntry(*e, commit);
+    }
+    return true;
   }
 
   static const luaL_Reg funcs[] = {
@@ -1379,6 +1484,8 @@ namespace CommitEntryReg {
 
   static const luaL_Reg methods[] = {
     {"get",WRAP(get)},
+    {"update_entry",WRAP(update_entry)},
+    {"update",WRAP(update)},
     { NULL, NULL },
   };
 
@@ -1392,12 +1499,17 @@ namespace CommitEntryReg {
 }
 namespace DictEntryReg {
   using T = DictEntry;
-  an<T> make() {
-    return an<T>(new T());
+
+  int raw_make(lua_State* L) {
+    an<T> t = (lua_gettop(L)>0)
+      ? New<T>(LuaType<const T&>::todata(L,1)) : New<T>();
+
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   static const luaL_Reg funcs[] = {
-    {"DictEntry",WRAP(make)},
+    {"DictEntry",raw_make},
     { NULL, NULL },
   };
 
@@ -1858,8 +1970,8 @@ namespace PhraseReg {
     return phrase;
   }
 
-  string lang_name(an<T> t) {
-    return t->language()->name();
+  string lang_name(T &t){
+    return t.language()->name();
   }
 
   static const luaL_Reg funcs[] = {
@@ -1904,8 +2016,7 @@ namespace PhraseReg {
     { NULL, NULL },
   };
 }// Phrase work with Translator
-
-//--- wrappers for Sentence
+//--- wrappers for Phrase
 namespace SentenceReg {
   using T = Sentence;
 
@@ -1913,14 +2024,15 @@ namespace SentenceReg {
     return t;
   }
 
-  string lang_name(an<T> t) {
-    return t->language()->name();
+  string lang_name(T& t){
+    return t.language()->name();
   }
-  vector<DictEntry> components(const T& t) {
+
+  vector<DictEntry> components(T& t) {
     return t.components();
   }
 
-  vector<size_t> word_lengths(const T& t) {
+  vector<size_t> word_lengths(T& t) {
     return t.word_lengths();
   }
 
@@ -1946,10 +2058,14 @@ namespace SentenceReg {
     { "preedit", WRAPMEM(T, preedit) },
     { "weight", WRAPMEM(T, weight)},
     { "code", WRAPMEM(T, code)},
-    { "entrys", WRAP(components)},
+    { "entry", WRAPMEM(T, entry)},
+    //span
+    //language doesn't wrap yet, so Wrap it later
+    // Sentence membors
     { "word_lengths", WRAP(word_lengths)},
-    { "empty", WRAPMEM(T, empty)},
-    { "size", WRAPMEM(T, size)},
+    { "entrys", WRAP(components)},
+    { "entrys_size", WRAPMEM(T, size)},
+    { "entrys_empty", WRAPMEM(T, empty)},
     { NULL, NULL },
   };
 
@@ -1966,6 +2082,7 @@ namespace SentenceReg {
     { NULL, NULL },
   };
 }// Sentence work with Translator
+
 namespace KeySequenceReg {
   using T = KeySequence;
 
@@ -2003,43 +2120,23 @@ namespace KeySequenceReg {
 
 namespace RimeApiReg {
   string get_rime_version() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_version());
-  }
-
-  string get_shared_data_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_shared_data_dir());
-  }
-
-  string get_user_data_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_user_data_dir());
-  }
-
-  string get_sync_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_sync_dir());
+    return string(rime_get_api()->get_version());
   }
 
   string get_distribution_name(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_name;
+    return Service::instance().deployer().distribution_name;
   }
 
   string get_distribution_code_name(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_code_name;
+    return Service::instance().deployer().distribution_code_name;
   }
 
   string get_distribution_version(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_version;
+    return Service::instance().deployer().distribution_version;
   }
 
   string get_user_id(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.user_id;
+    return Service::instance().deployer().user_id;
   }
 
 // boost::regex api
@@ -2071,9 +2168,9 @@ namespace RimeApiReg {
 
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
-    { "get_shared_data_dir", WRAP(get_shared_data_dir) },
-    { "get_user_data_dir", WRAP(get_user_data_dir) },
-    { "get_sync_dir", WRAP(get_sync_dir) },
+    { "get_shared_data_dir", WRAP(COMPAT<Deployer>::get_shared_data_dir) },
+    { "get_user_data_dir", WRAP(COMPAT<Deployer>::get_user_data_dir) },
+    { "get_sync_dir", WRAP(COMPAT<Deployer>::get_sync_dir) },
     { "get_distribution_name", WRAP(get_distribution_name) },
     { "get_distribution_code_name", WRAP(get_distribution_code_name) },
     { "get_distribution_version", WRAP(get_distribution_version) },

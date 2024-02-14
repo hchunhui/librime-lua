@@ -13,8 +13,8 @@
 #include <opencc/Dict.hpp>
 #include <opencc/DictEntry.hpp>
 #include <opencc/Common.hpp>
-#include <rime_api.h>
 #include <rime/common.h>
+#include <rime/service.h>
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
@@ -28,8 +28,8 @@ namespace {
 
 class Opencc {
 public:
-  //static shared_ptr<Opencc> create(const string &config_path);
-  Opencc(const string& config_path);
+  //static shared_ptr<Opencc> create(const path &config_path);
+  Opencc(const string& utf8_config_path);
   bool ConvertWord(const string& text, vector<string>* forms);
   bool RandomConvertText(const string& text, string* simplified);
   bool ConvertText(const string& text, string* simplified);
@@ -43,9 +43,10 @@ private:
   opencc::DictPtr dict_;
 };
 
-Opencc::Opencc(const string& config_path) {
+Opencc::Opencc(const string& utf8_config_path) {
   opencc::Config config;
-  converter_ = config.NewFromFile(config_path);
+  // OpenCC accepts UTF-8 encoded path.
+  converter_ = config.NewFromFile(utf8_config_path);
   const list<opencc::ConversionPtr> conversions =
     converter_->GetConversionChain()->GetConversions();
   dict_ = conversions.front()->GetDict();
@@ -115,23 +116,49 @@ vector<string> Opencc::convert_word(const string& text){
 namespace OpenccReg {
   using T = Opencc;
 
-  optional<T> make(const string &filename) {
-    string user_path( RimeGetUserDataDir());
-    string shared_path(RimeGetSharedDataDir());
-    try{
-      return T(user_path + "/opencc/" + filename);
-    }
-    catch(...) {
+  template<typename> using void_t = void;
+
+  template<typename U, typename = void>
+  struct COMPAT {
+    static optional<T> make(const string &filename) {
+      auto user_path = string(rime_get_api()->get_user_data_dir());
+      auto shared_path = string(rime_get_api()->get_shared_data_dir());
       try{
-        return T(shared_path + "/opencc/" + filename);
+        return T(user_path + "/opencc/" + filename);
       }
       catch(...) {
-        LOG(ERROR) << " [" << user_path << "|" << shared_path << "]/opencc/"
-          << filename  << ": File not found or InvalidFormat";
-        return {};
+        try{
+          return T(shared_path + "/opencc/" + filename);
+        }
+        catch(...) {
+          LOG(ERROR) << " [" << user_path << "|" << shared_path << "]/opencc/"
+                     << filename  << ": File not found or InvalidFormat";
+          return {};
+        }
       }
     }
-  }
+  };
+
+  template<typename U>
+  struct COMPAT<U, void_t<decltype(std::declval<U>().user_data_dir.string())>> {
+    static optional<T> make(const string &filename) {
+      path user_path = Service::instance().deployer().user_data_dir;
+      path shared_path = Service::instance().deployer().shared_data_dir;
+      try{
+        return T((user_path / "opencc" / filename).u8string());
+      }
+      catch(...) {
+        try{
+          return T((shared_path / "opencc" / filename).u8string());
+        }
+        catch(...) {
+          LOG(ERROR) << " [" << user_path << "|" << shared_path << "]/opencc/"
+                     << filename  << ": File not found or InvalidFormat";
+          return {};
+        }
+      }
+    }
+  };
 
   optional<vector<string>> convert_word(T &t,const string &s) {
     vector<string> res;
@@ -141,7 +168,7 @@ namespace OpenccReg {
   }
 
   static const luaL_Reg funcs[] = {
-    {"Opencc",WRAP(make)},
+    {"Opencc",WRAP(COMPAT<Deployer>::make)},
     { NULL, NULL },
   };
 

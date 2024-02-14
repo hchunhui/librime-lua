@@ -28,11 +28,20 @@ local function memoryCallback(memory, commit)
 	return true
 end
 
+local function memoryCallback1(commit)
+  for i, dictentry in ipairs(commit:get()) do
+    commits:update_entry(dictentry, 1, "")
+  end
+  --commits:update(1) --
+end
+
+
 local function init(env)
   env.mem = Memory(env.engine,env.engine.schema)  --  ns= "translator"
   -- env.mem = Memory(env.engine,env.engine.schema, env.name_space )  
   -- env.mem = Memory(env.engine,Schema("cangjie5") ) --  ns= "translator- 
-  env.mem:memorize(function(commit) memoryCallback(env.mem, commit) end)
+  --env.mem:memorize(function(commit) memoryCallback(env.mem, commit) end)
+  env.mem:memorize(memoryCallback1)
   -- or use
   -- schema = Schema("cangjie5") -- schema_id
   -- env.mem = Memory(env.engine, schema, "translator")

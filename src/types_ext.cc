@@ -16,11 +16,9 @@
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
-
 #include <utility>
 
 using namespace rime;
-
 namespace {
 
 template<typename> using void_t = void;
@@ -39,6 +37,18 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().name_space())>> {
     return t.name_space();
   }
 };
+
+// fallback version of file_path() if librime is old
+template<typename> struct void_t1 { using t = int; };
+template<typename T, typename void_t1<decltype(std::declval<T>().file_name())>::t = 0>
+std::string get_UserDb_file_path_string(const T &t) {
+    return t.file_name();
+}
+
+template<typename T, typename void_t1<decltype(std::declval<T>().file_path())>::t = 0>
+std::string get_UserDb_file_path_string(const T &t) {
+    return t.file_path().string();
+}
 
 namespace ProcessorReg{
   using T = Processor;
@@ -253,16 +263,21 @@ namespace UserDbReg{
   an<T> make_leveldb(const string& db_name) {
     return make(db_name, "userdb");
   }
-  
+
   an<T> make_tabledb(const string& db_name) {
     return make(db_name, "plain_userdb");
   }
-  
+
   optional<string> fetch(an<T> t, const string& key) {
     string res;
     if ( t->Fetch(key,&res) )
       return res;
     return {};
+  }
+
+  string file_name(const T& t) {
+    // returns ANSI encoded string on Windows
+    return t.file_path().string();
   }
 
   bool Open(T &t) { return t.Open(); }
@@ -274,7 +289,7 @@ namespace UserDbReg{
   }
 
   an<A> Query(T &t, const string& key) { return t.Query(key); }
-  
+
   static const luaL_Reg funcs[] = {
     {"UserDb", WRAP(make)},// an<Db> LevelDb( db_file, db_name)
     {"LevelDb", WRAP(make_leveldb)},// an<Db> LevelDb( db_file, db_name)
@@ -290,7 +305,7 @@ namespace UserDbReg{
     {"fetch", WRAP(fetch)},  //   fetch(key) return value
     {"update", WRAP(Update)}, // update(key,value) return bool
     {"erase", WRAP(Erase)}, // erase(key) return bool
-    
+
     {"loaded",WRAPMEM(T, loaded)},
     {"disable", WRAPMEM(T, disable)},
     {"enable", WRAPMEM(T, enable)},
@@ -302,7 +317,7 @@ namespace UserDbReg{
     {"read_only",WRAPMEM(T, readonly)},
     {"disabled",WRAPMEM(T, disabled)},
     {"name", WRAPMEM(T, name)},
-    {"file_name", WRAPMEM(T, file_name)},
+    {"file_name", WRAP(get_UserDb_file_path_string<T>)},
     { NULL, NULL },
   };
 
@@ -343,6 +358,7 @@ namespace ComponentReg{
     }
   };
 
+
   static const luaL_Reg funcs[] = {
     {"Processor",  raw_create<P>},
     {"Segmentor"   , raw_create<S>},
@@ -360,6 +376,9 @@ namespace ComponentReg{
 
 }
 
+void table_translator_init(lua_State *L);
+void script_translator_init(lua_State *L);
+
 void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(ProcessorReg, L);
   EXPORT(SegmentorReg, L);
@@ -369,4 +388,7 @@ void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(DbAccessorReg, L);
   EXPORT(UserDbReg, L);
   ComponentReg::init(L);
+  // add LtableTranslator ScriptTranslator in Component
+  table_translator_init(L);
+  script_translator_init(L);
 }
