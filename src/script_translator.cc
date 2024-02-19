@@ -85,7 +85,7 @@ namespace ScriptTranslatorReg {
   }
 
   void T::set_enable_correction(bool enable) {
-    if (enable_correction_ = enable && !corrector_)
+    if ((enable_correction_ = enable && !corrector_))
       init_correction();
   }
 
