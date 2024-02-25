@@ -147,6 +147,8 @@ namespace CandidateReg {
   using T = Candidate;
 
   string dynamic_type(T &c) {
+    if (dynamic_cast<Sentence *>(&c))
+      return "Sentence";
     if (dynamic_cast<Phrase *>(&c))
       return "Phrase";
     if (dynamic_cast<SimpleCandidate *>(&c))
@@ -338,6 +340,7 @@ namespace TranslationReg {
   };
 
   static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
     { NULL, NULL },
   };
 
@@ -1572,34 +1575,221 @@ namespace CodeReg {
     { NULL, NULL },
   };
 }
+
+namespace DictionaryReg {
+  using T = Dictionary;
+  using I = DictEntryIterator;
+  using D = DictEntry;
+
+  an<I> lookup_words(T& t, const string& code, bool predictive , size_t limit) {
+    an<I> ret=New<I>();
+    t.LookupWords(ret.get(),code, predictive, limit);
+    return ret;
+  }
+
+  vector<string> decode(T& t, const Code& code) {
+    vector<string> ret;
+    t.Decode(code, &ret);
+    return ret;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "lookup_words", WRAP(lookup_words)},
+    //{ "lookup", WRAPMEM(T, Lookup)},
+    { "decode", WRAP(decode)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "name", WRAPMEM(T, name)},
+    { "loaded", WRAPMEM(T, loaded)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace UserDictionaryReg {
+  using T = UserDictionary;
+  using I = UserDictEntryIterator;
+  using D = DictEntry;
+
+  an<I> lookup_words(T& t, const string& code, bool predictive , size_t limit) {
+    an<I> ret=New<I>();
+    t.LookupWords(ret.get(),code, predictive, limit);
+    return ret;
+  }
+  bool update_entry(T& t, const D& entry, int commits, const string& prefix,
+      const string lang_name) {
+    return (lang_name == t.name()) ? t.UpdateEntry(entry, commits, prefix) : false;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "lookup_words", WRAP(lookup_words)},
+    //{ "lookup", WRAPMEM(T, Lookup)},
+    { "update_entry", WRAP(update_entry)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "name", WRAPMEM(T, name)},
+    { "loaded", WRAPMEM(T, loaded)},
+    { "tick", WRAPMEM(T, tick)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace DictEntryIteratorReg {
+  using T = DictEntryIterator;
+  using D = DictEntry;
+
+  optional<an<D>> Next(T& t) {
+    if ( t.exhausted()) {
+      return {};
+    }
+    an<D> ret = t.Peek();
+     t.Next();
+    return ret;
+  }
+
+  int raw_iter(lua_State* L) {
+    int n = lua_gettop(L);
+    if (n>=1) { // :iter()
+      lua_pushcfunction(L, WRAP(Next));
+      lua_insert(L, 1);
+      return 2;
+    }
+    return 0;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"iter", raw_iter},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
+    {"size", WRAPMEM(T, entry_count)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+}
+
+namespace UserDictEntryIteratorReg {
+  using T = UserDictEntryIterator;
+  using D = DictEntry;
+
+  optional<an<D>> Next(T& t) {
+    if ( t.exhausted()) {
+      return {};
+    }
+    an<D> ret = t.Peek();
+     t.Next();
+    return ret;
+  }
+
+  int raw_iter(lua_State* L) {
+    int n = lua_gettop(L);
+    if (n>=1) { // :iter()
+      lua_pushcfunction(L, WRAP(Next));
+      lua_insert(L, 1);
+      return 2;
+    }
+    return 0;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"iter", raw_iter},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
+    {"size", WRAPMEM(T, cache_size)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 namespace MemoryReg {
   class LuaMemory : public Memory {
     an<LuaObj> memorize_callback;
     Lua *lua_;
   public:
-    using Memory::Memory;
-    DictEntryIterator iter;
-    UserDictEntryIterator uter;
+    an<DictEntryIterator> iter;
+    an<UserDictEntryIterator> uter;
 
-    LuaMemory(Lua *lua, const Ticket& ticket)
+    bool dictLookup(const string& str_code,
+        bool predictive, size_t expand_search_limit);
+
+    bool userLookup(const string& input, const bool isExpand);
+
+    an<DictEntryIterator> dictiterLookup(const string& str_code,
+        bool predictive, size_t expand_search_limit);
+
+    an<UserDictEntryIterator> useriterLookup(const string& input, const bool isExpand);
+
+    vector<string> decode(const Code& code);
+    bool update_userdict(const DictEntry& entry, const int commits,
+        const string& new_entry_prefix);
+
+    bool update_entry(const DictEntry& entry, const int commits,
+        const string& new_entry_prefix, const string& lang_string);
+
+    bool update_candidate(const an<Candidate> cand, const int commits);
+    const string lang_name() { return language_->name(); };
+    virtual bool Memorize(const CommitEntry& entry);
+
+    LuaMemory(const Ticket& ticket, Lua* lua)
       : lua_(lua), Memory(ticket) {}
-
-    virtual bool Memorize(const CommitEntry&);
 
     void memorize(an<LuaObj> func) {
       memorize_callback = func;
     }
-
     void clearDict() {
-      iter = DictEntryIterator();
+      iter.reset();
     }
     void clearUser() {
-      uter = UserDictEntryIterator();
+      uter.reset();
     }
   };
-  using T = LuaMemory;
 
-  bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
+  vector<string> LuaMemory::decode(const Code& code) {
+    vector<string> res;
+    if (dict_ && dict_->loaded())
+      dict_->Decode(code,&res);
+    return res;
+  }
+
+  bool LuaMemory::Memorize(const CommitEntry& commit_entry) {
     if (!memorize_callback)
       return false;
 
@@ -1612,8 +1802,78 @@ namespace MemoryReg {
       return r.get();
   }
 
+  bool LuaMemory::dictLookup(const string& input, const bool isExpand, size_t limit) {
+    iter = New<DictEntryIterator>();// t= New<DictEntryIterator>();
+    limit = limit == 0 ? 0xffffffffffffffff : limit;
+    if (dict_ && dict_->loaded()) {
+      return dict_->LookupWords(iter.get(), input, isExpand, limit) > 0;
+    }
+    return false;
+  }
+
+  bool  LuaMemory::userLookup(const string& input, const bool isExpand) {
+    uter = New<UserDictEntryIterator>();
+    if (user_dict_ && user_dict_->loaded()) {
+      return user_dict_->LookupWords(uter.get(), input, isExpand) > 0;
+    }
+    return false;
+  }
+
+  an<DictEntryIterator> LuaMemory::dictiterLookup(const string& input, const bool isExpand, size_t limit) {
+    dictLookup(input, isExpand, limit);
+    return iter;
+  }
+
+  an<UserDictEntryIterator> LuaMemory::useriterLookup(const string& input, const bool isExpand) {
+    userLookup(input, isExpand);
+    return uter;
+  }
+
+
+  bool LuaMemory::update_userdict(const DictEntry& entry, const int commits,
+      const string& new_entry_prefix) {
+    if (user_dict_ && user_dict_->loaded())
+      return user_dict_->UpdateEntry(entry, commits, new_entry_prefix);
+
+    return false;
+  }
+
+  bool LuaMemory::update_entry(const DictEntry& entry, const int commits,
+      const string& new_entry_prefix, const string& lang_name)
+  {
+    if (user_dict_ && user_dict_->loaded() && lang_name == language_->name())
+      return user_dict_->UpdateEntry(entry, commits, new_entry_prefix);
+
+    return false;
+  }
+
+  bool LuaMemory::update_candidate(const an<Candidate> cand, const int commits) {
+    if (!user_dict_ || !user_dict_->loaded())
+      return false;
+
+    bool res = false;
+    vector<of<Candidate>> cands = Candidate::GetGenuineCandidates(cand);
+    for (auto cand : cands) {
+      if (auto c = std::dynamic_pointer_cast<Sentence>(cand)) {
+        if (*language_ == *c->language()) {
+          for (auto entry : c->components()) {
+            res |= user_dict()->UpdateEntry(c->entry(), commits);
+          }//components
+        }
+      }
+      else if (auto c = std::dynamic_pointer_cast<Phrase>(cand)) {
+        res |= (*language_ == *c->language()) &&
+          user_dict()->UpdateEntry(c->entry(), commits);
+      }
+    }// cands
+    return res;
+  }
+
   // XXX: Currently the WRAP macro is not generic enough,
   // so that we need a raw function to get the lua state / parse variable args.
+
+  using T = LuaMemory;
+
   int raw_make(lua_State *L) {
     // TODO: fix the memory leak
     C_State C;
@@ -1629,63 +1889,36 @@ namespace MemoryReg {
     if (3 <= n)
       translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
 
-    an<T> memoli = New<T>(lua, translatorTicket);
+    an<T> memoli = New<T>(translatorTicket, lua);
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }
 
-  bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
-    memory.clearDict();
-    limit = limit == 0 ? 0xffffffffffffffff : limit;
-    if (auto dict = memory.dict())
-      return dict->LookupWords(&memory.iter, input, isExpand, limit) > 0;
-    else
-      return false;
-  }
 
-  optional<an<DictEntry>> dictNext(T& memory) {
-    if (memory.iter.exhausted()) {
-      return {};
-    }
-    an<DictEntry> ret = memory.iter.Peek();
-    memory.iter.Next();
-    return ret;
-  }
-
-  bool userLookup(T& memory, const string& input, const bool isExpand) {
-    memory.clearUser();
-    if (auto dict = memory.user_dict())
-      return dict->LookupWords(&memory.uter, input, isExpand) > 0;
-    else
-      return false;
-  }
-
-  optional<an<DictEntry>> userNext(T& memory) {
-    if (memory.uter.exhausted()) {
-      return {};
-    }
-    an<DictEntry> ret = memory.uter.Peek();
-    memory.uter.Next();
-    return ret;
-  }
-
-  bool updateToUserdict(T& memory, const DictEntry& entry, const int commits, const string& new_entry_prefix) {
-    if (auto dict = memory.user_dict())
-      return dict->UpdateEntry(entry, commits, new_entry_prefix);
-    else
-      return false;
-  }
-
+  // :iter_user([func[,...]]) return next_func, entryiterator
+  //  return next_entry, enter_iter[,func[, ...]]
   int raw_iter_user(lua_State* L) {
-    lua_pushcfunction(L, WRAP(userNext));
-    lua_pushvalue(L, 1);
-    return 2;
+    an<T> t = LuaType<an<T>>::todata(L, 1);
+    LuaType<an<UserDictEntryIterator>>::pushdata(L, t->uter);
+    lua_replace(L, 1);
+    lua_getfield(L, 1, "iter");
+    lua_insert(L, 1);
+    if (lua_pcall(L, lua_gettop(L) -1 , 2,0) != LUA_OK)
+      return 0;
+    return lua_gettop(L);
   }
 
+  // :iter_user([func[,...]]) return next_func, entryiterator
+  //  return next_entry, enter_iter[,func[, ...]]
   int raw_iter_dict(lua_State* L) {
-    lua_pushcfunction(L, WRAP(dictNext));
-    lua_pushvalue(L, 1);
-    return 2;
+    an<T> t = LuaType<an<T>>::todata(L, 1);
+    LuaType<an<DictEntryIterator>>::pushdata(L, t->iter);
+    lua_replace(L, 1);
+    lua_getfield(L, 1, "iter");
+    lua_insert(L, 1);
+    if (lua_pcall(L, lua_gettop(L) -1 , 2,0) != LUA_OK)
+      return 0;
+    return lua_gettop(L);
   }
 
   static const luaL_Reg funcs[] = {
@@ -1693,24 +1926,25 @@ namespace MemoryReg {
       {NULL, NULL},
   };
 
-  std::vector<string> decode(T& memory, Code& code) {
-    std::vector<string> res;
-    if (auto dict = memory.dict())
-      dict->Decode(code,&res);
-    return res;
-  }
   static const luaL_Reg methods[] = {
-      { "dict_lookup", WRAP(dictLookup)},
-      { "user_lookup", WRAP(userLookup)},
+      { "dict_lookup", WRAPMEM(T::dictLookup)}, // bool
+      { "user_lookup", WRAPMEM(T::userLookup)}, // bool
+      { "dictiter_lookup", WRAPMEM(T::dictiterLookup)}, // iter
+      { "useriter_lookup", WRAPMEM(T::useriterLookup)}, // iter
       { "memorize", WRAPMEM(T::memorize)},
-      { "decode", WRAP(decode)},
+      { "decode", WRAPMEM(T::decode)},
       { "iter_dict", raw_iter_dict},
       { "iter_user", raw_iter_user},
-      { "update_userdict", WRAP(updateToUserdict)},
+      { "update_userdict", WRAPMEM(T::update_userdict)},
+      { "update_entry", WRAPMEM(T::update_entry)},
+      { "update_candidate", WRAPMEM(T::update_candidate)},
       {NULL, NULL},
   };
 
   static const luaL_Reg vars_get[] = {
+      { "lang_name", WRAPMEM(T, lang_name)},
+      { "dict", WRAPMEM(T, dict)},
+      { "user_dict", WRAPMEM(T, user_dict)},
       {NULL, NULL},
   };
 
@@ -2020,6 +2254,10 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(MemoryReg, L);
+  EXPORT(DictionaryReg, L);
+  EXPORT(UserDictionaryReg, L);
+  EXPORT(DictEntryIteratorReg, L);
+  EXPORT(UserDictEntryIteratorReg, L);
   EXPORT(DictEntryReg, L);
   EXPORT(CodeReg, L);
   EXPORT(CommitEntryReg, L);
