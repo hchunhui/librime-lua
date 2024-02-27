@@ -275,11 +275,6 @@ namespace UserDbReg{
     return {};
   }
 
-  string file_name(const T& t) {
-    // returns ANSI encoded string on Windows
-    return t.file_path().string();
-  }
-
   bool Open(T &t) { return t.Open(); }
   bool Close(T &t) { return t.Close(); }
   bool OpenReadOnly(T &t) { return t.OpenReadOnly(); }

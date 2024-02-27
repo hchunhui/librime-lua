@@ -55,19 +55,23 @@ struct COMPAT {
 template<typename T>
 struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
   static an<ReverseDb> new_ReverseDb(const std::string &file) {
-    return New<ReverseDb>(Service::instance().deployer().user_data_dir / file);
+    T &deployer = Service::instance().deployer();
+    return New<ReverseDb>(deployer.user_data_dir / file);
   }
 
   static string get_shared_data_dir() {
-    return Service::instance().deployer().shared_data_dir.string();
+    T &deployer = Service::instance().deployer();
+    return deployer.shared_data_dir.string();
   }
 
   static string get_user_data_dir() {
-    return Service::instance().deployer().user_data_dir.string();
+    T &deployer = Service::instance().deployer();
+    return deployer.user_data_dir.string();
   }
 
   static string get_sync_dir() {
-    return Service::instance().deployer().sync_dir.string();
+    T &deployer = Service::instance().deployer();
+    return deployer.sync_dir.string();
   }
 };
 

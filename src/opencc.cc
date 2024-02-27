@@ -191,8 +191,9 @@ namespace OpenccReg {
   template<typename U>
   struct COMPAT<U, void_t<decltype(std::declval<U>().user_data_dir.string())>> {
     static optional<T> make(const string &filename) {
-      path user_path = Service::instance().deployer().user_data_dir;
-      path shared_path = Service::instance().deployer().shared_data_dir;
+      U &deployer = Service::instance().deployer();
+      auto user_path = deployer.user_data_dir;
+      auto shared_path = deployer.shared_data_dir;
       try{
         return T((user_path / "opencc" / filename).u8string());
       }

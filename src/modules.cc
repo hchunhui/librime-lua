@@ -35,11 +35,13 @@ template<typename T>
 struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
   static std::string get_shared_data_dir() {
     // path::string() returns native encoding on Windows
-    return rime::Service::instance().deployer().shared_data_dir.string();
+    T &deployer = rime::Service::instance().deployer();
+    return deployer.shared_data_dir.string();
   }
 
   static std::string get_user_data_dir() {
-    return rime::Service::instance().deployer().user_data_dir.string();
+    T &deployer = rime::Service::instance().deployer();
+    return deployer.user_data_dir.string();
   }
 };
 }
