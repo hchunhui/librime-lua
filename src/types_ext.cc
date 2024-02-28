@@ -251,12 +251,23 @@ namespace UserDbReg{
   using T = Db;
   using A = DbAccessor;
 
+  static map<string, weak<T>> db_pool_;
+
   an<T> make(const string& db_name, const string& db_class) {
-    if (auto comp= UserDb::Require(db_class)){
-      return an<T>( comp->Create(db_name)) ;
+    string db_key= db_name + "." + db_class;
+    if (auto db = db_pool_[db_key].lock() ) {
+      return db;
     }
     else {
-      return {};
+      if (auto comp= Db::Require(db_class)) {
+        db.reset(comp->Create(db_name));
+        db_pool_[db_key] = db;
+	return db;
+      }
+      else {
+	LOG(ERROR) << "UserDB::Require(db_class) error: value of db_class wasn't register "<< db_class ;
+        return {};
+      }
     }
   }
 
@@ -275,16 +286,6 @@ namespace UserDbReg{
     return {};
   }
 
-  bool Open(T &t) { return t.Open(); }
-  bool Close(T &t) { return t.Close(); }
-  bool OpenReadOnly(T &t) { return t.OpenReadOnly(); }
-  bool Erase(T &t, const string &key) { return t.Erase(key); }
-  bool Update(T &t, const string &key, const string &value) {
-    return t.Update(key, value);
-  }
-
-  an<A> Query(T &t, const string& key) { return t.Query(key); }
-
   static const luaL_Reg funcs[] = {
     {"UserDb", WRAP(make)},// an<Db> LevelDb( db_file, db_name)
     {"LevelDb", WRAP(make_leveldb)},// an<Db> LevelDb( db_file, db_name)
@@ -293,13 +294,13 @@ namespace UserDbReg{
   };
 
   static const luaL_Reg methods[] = {
-    {"open", WRAP(Open)},
-    {"open_read_only", WRAP(OpenReadOnly)},
-    {"close", WRAP(Close)},
-    {"query", WRAP(Query)}, // query(prefix_key) return DbAccessor
+    {"open", WRAPMEM(T, Open)},
+    {"open_read_only", WRAPMEM(T, OpenReadOnly)},
+    {"close", WRAPMEM(T, Close)},
+    {"query", WRAPMEM(T, Query)}, // query(prefix_key) return DbAccessor
     {"fetch", WRAP(fetch)},  //   fetch(key) return value
-    {"update", WRAP(Update)}, // update(key,value) return bool
-    {"erase", WRAP(Erase)}, // erase(key) return bool
+    {"update", WRAPMEM(T, Update)}, // update(key,value) return bool
+    {"erase", WRAPMEM(T, Erase)}, // erase(key) return bool
 
     {"loaded",WRAPMEM(T, loaded)},
     {"disable", WRAPMEM(T, disable)},
