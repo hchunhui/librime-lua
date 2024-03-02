@@ -251,24 +251,11 @@ namespace UserDbReg{
   using T = Db;
   using A = DbAccessor;
 
-  static map<string, weak<T>> db_pool_;
-
   an<T> make(const string& db_name, const string& db_class) {
-    string db_key= db_name + "." + db_class;
-    if (auto db = db_pool_[db_key].lock() ) {
-      return db;
+    if (auto comp= Db::Require(db_class)) {
+      return an<T>(comp->Create(db_name));
     }
-    else {
-      if (auto comp= Db::Require(db_class)) {
-        db.reset(comp->Create(db_name));
-        db_pool_[db_key] = db;
-	return db;
-      }
-      else {
-	LOG(ERROR) << "UserDB::Require(db_class) error: value of db_class wasn't register "<< db_class ;
-        return {};
-      }
-    }
+    return {};
   }
 
   an<T> make_leveldb(const string& db_name) {
