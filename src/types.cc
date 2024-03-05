@@ -508,12 +508,20 @@ namespace KeyEventReg {
     return t.modifier();
   }
 
-  an<T> make(const string &key) {
-    return New<T>(key) ;
+  int raw_make(lua_State *L) {
+    an<T> res;
+    int n = lua_gettop(L);
+    if (n == 1)
+      res = New<T>( string(lua_tostring(L, 1)) );
+    else if (n > 1)
+      res = New<T>( lua_tointeger(L, 1), lua_tointeger(L, 2) );
+
+    LuaType<an<T>>::pushdata(L, res);
+    return 1;
   }
 
   static const luaL_Reg funcs[] = {
-    { "KeyEvent", WRAP(make)  },
+    { "KeyEvent", raw_make  },
     { NULL, NULL },
   };
 
