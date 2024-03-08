@@ -1197,6 +1197,13 @@ namespace ProjectionReg{
 namespace ConfigReg {
   using T = Config;
 
+  the<T> make(const string &type, const string &filename) {
+    auto c = T::Require(type);
+    if (!c) 
+      return {};
+    return the<T>(c->Create(filename));
+  }
+  
   optional<bool> get_bool(T &t, const string &path) {
     bool v;
     if (t.GetBool(path, &v))
@@ -1256,6 +1263,7 @@ namespace ConfigReg {
   }
 
   static const luaL_Reg funcs[] = {
+    { "Config", WRAP(make) },
     { NULL, NULL },
   };
 
@@ -2284,6 +2292,7 @@ void types_init(lua_State *L) {
 #endif
 
   EXPORT_UPTR_TYPE(SchemaReg, L);
+  EXPORT_UPTR_TYPE(ConfigReg, L);
 
   opencc_init(L);
 }
