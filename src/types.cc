@@ -472,6 +472,15 @@ namespace MenuReg {
     return New<T>();
   }
 
+  CandidateList create_page(T& t, size_t page_size, size_t page_no) {
+    CandidateList res;
+    if (auto p = t.CreatePage(page_size, page_no)) {
+      res = p->candidates;
+      delete p;
+    }
+    return res;    
+  }
+
   static const luaL_Reg funcs[] = {
     { "Menu", WRAP(make) },
     { NULL, NULL },
@@ -481,7 +490,7 @@ namespace MenuReg {
     { "add_translation", WRAPMEM(T::AddTranslation) },
     //{ }, // AddFilter
     { "prepare", WRAPMEM(T::Prepare) },
-    //{ }, // CreatePage
+    { "create_page", WRAP(create_page)}, // CreatePage : return table of candidates
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
     { "candidate_count", WRAPMEM(T::candidate_count) },
     { "empty", WRAPMEM(T::empty) },
