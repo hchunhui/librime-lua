@@ -1128,13 +1128,13 @@ an<R> Get(an<T> t) {
     if (an<T> t = LuaType<an<T>>::todata(L_, 1)) {
       auto t_type = t->type();
       if (T::kScalar == t_type) {
-          lua_pushcfunction(L_, WRAP(Get_<V>));
+          lua_pushcfunction(L_, WRAP(Get<V>));
       }
       else if (T::kList == t_type) {
-          lua_pushcfunction(L_, WRAP(Get_<L>));
+          lua_pushcfunction(L_, WRAP(Get<L>));
       }
       else if (T::kMap == t_type) {
-          lua_pushcfunction(L_, WRAP(Get_<M>));
+          lua_pushcfunction(L_, WRAP(Get<M>));
       }
       else {
         return 0;
