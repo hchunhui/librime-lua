@@ -1,6 +1,6 @@
 #include "lua.h"
 #include "lua_templates.h"
-#include <iostream>
+
 namespace LuaImpl {
   int wrap_common(lua_State *L, int (*cfunc)(lua_State *)) {
     char room[sizeof(C_State)];
