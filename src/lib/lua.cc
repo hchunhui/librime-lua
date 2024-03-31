@@ -195,7 +195,7 @@ namespace LuaImpl {
     }
 
     static int raw_equal (lua_State *L) {
-      if (lua_type(L, 1) == LUA_TTABLE, lua_type(L, 2) == LUA_TTABLE) {
+      if (lua_type(L, 1) == LUA_TTABLE && lua_type(L, 2) == LUA_TTABLE) {
         if (lua_rawequal(L, 1, 2)) {
           lua_pushboolean(L, true);
           return 1;
