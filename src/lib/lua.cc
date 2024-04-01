@@ -156,6 +156,44 @@ namespace LuaImpl {
       return 1;
     }
 
+    static int raw_xor(lua_State *L) {
+      int n = lua_gettop(L);
+      // create union table
+      lua_createtable(L, 0, 0);
+      for (int i = 1; i <= n; i++) {
+        if (lua_type(L, i)!= LUA_TTABLE)
+          return 0;
+        lua_pushnil(L);
+        while (lua_next(L, i) != 0) {
+          if (lua_toboolean(L, -1)) {
+            lua_pushvalue(L, -2);
+            lua_pushboolean(L, true);
+            lua_rawset(L, n+1);
+          }
+          lua_pop(L, 1);
+        }
+      }
+      lua_pushnil(L);
+      while (lua_next(L, n+1) != 0) {
+        bool b = false;
+        for (int i=1; i<=n; i++) {
+          lua_pushvalue(L, -2);
+          lua_rawget(L, i);
+          b ^= lua_toboolean(L, -1);
+          lua_pop(L, 1);
+        }
+        //unset union table t[k]=nil
+        if (!b) {
+          lua_pushvalue(L, -2);
+          lua_pushnil(L);
+          lua_rawset(L, n+1);
+        }
+        lua_pop(L, 1);
+      }
+      luaL_setmetatable(L, "__set");
+      return 1;
+    }
+
     static int raw_empty(lua_State *L) {
       if (lua_gettop(L) != 1)
         return 0;
@@ -166,6 +204,21 @@ namespace LuaImpl {
       } else {
         lua_pop(L, 2);
         LuaType<bool>::pushdata(L, false);
+      }
+      return 1;
+    }
+
+    static int raw_equal(lua_State *L) {
+      if (lua_type(L, 1) != LUA_TTABLE || lua_type(L, 2) != LUA_TTABLE)
+        lua_pushboolean(L, false);
+      else if (lua_rawequal(L, 1, 2))
+        lua_pushboolean(L, true);
+      else {
+        //    a ^ b
+        lua_pushcfunction(L, raw_empty);
+        lua_pushcfunction(L, raw_xor);
+        lua_call(L, 2, 1);
+        lua_call(L, 1, 1);
       }
       return 1;
     }
@@ -194,34 +247,6 @@ namespace LuaImpl {
       return 1;
     }
 
-    static int raw_equal (lua_State *L) {
-      if (lua_type(L, 1) == LUA_TTABLE && lua_type(L, 2) == LUA_TTABLE) {
-        if (lua_rawequal(L, 1, 2)) {
-          lua_pushboolean(L, true);
-          return 1;
-        }
-        //    a - b
-        lua_pushcfunction(L, raw_empty);
-        lua_pushcfunction(L, raw_diff);
-        lua_pushvalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_call(L, 2, 1);
-        lua_call(L, 1, 1);
-        if (! lua_toboolean(L, -1))
-          return 1;
-        //   b - a
-        lua_pushcfunction(L, raw_empty);
-        lua_pushcfunction(L, raw_diff);
-        lua_pushvalue(L, 2);
-        lua_pushvalue(L, 1);
-        lua_call(L, 2, 1);
-        lua_call(L, 1, 1);
-        return 1;
-      }
-      lua_pushboolean(L, false);
-      return 1;
-    }
-
     static const luaL_Reg methods[] = {
       { "empty", raw_empty },
       { "set", raw_set},
@@ -237,6 +262,7 @@ namespace LuaImpl {
       { "__mul", raw_inter },
       { "__bor", raw_union },
       { "__band", raw_inter },
+      { "__bxor", raw_xor },
       { "__shl", raw_set },
       { "__shr", raw_unset},
       { "__eq", raw_equal},
