@@ -1109,6 +1109,11 @@ namespace ConfigItemReg {
   using L = ConfigList;
   using V = ConfigValue;
 
+template <class R>
+an<R> Get(an<T> t) {
+    return std::dynamic_pointer_cast<R>(t);
+};
+
   string type(T &t){
     switch (t.type()) {
     case T::kNull: return "kNull";
@@ -1119,30 +1124,37 @@ namespace ConfigItemReg {
     return "";
   }
 
-//START_GET_
-//sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
-#define GET_(f_name,from ,rt, k_type) \
-  an<rt> f_name( an<from> t) { \
-    if (t->type() == from::k_type) \
-      return std::dynamic_pointer_cast<rt> (t);\
-    return nullptr;\
+  int get_obj(lua_State *L_) {
+    if (an<T> t = LuaType<an<T>>::todata(L_, 1)) {
+      auto t_type = t->type();
+      if (T::kScalar == t_type) {
+          lua_pushcfunction(L_, WRAP(Get<V>));
+      }
+      else if (T::kList == t_type) {
+          lua_pushcfunction(L_, WRAP(Get<L>));
+      }
+      else if (T::kMap == t_type) {
+          lua_pushcfunction(L_, WRAP(Get<M>));
+      }
+      else {
+        return 0;
+      }
+      lua_pushvalue(L_, 1);
+      lua_call(L_, 1, 1);
+      return 1;
+    }
+    return 0;
   }
-
-  GET_( get_value,T,  V, kScalar );
-  GET_( get_list, T,  L, kList );
-  GET_( get_map,  T,  M, kMap );
-
-#undef GET_
-//END_GET_
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"get_value",WRAP(get_value)},
-    {"get_list",WRAP(get_list)},
-    {"get_map",WRAP(get_map)},
+    {"get_value",WRAP(Get<V>)},
+    {"get_list",WRAP(Get<L>)},
+    {"get_map",WRAP(Get<M>)},
+    {"get_obj", get_obj},
     { NULL, NULL },
   };
 
