@@ -106,7 +106,7 @@ namespace TableTranslatorReg {
   }
 
   void T::set_enable_encoder(bool enable) {
-    if (enable_encoder_ = enable && user_dict_ && !encoder_){
+    if ((enable_encoder_ = enable && user_dict_ && !encoder_)) {
       init_encoder();
     }
   }
@@ -122,17 +122,17 @@ namespace TableTranslatorReg {
   }
 
   void T::set_enable_sentence(bool enable) {
-    if (enable_sentence_ = enable && !poet_)
+    if ((enable_sentence_ = enable && !poet_))
       init_poet();
   }
 
   void T::set_sentence_over_completion(bool enable) {
-    if (sentence_over_completion_ = enable && !poet_ )
+    if ((sentence_over_completion_ = enable && !poet_ ))
       init_poet();
   }
 
   void T::set_contextual_suggestions(bool enable) {
-    if (contextual_suggestions_ = enable && !poet_)
+    if ((contextual_suggestions_ = enable && !poet_))
       init_poet();
   }
   bool T::reload_user_dict_disabling_patterns(an<ConfigList> cl) {

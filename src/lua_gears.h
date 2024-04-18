@@ -24,6 +24,8 @@ public:
     return c_;
   }
 
+  virtual ~LuaTranslation();
+
 private:
   Lua *lua_;
   an<Candidate> c_;

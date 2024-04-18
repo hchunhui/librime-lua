@@ -38,6 +38,18 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().name_space())>> {
   }
 };
 
+// fallback version of file_path() if librime is old
+template<typename> struct void_t1 { using t = int; };
+template<typename T, typename void_t1<decltype(std::declval<T>().file_name())>::t = 0>
+std::string get_UserDb_file_path_string(const T &t) {
+    return t.file_name();
+}
+
+template<typename T, typename void_t1<decltype(std::declval<T>().file_path())>::t = 0>
+std::string get_UserDb_file_path_string(const T &t) {
+    return t.file_path().string();
+}
+
 namespace ProcessorReg{
   using T = Processor;
 
@@ -240,12 +252,10 @@ namespace UserDbReg{
   using A = DbAccessor;
 
   an<T> make(const string& db_name, const string& db_class) {
-    if (auto comp= UserDb::Require(db_class)){
-      return an<T>( comp->Create(db_name)) ;
+    if (auto comp= Db::Require(db_class)) {
+      return an<T>(comp->Create(db_name));
     }
-    else {
-      return {};
-    }
+    return {};
   }
 
   an<T> make_leveldb(const string& db_name) {
@@ -263,16 +273,6 @@ namespace UserDbReg{
     return {};
   }
 
-  bool Open(T &t) { return t.Open(); }
-  bool Close(T &t) { return t.Close(); }
-  bool OpenReadOnly(T &t) { return t.OpenReadOnly(); }
-  bool Erase(T &t, const string &key) { return t.Erase(key); }
-  bool Update(T &t, const string &key, const string &value) {
-    return t.Update(key, value);
-  }
-
-  an<A> Query(T &t, const string& key) { return t.Query(key); }
-
   static const luaL_Reg funcs[] = {
     {"UserDb", WRAP(make)},// an<Db> LevelDb( db_file, db_name)
     {"LevelDb", WRAP(make_leveldb)},// an<Db> LevelDb( db_file, db_name)
@@ -281,13 +281,13 @@ namespace UserDbReg{
   };
 
   static const luaL_Reg methods[] = {
-    {"open", WRAP(Open)},
-    {"open_read_only", WRAP(OpenReadOnly)},
-    {"close", WRAP(Close)},
-    {"query", WRAP(Query)}, // query(prefix_key) return DbAccessor
+    {"open", WRAPMEM(T, Open)},
+    {"open_read_only", WRAPMEM(T, OpenReadOnly)},
+    {"close", WRAPMEM(T, Close)},
+    {"query", WRAPMEM(T, Query)}, // query(prefix_key) return DbAccessor
     {"fetch", WRAP(fetch)},  //   fetch(key) return value
-    {"update", WRAP(Update)}, // update(key,value) return bool
-    {"erase", WRAP(Erase)}, // erase(key) return bool
+    {"update", WRAPMEM(T, Update)}, // update(key,value) return bool
+    {"erase", WRAPMEM(T, Erase)}, // erase(key) return bool
 
     {"loaded",WRAPMEM(T, loaded)},
     {"disable", WRAPMEM(T, disable)},
@@ -300,7 +300,7 @@ namespace UserDbReg{
     {"read_only",WRAPMEM(T, readonly)},
     {"disabled",WRAPMEM(T, disabled)},
     {"name", WRAPMEM(T, name)},
-    {"file_name", WRAPMEM(T, file_name)},
+    {"file_name", WRAP(get_UserDb_file_path_string<T>)},
     { NULL, NULL },
   };
 

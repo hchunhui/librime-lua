@@ -34,6 +34,8 @@ public:
 
   std::shared_ptr<LuaObj> newthreadx(lua_State *L, int nargs);
 
+  void gc();
+
   template <typename ... I>
   std::shared_ptr<LuaObj> newthread(I ... input);
 

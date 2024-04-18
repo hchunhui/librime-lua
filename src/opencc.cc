@@ -13,8 +13,8 @@
 #include <opencc/Dict.hpp>
 #include <opencc/DictEntry.hpp>
 #include <opencc/Common.hpp>
-#include <rime_api.h>
 #include <rime/common.h>
+#include <rime/service.h>
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
@@ -28,8 +28,8 @@ namespace {
 
 class Opencc {
 public:
-  //static shared_ptr<Opencc> create(const string &config_path);
-  Opencc(const string& config_path);
+  //static shared_ptr<Opencc> create(const path &config_path);
+  Opencc(const string& utf8_config_path);
   bool ConvertWord(const string& text, vector<string>* forms);
   bool RandomConvertText(const string& text, string* simplified);
   bool ConvertText(const string& text, string* simplified);
@@ -43,14 +43,14 @@ private:
   opencc::DictPtr dict_;
 };
 
-Opencc::Opencc(const string& config_path) {
+Opencc::Opencc(const string& utf8_config_path) {
   opencc::Config config;
-  converter_ = config.NewFromFile(config_path);
+  // OpenCC accepts UTF-8 encoded path.
+  converter_ = config.NewFromFile(utf8_config_path);
   const list<opencc::ConversionPtr> conversions =
     converter_->GetConversionChain()->GetConversions();
   dict_ = conversions.front()->GetDict();
 }
-
 
 bool Opencc::ConvertText(const string& text, string* simplified) {
   if (converter_ == nullptr) return false;
@@ -59,40 +59,90 @@ bool Opencc::ConvertText(const string& text, string* simplified) {
 }
 
 bool Opencc::ConvertWord(const string& text, vector<string>* forms) {
-  if (dict_ == nullptr) return false;
-  opencc::Optional<const opencc::DictEntry*> item = dict_->Match(text);
-  if (item.IsNull()) {
-    // Match not found
-    return false;
-  } else {
-    const opencc::DictEntry* entry = item.Get();
-    for (auto&& value : entry->Values()) {
-      forms->push_back(std::move(value));
+  if (converter_ == nullptr) return false;
+  const list<opencc::ConversionPtr> conversions =
+        converter_->GetConversionChain()->GetConversions();
+  vector<string> original_words{text};
+  bool matched = false;
+  for (auto conversion : conversions) {
+    opencc::DictPtr dict = conversion->GetDict();
+    if (dict == nullptr) return false;
+    set<string> word_set;
+    vector<string> converted_words;
+    for (const auto& original_word : original_words) {
+      opencc::Optional<const opencc::DictEntry*> item =
+          dict->Match(original_word);
+      if (item.IsNull()) {
+        // No exact match, but still need to convert partially matched
+        std::ostringstream buffer;
+        for (const char* wstr = original_word.c_str(); *wstr != '\0';) {
+          opencc::Optional<const opencc::DictEntry*> matched =
+              dict->MatchPrefix(wstr);
+          size_t matched_length;
+          if (matched.IsNull()) {
+            matched_length = opencc::UTF8Util::NextCharLength(wstr);
+            buffer << opencc::UTF8Util::FromSubstr(wstr, matched_length);
+          } else {
+            matched_length = matched.Get()->KeyLength();
+            buffer << matched.Get()->GetDefault();
+          }
+          wstr += matched_length;
+        }
+        const string& converted_word = buffer.str();
+        // Even if current dictionary doesn't convert the word
+        // (converted_word == original_word), we still need to keep it for
+        // subsequent dicts in the chain. e.g. s2t.json expands 里 to 里 and
+        // 裏, then t2tw.json passes 里 as-is and converts 裏 to 裡.
+        if (word_set.insert(converted_word).second) {
+          converted_words.push_back(converted_word);
+        }
+        continue;
+      }
+      matched = true;
+      const opencc::DictEntry* entry = item.Get();
+      for (const auto& converted_word : entry->Values()) {
+        if (word_set.insert(converted_word).second) {
+          converted_words.push_back(converted_word);
+        }
+      }
     }
-    return forms->size() > 0;
+    original_words.swap(converted_words);
   }
+  // No dictionary contains the word
+  if (!matched) return false;
+  *forms = std::move(original_words);
+  return forms->size() > 0;
 }
 
 bool Opencc::RandomConvertText(const string& text, string* simplified) {
   if (dict_ == nullptr) return false;
-  const char *phrase = text.c_str();
-  std::ostringstream buffer;
-  for (const char* pstr = phrase; *pstr != '\0';) {
-    opencc::Optional<const opencc::DictEntry*> matched = dict_->MatchPrefix(pstr);
-    size_t matchedLength;
-    if (matched.IsNull()) {
-      matchedLength = opencc::UTF8Util::NextCharLength(pstr);
-      buffer << opencc::UTF8Util::FromSubstr(pstr, matchedLength);
-    } else {
-      matchedLength = matched.Get()->KeyLength();
-      size_t i = rand() % (matched.Get()->NumValues());
-      buffer << matched.Get()->Values().at(i);
+  const list<opencc::ConversionPtr> conversions =
+        converter_->GetConversionChain()->GetConversions();
+  const char* phrase = text.c_str();
+  for (auto conversion : conversions) {
+    opencc::DictPtr dict = conversion->GetDict();
+    if (dict == nullptr) return false;
+    std::ostringstream buffer;
+    for (const char* pstr = phrase; *pstr != '\0';) {
+      opencc::Optional<const opencc::DictEntry*> matched =
+          dict->MatchPrefix(pstr);
+      size_t matched_length;
+      if (matched.IsNull()) {
+        matched_length = opencc::UTF8Util::NextCharLength(pstr);
+        buffer << opencc::UTF8Util::FromSubstr(pstr, matched_length);
+      } else {
+        matched_length = matched.Get()->KeyLength();
+        size_t i = rand() % (matched.Get()->NumValues());
+        buffer << matched.Get()->Values().at(i);
+      }
+      pstr += matched_length;
     }
-    pstr += matchedLength;
+    *simplified = buffer.str();
+    phrase = simplified->c_str();
   }
-  *simplified = buffer.str();
   return *simplified != text;
 }
+
 // for lua
 string Opencc::convert_text(const string& text) {
   string res;
@@ -115,23 +165,50 @@ vector<string> Opencc::convert_word(const string& text){
 namespace OpenccReg {
   using T = Opencc;
 
-  optional<T> make(const string &filename) {
-    string user_path( RimeGetUserDataDir());
-    string shared_path(RimeGetSharedDataDir());
-    try{
-      return T(user_path + "/opencc/" + filename);
-    }
-    catch(...) {
+  template<typename> using void_t = void;
+
+  template<typename U, typename = void>
+  struct COMPAT {
+    static optional<T> make(const string &filename) {
+      auto user_path = string(rime_get_api()->get_user_data_dir());
+      auto shared_path = string(rime_get_api()->get_shared_data_dir());
       try{
-        return T(shared_path + "/opencc/" + filename);
+        return T(user_path + "/opencc/" + filename);
       }
       catch(...) {
-        LOG(ERROR) << " [" << user_path << "|" << shared_path << "]/opencc/"
-          << filename  << ": File not found or InvalidFormat";
-        return {};
+        try{
+          return T(shared_path + "/opencc/" + filename);
+        }
+        catch(...) {
+          LOG(ERROR) << " [" << user_path << "|" << shared_path << "]/opencc/"
+                     << filename  << ": File not found or InvalidFormat";
+          return {};
+        }
       }
     }
-  }
+  };
+
+  template<typename U>
+  struct COMPAT<U, void_t<decltype(std::declval<U>().user_data_dir.string())>> {
+    static optional<T> make(const string &filename) {
+      U &deployer = Service::instance().deployer();
+      auto user_path = deployer.user_data_dir;
+      auto shared_path = deployer.shared_data_dir;
+      try{
+        return T((user_path / "opencc" / filename).u8string());
+      }
+      catch(...) {
+        try{
+          return T((shared_path / "opencc" / filename).u8string());
+        }
+        catch(...) {
+          LOG(ERROR) << " [" << user_path << "|" << shared_path << "]/opencc/"
+                     << filename  << ": File not found or InvalidFormat";
+          return {};
+        }
+      }
+    }
+  };
 
   optional<vector<string>> convert_word(T &t,const string &s) {
     vector<string> res;
@@ -141,7 +218,7 @@ namespace OpenccReg {
   }
 
   static const luaL_Reg funcs[] = {
-    {"Opencc",WRAP(make)},
+    {"Opencc",WRAP(COMPAT<Deployer>::make)},
     { NULL, NULL },
   };
 
