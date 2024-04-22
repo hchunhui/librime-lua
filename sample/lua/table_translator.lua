@@ -21,12 +21,13 @@ env.tran:discard_session bool function()
 env.tran:query           translation function(inp, seg)
 env.tran:memorize        bool function(commit_entrys)
 env.tran:update_entry    bool function(entry)
+env.tran:set_memorize_callback  bool function(commit_entry)
 
 ------- vars_set                   設定值
 env.tran.max_homophones         =  number
 env.tran.spelling_hints         =  number
 env.tran.enable_correction      =  boolean
-env.tran.memorize_callback      =  function(self, commits)
+env.tran.memorize_callback      =  function(commits)|nil
 env.tran.enable_completion      =  false   boolean
 env.tran.delimiters             =  false   string
 env.tran.strict_spelling        =  boolean
@@ -39,6 +40,7 @@ env.tran.tag                    =  string
 res = env.tran.max_homophones           1       number
 res = env.tran.spelling_hints           0       number
 res = env.tran.enable_correction        false   boolean
+env.tran.memorize_callback              function|nil
 res = env.tran.enable_completion        true    boolean
 res = env.tran.delimiters       '       string
 res = env.tran.strict_spelling false    boolean
@@ -67,7 +69,10 @@ local function callback(self, commits) -- self : env.tran commits : list
 end
 function M.init(env)
   env.tran = Component.TableTranslator(env.engine, env.name_space, "table_translator")
-  env.tran:memorize_callback(simple_callback)
+  env.tran:set_memorize_callback(simple_callback)
+  --env.tran:set_memorize_callback() -- reset callback
+  --env.tran.memorize_callback= function(simple_callback)
+  --env.tran.memorize_callback= nil  -- reset callback
 end
 
 function M.fini(env)
