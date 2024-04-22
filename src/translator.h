@@ -15,6 +15,7 @@
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
 #include "lib/lua_export_type.h"
+#include "optional.h"
 
 #define SET_(name, type)             \
   void set_##name(const type data) { \

@@ -29,7 +29,7 @@ namespace ScriptTranslatorReg {
           int commits, const string& new_entory_prefix);
 
       SET_(memorize_callback, an<LuaObj>);
-      bool memorize_callback();
+      optional<an<LuaObj>> memorize_callback();
 
       // TranslatorOptions
       SET_(contextual_suggestions, bool);
@@ -53,8 +53,10 @@ namespace ScriptTranslatorReg {
 
   using T = LScriptTranslator;
 
-  bool T::memorize_callback() {
-    return (memorize_callback_) ? true : false;
+  optional<an<LuaObj>> T::memorize_callback() {
+    if (memorize_callback_)
+      return memorize_callback_;
+    return {};
   }
 
   bool T::memorize(const CommitEntry& commit_entry) {

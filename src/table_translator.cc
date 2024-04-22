@@ -29,7 +29,7 @@ namespace TableTranslatorReg {
           int commits, const string& new_entory_prefix);
 
       SET_(memorize_callback, an<LuaObj>);
-      bool memorize_callback();
+      optional<an<LuaObj>> memorize_callback();
 
       // TranslatorOptions
       void set_contextual_suggestions(bool);
@@ -60,9 +60,12 @@ namespace TableTranslatorReg {
 
   using T = LTableTranslator;
 
-  bool T::memorize_callback() {
-    return (memorize_callback_) ? true : false;
+  optional<an<LuaObj>> T::memorize_callback() {
+    if (memorize_callback_)
+      return memorize_callback_;
+    return {};
   }
+
   bool T::memorize(const CommitEntry& commit_entry) {
     return TableTranslator::Memorize(commit_entry);
   }
@@ -73,18 +76,18 @@ namespace TableTranslatorReg {
     }
 
     auto r = lua_->call<bool, an<LuaObj>, LTableTranslator*, const CommitEntry&>(
-        memorize_callback_, this, commit_entry);
+										 memorize_callback_, this, commit_entry);
     if (!r.ok()) {
       auto e = r.get_err();
       LOG(ERROR) << "LTableTranslator of " << name_space_
-        << ": memorize_callback error(" << e.status << "): " << e.e;
+		 << ": memorize_callback error(" << e.status << "): " << e.e;
       return false;
     }
     return r.get();
   }
 
   bool T::update_entry(const DictEntry& entry,
-      int commits, const string& new_entory_prefix) {
+		       int commits, const string& new_entory_prefix) {
     if (user_dict_ && user_dict_->loaded())
       return user_dict_->UpdateEntry(entry, commits, new_entory_prefix);
 
