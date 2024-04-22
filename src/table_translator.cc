@@ -76,7 +76,7 @@ namespace TableTranslatorReg {
     }
 
     auto r = lua_->call<bool, an<LuaObj>, LTableTranslator*, const CommitEntry&>(
-										 memorize_callback_, this, commit_entry);
+	           memorize_callback_, this, commit_entry);
     if (!r.ok()) {
       auto e = r.get_err();
       LOG(ERROR) << "LTableTranslator of " << name_space_
