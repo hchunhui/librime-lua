@@ -113,14 +113,14 @@ namespace ScriptTranslatorReg {
     WMEM(memorize),      // delegate TableTransaltor::Momorize
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
+    WMEM(set_memorize_callback),  // an<LuaObj> callback function
     {NULL, NULL},
   };
 
   static const luaL_Reg vars_get[] = {
     Get_WMEM(name_space),  // string
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
-                                  // ScriptTranslator member
+    Get_WMEM(memorize_callback),  // an<LuaObj> callback function
+    // ScriptTranslator member
     Get_WMEM(max_homophones),        // int
     Get_WMEM(spelling_hints),        // int
     Get_WMEM(always_show_comments),  // bool
@@ -141,12 +141,13 @@ namespace ScriptTranslatorReg {
   };
 
   static const luaL_Reg vars_set[] = {
+    Set_WMEM(memorize_callback),     // an<LuaObj> callback function
     // ScriptTranslator member
     Set_WMEM(max_homophones),        // int
     Set_WMEM(spelling_hints),        // int
     Set_WMEM(always_show_comments),  // bool
     Set_WMEM(enable_correction),     // bool
-                                     // TranslatorOptions
+    // TranslatorOptions
     Set_WMEM(delimiters),              // string&
     Set_WMEM(tag),                     // string
     Set_WMEM(enable_completion),       // bool

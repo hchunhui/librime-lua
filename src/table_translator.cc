@@ -151,7 +151,7 @@ namespace TableTranslatorReg {
     WMEM(memorize),      // delegate TableTransaltor::Momorize
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
+    WMEM(set_memorize_callback),  // an<LuaObj> callback function
     {NULL, NULL},
   };
 
@@ -183,6 +183,7 @@ namespace TableTranslatorReg {
   };
 
   static const luaL_Reg vars_set[] = {
+    Set_WMEM(memorize_callback),     // an<LuaObj> callback function
     // TableTranslator member
     Set_WMEM(enable_charset_filter),     // bool
     Set_WMEM(enable_encoder),            // bool
