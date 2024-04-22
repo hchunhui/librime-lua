@@ -115,7 +115,7 @@ namespace ScriptTranslatorReg {
     WMEM(memorize),      // delegate TableTransaltor::Momorize
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
-    WMEM(set_memorize_callback),  // an<LuaObj> callback function
+    {"set_memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
     {NULL, NULL},
   };
 
@@ -143,7 +143,7 @@ namespace ScriptTranslatorReg {
   };
 
   static const luaL_Reg vars_set[] = {
-    Set_WMEM(memorize_callback),     // an<LuaObj> callback function
+    {"memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
     // ScriptTranslator member
     Set_WMEM(max_homophones),        // int
     Set_WMEM(spelling_hints),        // int
