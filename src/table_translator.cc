@@ -11,6 +11,9 @@
 #include <rime/schema.h>
 #include <rime/engine.h>
 
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
+
 #include "translator.h"
 
 using namespace rime;
@@ -186,7 +189,7 @@ namespace TableTranslatorReg {
   };
 
   static const luaL_Reg vars_set[] = {
-    {"set_memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
+    {"memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
     // TableTranslator member
     Set_WMEM(enable_charset_filter),     // bool
     Set_WMEM(enable_encoder),            // bool

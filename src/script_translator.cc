@@ -10,6 +10,8 @@
 #include <rime/dict/corrector.h>
 #include <rime/gear/poet.h>
 
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
 
 #include "translator.h"
 

@@ -8,12 +8,7 @@
 #ifndef _LUA_TRANSLATOR_H
 #define _LUA_TRANSLATOR_H
 
-#include <rime/common.h>
-#include <rime/engine.h>
-#include <rime/schema.h>
-#include <rime/config.h>
-#include <rime/dict/dictionary.h>
-#include <rime/dict/user_dictionary.h>
+#include <rime/ticket.h>
 #include "lib/lua_export_type.h"
 #include "optional.h"
 
