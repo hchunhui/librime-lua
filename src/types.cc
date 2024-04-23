@@ -1951,6 +1951,9 @@ namespace MemoryReg {
   };
 
   static const luaL_Reg methods[] = {
+      {"start_session", WRAPMEM(T, StartSession)},
+      {"finish_session", WRAPMEM(T, FinishSession)},
+      {"discard_session", WRAPMEM(T, DiscardSession)},
       { "dict_lookup", WRAPMEM(T::dictLookup)}, // bool
       { "user_lookup", WRAPMEM(T::userLookup)}, // bool
       { "dictiter_lookup", WRAPMEM(T::dictiterLookup)}, // iter
