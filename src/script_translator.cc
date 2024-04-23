@@ -12,6 +12,7 @@
 
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
+#include <rime/language.h>
 
 #include "translator.h"
 
@@ -32,6 +33,7 @@ namespace ScriptTranslatorReg {
 
       SET_(memorize_callback, an<LuaObj>);
       optional<an<LuaObj>> memorize_callback();
+      string lang_name() { return language_->name();};
 
       // TranslatorOptions
       SET_(contextual_suggestions, bool);
@@ -122,8 +124,9 @@ namespace ScriptTranslatorReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    Get_WMEM(name_space),  // string
-    Get_WMEM(memorize_callback),  // an<LuaObj> callback function
+    Get_WMEM(name_space),            // string
+    Get_WMEM(lang_name),             // string
+    Get_WMEM(memorize_callback),     // an<LuaObj> callback function
     // ScriptTranslator member
     Get_WMEM(max_homophones),        // int
     Get_WMEM(spelling_hints),        // int

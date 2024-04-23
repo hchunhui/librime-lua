@@ -13,6 +13,7 @@
 
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
+#include <rime/language.h>
 
 #include "translator.h"
 
@@ -33,6 +34,7 @@ namespace TableTranslatorReg {
 
       SET_(memorize_callback, an<LuaObj>);
       optional<an<LuaObj>> memorize_callback();
+      string lang_name() const { return language_->name();};
 
       // TranslatorOptions
       void set_contextual_suggestions(bool);
@@ -163,8 +165,9 @@ namespace TableTranslatorReg {
 
   static const luaL_Reg vars_get[] = {
     // class translator member
-    Get_WMEM(name_space),  // string
-    Get_WMEM(memorize_callback),  // an<LuaObj> callback function
+    Get_WMEM(name_space),                // string
+    Get_WMEM(lang_name),                 // string
+    Get_WMEM(memorize_callback),         // an<LuaObj> callback function
     // TabletTranslator member
     Get_WMEM(enable_charset_filter),     // bool
     Get_WMEM(enable_encoder),            // bool
