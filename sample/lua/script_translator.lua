@@ -21,11 +21,12 @@ env.tran:discard_session false   function()
 env.tran:query   false   function(inp, seg)
 env.tran:memorize        false   function(commit_entrys)
 env.tran:update_entry    false   function(entry, state, prefix_str)
-env.tran.memorize_callback      =    function(self, commit_entry)
+env.tran:set_memorize_callback  bool function(commit_entry)
 ------- vars_set
 env.tran.spelling_hints         =    int >0
 env.tran.initial_quality        =    double
 env.tran.contextual_suggestions =    boolean
+env.tran.memorize_callback      =    [function | nil]
 env.tran.enable_completion      =    boolean
 env.tran.always_show_comments   =    boolean
 env.tran.strict_spelling        =    boolean
@@ -38,6 +39,7 @@ env.tran.delimiters             =    string
 res = env.tran.spelling_hints           0       number
 res = env.tran.initial_quality          0.0     number
 res = env.tran.contextual_suggestions   false   boolean
+env.tran.memorize_callback              function|nil
 res = env.tran.enable_completion        true    boolean
 res = env.tran.always_show_comments     false   boolean
 res = env.tran.strict_spelling          false   boolean
@@ -64,7 +66,10 @@ local function callback(self, commits) -- self : env.tran commits : list
 end
 function M.init(env)
   env.tran = Component.ScriptTranslator(env.engine, env.name_space, "script_translator")
-  env.tran:memorize_callback(simple_callback)
+  env.tran:set_memorize_callback(simple_callback)
+  --env.tran:set_memorize_callback() -- reset callback
+  --env.tran.memorize_callback= function(simple_callback)
+  --env.tran.memorize_callback= nil  -- reset callback
 end
 
 function M.fini(env)

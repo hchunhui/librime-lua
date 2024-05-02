@@ -10,6 +10,9 @@
 #include <rime/dict/corrector.h>
 #include <rime/gear/poet.h>
 
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
+#include <rime/language.h>
 
 #include "translator.h"
 
@@ -29,7 +32,8 @@ namespace ScriptTranslatorReg {
           int commits, const string& new_entory_prefix);
 
       SET_(memorize_callback, an<LuaObj>);
-      bool memorize_callback();
+      optional<an<LuaObj>> memorize_callback();
+      string lang_name() { return language_->name();};
 
       // TranslatorOptions
       SET_(contextual_suggestions, bool);
@@ -53,8 +57,10 @@ namespace ScriptTranslatorReg {
 
   using T = LScriptTranslator;
 
-  bool T::memorize_callback() {
-    return (memorize_callback_) ? true : false;
+  optional<an<LuaObj>> T::memorize_callback() {
+    if (memorize_callback_)
+      return memorize_callback_;
+    return {};
   }
 
   bool T::memorize(const CommitEntry& commit_entry) {
@@ -67,7 +73,7 @@ namespace ScriptTranslatorReg {
     }
 
     auto r = lua_->call<bool, an<LuaObj>, LScriptTranslator*, const CommitEntry&>(
-        memorize_callback_, this, commit_entry);
+                   memorize_callback_, this, commit_entry);
     if (!r.ok()) {
       auto e = r.get_err();
       LOG(ERROR) << "LScriptTranslator of " << name_space_
@@ -113,14 +119,15 @@ namespace ScriptTranslatorReg {
     WMEM(memorize),      // delegate TableTransaltor::Momorize
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
+    {"set_memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
     {NULL, NULL},
   };
 
   static const luaL_Reg vars_get[] = {
-    Get_WMEM(name_space),  // string
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
-                                  // ScriptTranslator member
+    Get_WMEM(name_space),            // string
+    Get_WMEM(lang_name),             // string
+    Get_WMEM(memorize_callback),     // an<LuaObj> callback function
+    // ScriptTranslator member
     Get_WMEM(max_homophones),        // int
     Get_WMEM(spelling_hints),        // int
     Get_WMEM(always_show_comments),  // bool
@@ -141,12 +148,13 @@ namespace ScriptTranslatorReg {
   };
 
   static const luaL_Reg vars_set[] = {
+    {"memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
     // ScriptTranslator member
     Set_WMEM(max_homophones),        // int
     Set_WMEM(spelling_hints),        // int
     Set_WMEM(always_show_comments),  // bool
     Set_WMEM(enable_correction),     // bool
-                                     // TranslatorOptions
+    // TranslatorOptions
     Set_WMEM(delimiters),              // string&
     Set_WMEM(tag),                     // string
     Set_WMEM(enable_completion),       // bool
