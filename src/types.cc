@@ -104,6 +104,10 @@ namespace SegmentReg {
       t.status = T::kConfirmed;
   }
 
+  string active_text(T &t, const string &r) {
+    return r.substr(t.start, t.end - t.start);
+  }
+
   static const luaL_Reg funcs[] = {
     { "Segment", WRAP(make) },
     { NULL, NULL },
@@ -116,6 +120,7 @@ namespace SegmentReg {
     { "has_tag", WRAPMEM(T::HasTag) },
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
     { "get_selected_candidate", WRAPMEM(T::GetSelectedCandidate) },
+    { "active_text", WRAP(active_text) },
     { NULL, NULL },
   };
 
