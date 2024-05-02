@@ -11,6 +11,10 @@
 #include <rime/schema.h>
 #include <rime/engine.h>
 
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
+#include <rime/language.h>
+
 #include "translator.h"
 
 using namespace rime;
@@ -29,7 +33,8 @@ namespace TableTranslatorReg {
           int commits, const string& new_entory_prefix);
 
       SET_(memorize_callback, an<LuaObj>);
-      bool memorize_callback();
+      optional<an<LuaObj>> memorize_callback();
+      string lang_name() const { return language_->name();};
 
       // TranslatorOptions
       void set_contextual_suggestions(bool);
@@ -60,9 +65,12 @@ namespace TableTranslatorReg {
 
   using T = LTableTranslator;
 
-  bool T::memorize_callback() {
-    return (memorize_callback_) ? true : false;
+  optional<an<LuaObj>> T::memorize_callback() {
+    if (memorize_callback_)
+      return memorize_callback_;
+    return {};
   }
+
   bool T::memorize(const CommitEntry& commit_entry) {
     return TableTranslator::Memorize(commit_entry);
   }
@@ -73,18 +81,18 @@ namespace TableTranslatorReg {
     }
 
     auto r = lua_->call<bool, an<LuaObj>, LTableTranslator*, const CommitEntry&>(
-        memorize_callback_, this, commit_entry);
+	           memorize_callback_, this, commit_entry);
     if (!r.ok()) {
       auto e = r.get_err();
       LOG(ERROR) << "LTableTranslator of " << name_space_
-        << ": memorize_callback error(" << e.status << "): " << e.e;
+		 << ": memorize_callback error(" << e.status << "): " << e.e;
       return false;
     }
     return r.get();
   }
 
   bool T::update_entry(const DictEntry& entry,
-      int commits, const string& new_entory_prefix) {
+		       int commits, const string& new_entory_prefix) {
     if (user_dict_ && user_dict_->loaded())
       return user_dict_->UpdateEntry(entry, commits, new_entory_prefix);
 
@@ -151,14 +159,15 @@ namespace TableTranslatorReg {
     WMEM(memorize),      // delegate TableTransaltor::Momorize
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
-    Set_WMEM(memorize_callback),  // an<LuaObj> callback function
+    {"set_memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
     {NULL, NULL},
   };
 
   static const luaL_Reg vars_get[] = {
     // class translator member
-    Get_WMEM(name_space),  // string
-    Get_WMEM(memorize_callback),  // an<LuaObj> callback function
+    Get_WMEM(name_space),                // string
+    Get_WMEM(lang_name),                 // string
+    Get_WMEM(memorize_callback),         // an<LuaObj> callback function
     // TabletTranslator member
     Get_WMEM(enable_charset_filter),     // bool
     Get_WMEM(enable_encoder),            // bool
@@ -183,6 +192,7 @@ namespace TableTranslatorReg {
   };
 
   static const luaL_Reg vars_set[] = {
+    {"memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
     // TableTranslator member
     Set_WMEM(enable_charset_filter),     // bool
     Set_WMEM(enable_encoder),            // bool

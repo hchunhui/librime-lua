@@ -8,13 +8,9 @@
 #ifndef _LUA_TRANSLATOR_H
 #define _LUA_TRANSLATOR_H
 
-#include <rime/common.h>
-#include <rime/engine.h>
-#include <rime/schema.h>
-#include <rime/config.h>
-#include <rime/dict/dictionary.h>
-#include <rime/dict/user_dictionary.h>
+#include <rime/ticket.h>
 #include "lib/lua_export_type.h"
+#include "optional.h"
 
 #define SET_(name, type)             \
   void set_##name(const type data) { \
@@ -56,9 +52,9 @@ int raw_make_translator(lua_State* L){
   if ( n == 4 )
     ticket.schema = &(LuaType<rime::Schema &>::todata(L, 2) ); //overwrite schema
   Lua* lua= Lua::from_state(L);
-  rime::an<O> obj = rime::New<O>(ticket, lua);
+  std::shared_ptr<O> obj = rime::New<O>(ticket, lua);
   if (obj) {
-    LuaType<rime::an<O>>::pushdata(L, obj);
+    LuaType<std::shared_ptr<O>>::pushdata(L, obj);
     return 1;
   }
   else {
@@ -66,4 +62,27 @@ int raw_make_translator(lua_State* L){
     return 0;
   }
 };
+
+template <typename O>
+int raw_set_memorize_callback(lua_State *L) {
+  bool res = false;
+  auto t = LuaType<std::shared_ptr<O>>::todata(L, 1);
+  const int type = (1 < lua_gettop(L)) ? lua_type(L, 2) : LUA_TNIL;
+  if (type == LUA_TNIL) {
+    // reset memorize_callback
+    LOG(INFO) << typeid(*t).name() <<" of " << t->name_space() << ": reset memorize_callback";
+    t->set_memorize_callback({});
+    res = true;
+  }
+  else if (type == LUA_TFUNCTION) {
+    t->set_memorize_callback( LuaObj::todata(L, 2));
+    res = true;
+  }
+  else {
+    LOG(WARNING) << typeid(*t).name() <<" of " << t->name_space()
+		 << ": set memorize_callback '?' (function expected, got " << lua_typename(L, type) <<")";
+  }
+  lua_pushboolean(L, res);
+  return 1;
+}
 #endif /* !_LUA_TRANSLATOR_H */
