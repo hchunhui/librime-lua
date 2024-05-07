@@ -159,6 +159,7 @@ LuaFilter::~LuaFilter() {
       LOG(ERROR) << "LuaFilter::~LuaFilter of "<< name_space_ << " error(" << e.status << "): " << e.e;
     }
   }
+  lua_->gc();
 }
 
 //--- LuaTranslator
@@ -186,6 +187,7 @@ LuaTranslator::~LuaTranslator() {
       LOG(ERROR) << "LuaTranslator::~LuaTranslator of "<< name_space_ << " error(" << e.status << "): " << e.e;
     }
   }
+  lua_->gc();
 }
 
 //--- LuaSegmentor
@@ -213,6 +215,7 @@ LuaSegmentor::~LuaSegmentor() {
       LOG(ERROR) << "LuaSegmentor::~LuaSegmentor of "<< name_space_ << " error(" << e.status << "): " << e.e;
     }
   }
+  lua_->gc();
 }
 
 //--- LuaProcessor
@@ -244,6 +247,7 @@ LuaProcessor::~LuaProcessor() {
       LOG(ERROR) << "LuaProcessor::~LuaProcessor of "<< name_space_ << " error(" << e.status << "): " << e.e;
     }
   }
+  lua_->gc();
 }
 
 }  // namespace rime
