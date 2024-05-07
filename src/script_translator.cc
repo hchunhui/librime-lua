@@ -75,9 +75,8 @@ namespace ScriptTranslatorReg {
     auto r = lua_->call<bool, an<LuaObj>, LScriptTranslator*, const CommitEntry&>(
                    memorize_callback_, this, commit_entry);
     if (!r.ok()) {
-      auto e = r.get_err();
       LOG(ERROR) << "LScriptTranslator of " << name_space_
-        << ": memorize_callback error(" << e.status << "): " << e.e;
+        << ": memorize_callback" << r.get_err();
       return false;
     }
     return r.get();

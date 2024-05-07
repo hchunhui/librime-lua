@@ -1336,8 +1336,7 @@ static int raw_connect(lua_State *L) {
   auto f = [lua, o](I... i) {
     auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
     if (!r.ok()) {
-                 auto e = r.get_err();
-      LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "Context::Notifier" << r.get_err();
     }
   };
 
@@ -1824,8 +1823,7 @@ namespace MemoryReg {
 
     auto r = lua_->call<bool, an<LuaObj>, const CommitEntry &>(memorize_callback, commit_entry);
     if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaMemory::Memorize error(" << e.status << "): " << e.e;
+      LOG(ERROR) << "LuaMemory::Memorize" << r.get_err();
       return false;
     } else
       return r.get();
