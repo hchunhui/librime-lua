@@ -33,7 +33,7 @@ namespace ScriptTranslatorReg {
 
       SET_(memorize_callback, an<LuaObj>);
       optional<an<LuaObj>> memorize_callback();
-      string lang_name() { return language_->name();};
+      string lang_name() const { return (language_) ? language_->name() : "";};
 
       // TranslatorOptions
       SET_(contextual_suggestions, bool);
@@ -48,6 +48,12 @@ namespace ScriptTranslatorReg {
       ACCESS_(max_homophones, int);
       GET_(enable_correction, bool);
       void set_enable_correction(bool);
+
+      void disconnect() {
+        dict_.reset();
+        user_dict_.reset();
+        language_.reset();
+      }
 
     protected:
       Lua* lua_;
@@ -107,6 +113,10 @@ namespace ScriptTranslatorReg {
     return cl ?  user_dict_disabling_patterns_.Load(cl) : false;
   }
 
+  an<Translator> as_translator(an<T> &t) {
+    return As<Translator>(t);
+  }
+
   static const luaL_Reg funcs[] = {
     {NULL, NULL},
   };
@@ -120,6 +130,7 @@ namespace ScriptTranslatorReg {
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
     {"set_memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
+    {"disconnect", WRAPMEM(T::disconnect)},
     {NULL, NULL},
   };
 
@@ -144,6 +155,7 @@ namespace ScriptTranslatorReg {
     // Memory
     Get_WMEM(dict),
     Get_WMEM(user_dict),
+    {"translator", WRAP(as_translator)},
     {NULL, NULL},
   };
 

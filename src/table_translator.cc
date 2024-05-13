@@ -34,7 +34,7 @@ namespace TableTranslatorReg {
 
       SET_(memorize_callback, an<LuaObj>);
       optional<an<LuaObj>> memorize_callback();
-      string lang_name() const { return language_->name();};
+      string lang_name() const { return (language_) ? language_->name() : "";};
 
       // TranslatorOptions
       void set_contextual_suggestions(bool);
@@ -54,6 +54,12 @@ namespace TableTranslatorReg {
       void set_enable_encoder(bool);
       GET_(enable_sentence, bool);
       void set_enable_sentence(bool);
+
+      void disconnect() {
+        dict_.reset();
+        user_dict_.reset();
+        language_.reset();
+      }
 
     protected:
       Lua* lua_;
@@ -147,6 +153,10 @@ namespace TableTranslatorReg {
     return cl ?  user_dict_disabling_patterns_.Load(cl) : false;
   }
 
+  an<Translator> as_translator(an<T> &t) {
+    return As<Translator>(t);
+  }
+
   static const luaL_Reg funcs[] = {
     {NULL, NULL},
   };
@@ -160,6 +170,7 @@ namespace TableTranslatorReg {
     WMEM(update_entry),  // delegate UserDictionary::UpdateEntry
     WMEM(reload_user_dict_disabling_patterns),
     {"set_memorize_callback", raw_set_memorize_callback<T>},  // an<LuaObj> callback function
+    {"disconnect", WRAPMEM(T::disconnect)},
     {NULL, NULL},
   };
 
@@ -188,6 +199,7 @@ namespace TableTranslatorReg {
     // Memory
     Get_WMEM(dict),
     Get_WMEM(user_dict),
+    {"translator", WRAP(as_translator)},
     {NULL, NULL},
   };
 
