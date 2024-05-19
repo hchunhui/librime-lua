@@ -36,7 +36,7 @@ template<typename T, typename = void>
 struct COMPAT {
   // fallback version if librime is old
   static an<ReverseDb> new_ReverseDb(const std::string &file) {
-    return New<ReverseDb>(std::string(RimeGetUserDataDir()) + "/" + file);
+    return New<ReverseDb>(string(rime_get_api()->get_user_data_dir()) + "/" + file);
   }
 
   static string get_shared_data_dir() {
