@@ -1794,7 +1794,7 @@ namespace MemoryReg {
         const string& new_entry_prefix, const string& lang_string);
 
     bool update_candidate(const an<Candidate> cand, const int commits);
-    const string lang_name() { return language_->name(); };
+    const string lang_name() { return (language_) ? language_->name() : ""; };
     virtual bool Memorize(const CommitEntry& entry);
 
     LuaMemory(const Ticket& ticket, Lua* lua)
@@ -1808,6 +1808,11 @@ namespace MemoryReg {
     }
     void clearUser() {
       uter.reset();
+    }
+    void disconnect() {
+      dict_.reset();
+      user_dict_.reset();
+      language_.reset();
     }
   };
 
@@ -1970,6 +1975,7 @@ namespace MemoryReg {
       { "update_userdict", WRAPMEM(T::update_userdict)},
       { "update_entry", WRAPMEM(T::update_entry)},
       { "update_candidate", WRAPMEM(T::update_candidate)},
+      { "disconnect", WRAPMEM(T::disconnect)},
       {NULL, NULL},
   };
 
