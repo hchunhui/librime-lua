@@ -75,6 +75,25 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
   }
 };
 
+template<typename T>
+struct CONFIGDATA_COMPAT {
+
+  static string type(T &t) {
+    switch (t.type()) {
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
+    }
+    return "";
+  }
+
+  static an<ConfigItem> element(an<T> &t) {
+    return As<ConfigItem>(t);
+  }
+
+};
+
 //--- wrappers for Segment
 namespace SegmentReg {
   using T = Segment;
@@ -906,9 +925,6 @@ namespace ConfigValueReg {
   using T = ConfigValue;
   using E = ConfigItem;
 
-  // an<T> make(){
-  //  return New<T>();
-  // };
   an<T> make(string s){
     return New<T>(s);
   };
@@ -949,20 +965,6 @@ namespace ConfigValueReg {
     return t.SetString( value);
   }
 
-  string type(T &t){
-    switch (t.type()) {
-    case T::kNull: return "kNull";
-    case T::kScalar: return "kScalar";
-    case T::kList: return "kList";
-    case T::kMap: return "kMap";
-    }
-    return "";
-  }
-
-  an<E> element(an<T> t){
-    return t ;
-  }
-
   static const luaL_Reg funcs[] = {
     {"ConfigValue", WRAP(make)},
     { NULL, NULL },
@@ -982,8 +984,8 @@ namespace ConfigValueReg {
 
   static const luaL_Reg vars_get[] = {
     {"value",WRAP(get_string)},
-    {"type",WRAP(type)},
-    {"element",WRAP(element)},
+    {"type", WRAP(CONFIGDATA_COMPAT<T>::type)},
+    {"element",WRAP(CONFIGDATA_COMPAT<T>::element)},
     { NULL, NULL },
   };
 
@@ -999,20 +1001,6 @@ namespace ConfigListReg {
   an<T> make(){
     return New<T>();
   };
-
-  string type(T &t){
-    switch (t.type()) {
-    case T::kNull: return "kNull";
-    case T::kScalar: return "kScalar";
-    case T::kList: return "kList";
-    case T::kMap: return "kMap";
-    }
-    return "";
-  }
-
-  an<E> element(an<T> t){
-    return t;
-  }
 
   static const luaL_Reg funcs[] = {
     {"ConfigList", WRAP(make)},
@@ -1033,8 +1021,8 @@ namespace ConfigListReg {
 
   static const luaL_Reg vars_get[] = {
     {"size", WRAPMEM(T::size)},
-    {"type",WRAP(type)},
-    {"element",WRAP(element)},
+    {"type", WRAP(CONFIGDATA_COMPAT<T>::type)},
+    {"element",WRAP(CONFIGDATA_COMPAT<T>::element)},
     { NULL, NULL },
   };
 
@@ -1052,25 +1040,11 @@ namespace ConfigMapReg {
     return New<T>();
   }
 
-  string type(T &t){
-    switch (t.type()) {
-    case T::kNull: return "kNull";
-    case T::kScalar: return "kScalar";
-    case T::kList: return "kList";
-    case T::kMap: return "kMap";
-    }
-    return "";
-  }
-
   size_t size(T &t){
     size_t count=0;
     for (auto it=t.begin(); it !=t.end();it++)
       count++ ;
     return count;
-  }
-
-  an<E> element(an<T> t){
-    return t ;
   }
 
   std::vector<string> get_keys(T &t){
@@ -1098,8 +1072,8 @@ namespace ConfigMapReg {
 
   static const luaL_Reg vars_get[] = {
     {"size", WRAP(size)},
-    {"type",WRAP(type)},
-    {"element",WRAP(element)},
+    {"type", WRAP(CONFIGDATA_COMPAT<T>::type)},
+    {"element",WRAP(CONFIGDATA_COMPAT<T>::element)},
     { NULL, NULL },
   };
 
@@ -1116,37 +1090,23 @@ namespace ConfigItemReg {
 
 template <class R>
 an<R> Get(an<T> t) {
-    return std::dynamic_pointer_cast<R>(t);
+  return std::dynamic_pointer_cast<R>(t);
 };
 
-  string type(T &t){
-    switch (t.type()) {
-    case T::kNull: return "kNull";
-    case T::kScalar: return "kScalar";
-    case T::kList: return "kList";
-    case T::kMap: return "kMap";
-    }
-    return "";
-  }
+template <class R>
+inline int push_config_data(lua_State *L_, an<T> t) {
+  auto res = As<R>(t);
+  LuaType<an<R>>::pushdata(L_, res);
+  return 1;
+};
 
-  int get_obj(lua_State *L_) {
+  int raw_get_obj(lua_State *L_) {
     if (an<T> t = LuaType<an<T>>::todata(L_, 1)) {
-      auto t_type = t->type();
-      if (T::kScalar == t_type) {
-          lua_pushcfunction(L_, WRAP(Get<V>));
+      switch(t->type()) {
+      case T::kScalar : return push_config_data<V>(L_, t);
+      case T::kList   : return push_config_data<L>(L_, t);
+      case T::kMap    : return push_config_data<M>(L_, t);
       }
-      else if (T::kList == t_type) {
-          lua_pushcfunction(L_, WRAP(Get<L>));
-      }
-      else if (T::kMap == t_type) {
-          lua_pushcfunction(L_, WRAP(Get<M>));
-      }
-      else {
-        return 0;
-      }
-      lua_pushvalue(L_, 1);
-      lua_call(L_, 1, 1);
-      return 1;
     }
     return 0;
   }
@@ -1159,12 +1119,12 @@ an<R> Get(an<T> t) {
     {"get_value",WRAP(Get<V>)},
     {"get_list",WRAP(Get<L>)},
     {"get_map",WRAP(Get<M>)},
-    {"get_obj", get_obj},
+    {"get_obj", raw_get_obj},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
-    {"type",WRAP(type)},
+    {"type",WRAP(CONFIGDATA_COMPAT<T>::type)},
     {"empty",WRAPMEM(T::empty)},
     { NULL, NULL },
   };
