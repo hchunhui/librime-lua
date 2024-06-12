@@ -34,7 +34,7 @@ private:
 
 class LuaFilter : public Filter, TagMatching {
 public:
-  explicit LuaFilter(const Ticket& ticket, Lua* lua);
+  explicit LuaFilter(const Ticket& ticket, an<Lua> lua);
   virtual ~LuaFilter();
 
   virtual an<Translation> Apply(an<Translation> translation,
@@ -55,7 +55,7 @@ public:
   }
 
 private:
-  Lua *lua_;
+  an<Lua> lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
   an<LuaObj> fini_;
@@ -64,14 +64,14 @@ private:
 
 class LuaTranslator : public Translator {
 public:
-  explicit LuaTranslator(const Ticket& ticket, Lua* lua);
+  explicit LuaTranslator(const Ticket& ticket, an<Lua> lua);
   virtual ~LuaTranslator();
 
   virtual an<Translation> Query(const string& input,
                                 const Segment& segment);
 
 private:
-  Lua *lua_;
+  an<Lua> lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
   an<LuaObj> fini_;
@@ -79,13 +79,13 @@ private:
 
 class LuaSegmentor : public Segmentor {
 public:
-  explicit LuaSegmentor(const Ticket& ticket, Lua *lua);
+  explicit LuaSegmentor(const Ticket& ticket, an<Lua> lua);
   virtual ~LuaSegmentor();
 
   virtual bool Proceed(Segmentation* Segmentation);
 
 private:
-  Lua *lua_;
+  an<Lua> lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
   an<LuaObj> fini_;
@@ -93,29 +93,36 @@ private:
 
 class LuaProcessor : public Processor {
 public:
-  LuaProcessor(const Ticket& ticket, Lua *lua);
+  LuaProcessor(const Ticket& ticket, an<Lua> lua);
   virtual ~LuaProcessor();
 
   virtual ProcessResult ProcessKeyEvent(const KeyEvent& key_event);
 
 private:
-  Lua *lua_;
+  an<Lua> lua_;
   an<LuaObj> env_;
   an<LuaObj> func_;
   an<LuaObj> fini_;
 };
 
-template<typename T>
+struct LuaSingletonFactory {
+  LuaSingletonFactory() = default;
+  ~LuaSingletonFactory() = default;
+  an<Lua> instance();
+private:
+  std::weak_ptr<Lua> lua_;
+};
 
+template<typename T>
 class LuaComponent : public T::Component {
 private:
-  an<Lua> lua_;
+  an<LuaSingletonFactory> lua_factory_;
 
 public:
-  LuaComponent(an<Lua> lua) : lua_(lua) {};
+  LuaComponent(an<LuaSingletonFactory> lua_factory) : lua_factory_(lua_factory) {};
   T* Create(const Ticket &a) {
     Ticket t(a.engine, a.name_space, a.name_space);
-    return new T(t, lua_.get());
+    return new T(t, lua_factory_->instance());
   }
 };
 

@@ -90,19 +90,31 @@ static void lua_init(lua_State *L) {
   }
 }
 
+namespace rime {
+an<Lua> LuaSingletonFactory::instance() {
+  if (auto instance = lua_.lock()) {
+    return instance;
+  } else {
+    an<Lua> lua(new Lua);
+    lua->to_state(lua_init);
+    lua_ = lua;
+    return lua;
+  }
+}
+}
+
 static void rime_lua_initialize() {
   using namespace rime;
 
   LOG(INFO) << "registering components from module 'lua'.";
   Registry& r = Registry::instance();
 
-  an<Lua> lua(new Lua);
-  lua->to_state(lua_init);
+  auto lua_factory = std::make_shared<LuaSingletonFactory>();
 
-  r.Register("lua_translator", new LuaComponent<LuaTranslator>(lua));
-  r.Register("lua_filter", new LuaComponent<LuaFilter>(lua));
-  r.Register("lua_segmentor", new LuaComponent<LuaSegmentor>(lua));
-  r.Register("lua_processor", new LuaComponent<LuaProcessor>(lua));
+  r.Register("lua_translator", new LuaComponent<LuaTranslator>(lua_factory));
+  r.Register("lua_filter", new LuaComponent<LuaFilter>(lua_factory));
+  r.Register("lua_segmentor", new LuaComponent<LuaSegmentor>(lua_factory));
+  r.Register("lua_processor", new LuaComponent<LuaProcessor>(lua_factory));
 }
 
 static void rime_lua_finalize() {
