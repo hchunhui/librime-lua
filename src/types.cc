@@ -153,7 +153,99 @@ namespace SegmentReg {
 
 //--- wrappers for an<Candidate>
 namespace CandidateReg {
-  using T = Candidate;
+  using T  = Candidate;
+  using P  = Phrase;
+  using S  = Sentence;
+  using SP = SimpleCandidate;
+  using SD = ShadowCandidate;
+  using U  = UniquifiedCandidate;
+
+  void set_preedit(an<T>, const string &);
+
+  class LuaShadowCandidate : public rime::ShadowCandidate {
+     public:
+        LuaShadowCandidate(const an<Candidate>& item,
+                   const string& type,
+                   const string& text = string(),
+                   const string& comment = string(),
+		   const bool inherit_comment = true,
+		   const bool write_able = false)
+          : ShadowCandidate(item, type, text, comment, inherit_comment),
+	    write_able_(write_able)
+        {
+	  if (Is<ShadowCandidate>(item))
+	    Candidate::GetGenuineCandidate(item);
+        }
+        void set_text(const string &s) {
+	  if (write_able_)
+	    text_ = s;
+	  else
+	    LOG(WARNING) << "The LuaShadowCandidate of text are immutable.";
+	}
+        void set_comment(const string &s) {
+	  if (write_able_)
+	    comment_ = s;
+	  else
+	    LOG(WARNING) << "The LuaShadowCandidate of comment are immutable.";
+	}
+        bool write_able() const { return write_able_; }
+        void set_write_able(const bool enable) { write_able_ = enable;}
+     protected:
+        bool write_able_;
+  };
+
+  class LuaUniquifiedCandidate : public UniquifiedCandidate {
+     public:
+        LuaUniquifiedCandidate(const an<Candidate>& item,
+                   const string& type,
+                   const string& text = string(),
+                   const string& comment = string(),
+		   bool write_able= false)
+          : UniquifiedCandidate(item, type, comment),
+	    write_able_(write_able) {
+           items_= Candidate::GetGenuineCandidates(item);
+	}
+
+       void set_text(const string &s) {
+	  if (write_able_)
+	    text_ = s;
+	  else
+	    LOG(WARNING) << "The LuaUniquifiedCandidate of text are immutable.";
+	}
+        void set_comment(const string &s) {
+	  if (write_able_)
+	    comment_ = s;
+	  else
+	    LOG(WARNING) << "The LuaUniquifiedCandidate of comment are immutable.";
+	}
+        bool write_able() { return write_able_; }
+        void set_write_able(bool enable) { write_able_ = enable;}
+     protected:
+        bool write_able_;
+  };
+
+  using LSD= LuaShadowCandidate;
+  using LU = LuaUniquifiedCandidate;
+
+  int raw_get_dynamic(lua_State *L) {
+    an<T> c = LuaType<an<T>>::todata(L, 1);
+    if (auto p = As<S>(c))
+      LuaType<an<S>>::pushdata(L, p);
+    else if (auto p = As<P>(c))
+      LuaType<an<P>>::pushdata(L, p);
+    //else if (auto p = As<SP>(c))
+    //  LuaType<an<SP>>::pushdata(L, p);
+    //else if (auto p = As<SD>(c))
+    //  LuaType<an<SD>>::pushdata(L, p);
+    else if (auto p = As<LSD>(c))
+      LuaType<an<LSD>>::pushdata(L, p);
+    //else if (auto p = As<U>(c))
+    //  LuaType<an<U>>::pushdata(L, p);
+    else if (auto p = As<LU>(c))
+      LuaType<an<LU>>::pushdata(L, p);
+    // else return an<T>
+    return 1;
+  }
 
   string dynamic_type(T &c) {
     if (dynamic_cast<Sentence *>(&c))
@@ -162,8 +254,12 @@ namespace CandidateReg {
       return "Phrase";
     if (dynamic_cast<SimpleCandidate *>(&c))
       return "Simple";
+    if (dynamic_cast<LuaShadowCandidate *>(&c))
+      return "LuaShadowCandidate";
     if (dynamic_cast<ShadowCandidate *>(&c))
       return "Shadow";
+    if (dynamic_cast<LuaUniquifiedCandidate *>(&c))
+      return "LuaUniquifiedCandidate";
     if (dynamic_cast<UniquifiedCandidate *>(&c))
       return "Uniquified";
     return "Other";
@@ -172,6 +268,12 @@ namespace CandidateReg {
   void set_text(T &c, const string &v) {
     if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_text(v);
+    else if (auto p = dynamic_cast<LSD *>(&c))
+      p->set_text(v);
+    else if (auto p = dynamic_cast<LU *>(&c))
+      p->set_text(v);
+    else
+      LOG(WARNING) << "The " << dynamic_type(c) << " of text is immutable.";
   }
 
   void set_comment(T &c, const string &v) {
@@ -179,73 +281,109 @@ namespace CandidateReg {
       p->set_comment(v);
     else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_comment(v);
+    else if (auto p = dynamic_cast<LSD *>(&c))
+      p->set_comment(v);
+    else if (auto p = dynamic_cast<LU *>(&c))
+      p->set_comment(v);
+    else
+      LOG(WARNING) << "The "<< dynamic_type(c) << " of comment are immutable.";
   }
 
-  void set_preedit(T &c, const string &v) {
-    if (auto p = dynamic_cast<Phrase *>(&c))
+  void set_preedit(an<T> c, const string &v) {
+    if (auto p = As<Phrase>(c))
       p->set_preedit(v);
-    else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
+    else if (auto p = As<SimpleCandidate>(c))
       p->set_preedit(v);
+    else if (Is<LSD>(c) || Is<LU>(c))
+      set_preedit( T::GetGenuineCandidate(c), v);
+    else
+      LOG(WARNING) << "The " << dynamic_type(*c) << " of preedit are immutable.";
   }
 
   an<T> make(const string type,
-                    size_t start, size_t end,
-                    const string text, const string comment)
+	     size_t start, size_t end,
+	     const string text, const string comment)
   {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
-
-  an<T> shadow_candidate(const an<T> item,
-      const string& type, const string& text, const string& comment,
-      const bool inherit_comment)
-  {
-    return New<ShadowCandidate>(item, type, text, comment);
-  }
-
-  int raw_shadow_candidate(lua_State* L) {
+  // cand, type[, text[, comment[, inherit_comment[, write_able]]]]
+  int raw_make_lua_shadow_candidate(lua_State* L) {
     size_t n = lua_gettop(L);
     if (2 > n) {
-      return (1 == n) ?
-        luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
-        luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+      if (1 == n)
+	luaL_error(L, "bad argument #2 to func (string expected, got no value)" );
+      else
+	luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+      lua_pop(L, n);
+      return 0;
     }
-    // init args(2-5) ( an<Candidate>, type [,text, comment,  inherit_comment])
-    if (5 < n)
-      lua_pop(L, n-5);
-    else if (4 == n)
-      lua_pushboolean(L, true);
-    else if (4 > n) {
-      for (int i=n; 4 > i ; i++)
-        lua_pushstring(L, "");
-      lua_pushboolean(L, true);
+    //start
+    string text[3];//type, text, comment;
+    bool flag[2]={true, false}; //initherit_comment = true;
+    an<T> cand;
+
+    for (int i =1;i<=6;i++) {
+      switch (i) {
+      case 1:
+	cand = LuaType<an<T>>::todata(L, i);
+	break;
+      case 2: case 3: case 4: // type, text, comment
+	if (n >= i)
+	  text[i-2] = lua_tostring(L, i);
+	break;
+      case 5: // initherit_comment default: true
+	if (n >= i)
+	  flag[i-5] = lua_isnil(L, i) || lua_toboolean(L, i);
+	break;
+      case 6: // write_able default: false
+	if (n >= i)
+	  flag[i-5] = lua_toboolean(L, i);
+	break;
+      }
     }
-    lua_pushcfunction(L, WRAP(shadow_candidate));
-    lua_insert(L, 1);
-    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+    //
+    an<T> scand =
+      New<LuaShadowCandidate>(cand, text[0], text[1], text[2], flag[0], flag[1]);
+    LuaType<an<T>>::pushdata(L, scand);
+    return 1;
   }
 
-  an<T> uniquified_candidate(const an<T> item,
-      const string& type, const string& text, const string& comment)
-  {
-    return New<UniquifiedCandidate>(item, type, text, comment);
-  }
-  int raw_uniquified_candidate(lua_State* L) {
+  // cand, type[, text[, comment[, write_able]]]
+  int raw_make_lua_uniquified_candidate(lua_State* L) {
     size_t n = lua_gettop(L);
     if (2 > n) {
-      return (1 == n) ?
-        luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
-        luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+      if (1 == n)
+	luaL_error(L, "bad argument #2 to func (string expected, got no value)");
+      else
+	luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+      lua_pop(L, n);
+      return 0;
     }
-    // init args(2-4) ( an<Candidate>, type [,text, comment])
-    if (4 < n)
-      lua_pop(L, n-4);
-    else if (4 > n) {
-      for (int i=n; 4 > i ; i++)
-        lua_pushstring(L, "");
+    //start
+    string text[3];//type, text, comment;
+    bool flag = false;
+    an<T> cand;
+
+    for (int i =1;i<=5;i++) {
+      switch (i) {
+      case 1:
+	cand = LuaType<an<T>>::todata(L, i);
+	break;
+      case 2: case 3: case 4: // type, text, comment
+	if (n >= i)
+	  text[i-2] = lua_tostring(L, i);
+	break;
+      case 5: // initherit_comment default: true
+	if (n >= i)
+	  flag = lua_isnil(L, i) || lua_toboolean(L, i);
+	break;
+      }
     }
-    lua_pushcfunction(L, WRAP(uniquified_candidate));
-    lua_insert(L, 1);
-    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+    //
+    an<T> scand =
+      New<LuaUniquifiedCandidate>(cand, text[0], text[1], text[2], flag);
+    LuaType<an<T>>::pushdata(L, scand);
+    return 1;
   }
 
   bool append(an<T> self, an<T> item) {
@@ -257,15 +395,33 @@ namespace CandidateReg {
     return false;
   };
 
+  void set_write_able(an<T> t, bool w){
+    if (auto p = As<LSD>(t))
+      p->set_write_able(w);
+    if (auto p = As<LU>(t))
+      p->set_write_able(w);
+  }
+
+  bool write_able(an<T> t) {
+    if (auto p = As<LSD>(t))
+      return p->write_able();
+    if (auto p = As<LU>(t))
+      return p->write_able();
+    if (Is<SP>(t) || Is<P>(t))
+      return true;
+    return false;
+  }
+
   template<class OT>
-  an<OT> candidate_to_(an<T> t) {
-    return std::dynamic_pointer_cast<OT>(t);
+  inline an<OT> candidate_to_(an<T> t) {
+    return As<OT>(t);
   };
+
 
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
-    { "ShadowCandidate", (raw_shadow_candidate) },
-    { "UniquifiedCandidate", (raw_uniquified_candidate) },
+    { "ShadowCandidate", (raw_make_lua_shadow_candidate) },
+    { "UniquifiedCandidate", (raw_make_lua_uniquified_candidate) },
     { NULL, NULL },
   };
 
@@ -273,11 +429,11 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
-    { "to_shadow_candidate", (raw_shadow_candidate) },
-    { "to_uniquified_candidate", (raw_uniquified_candidate) },
+    { "to_shadow_candidate", (raw_make_lua_shadow_candidate) },
+    { "to_uniquified_candidate", (raw_make_lua_uniquified_candidate) },
     { "to_phrase", WRAP(candidate_to_<Phrase>)},
     { "to_sentence", WRAP(candidate_to_<Sentence>)},
-    { "append", WRAP(append)},
+    { "append", WRAP(append)},//for UniquifiedCandidate
     { NULL, NULL },
   };
 
@@ -290,6 +446,9 @@ namespace CandidateReg {
     { "text", WRAPMEM(T, text) },
     { "comment", WRAPMEM(T, comment) },
     { "preedit", WRAPMEM(T, preedit) },
+    { "write_able", WRAP(write_able)},
+    { "dynamic_candidate", raw_get_dynamic},
+    { "dynamic_type", WRAP(dynamic_type)},
     { NULL, NULL },
   };
 
@@ -302,6 +461,7 @@ namespace CandidateReg {
     { "text", WRAP(set_text) },
     { "comment", WRAP(set_comment) },
     { "preedit", WRAP(set_preedit) },
+    { "write_able", WRAP(set_write_able)},
     { NULL, NULL },
   };
 }
