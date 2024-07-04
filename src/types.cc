@@ -734,6 +734,80 @@ namespace ContextReg {
     return t.commit_history();
   }
 
+  // args : Context*
+  int raw_get_options(lua_State *L) {
+    if (auto context = LuaType<Context *>::todata(L, 1)) {
+      lua_newtable(L);
+      for (auto &[key,value]: context->options()) {
+        LuaType<bool>::pushdata(L, value);
+        lua_setfield(L, -2, key.c_str());
+      }
+      return 1;
+    }
+    return 0;
+  }
+
+  // args : Context* , LuaObj table, bool force_write
+  int raw_set_options(lua_State *L) {
+    auto context = LuaType<Context *>::todata(L, 1);
+    string key;
+    bool value;
+    bool force_write =false;
+    if (context && lua_type(L, 2) == LUA_TTABLE) {
+      if (lua_gettop(L) >= 3 && lua_type(L, 3) == LUA_TBOOLEAN){
+        force_write = lua_toboolean(L, 3);
+      }
+
+      lua_pushnil(L);
+      while (lua_next(L, 2) != 0 ) {
+        key.assign(lua_tostring(L, -2));
+        value = lua_toboolean(L, -1);
+        if ( force_write || context->get_option(key) != value ) {
+          context->set_option(key, value);
+        }
+        lua_pop(L, 1);
+      }
+    }
+    return 0;
+  }
+
+  // args : Context*
+  int raw_get_properties(lua_State *L) {
+    if (auto context = LuaType<Context *>::todata(L, 1)) {
+      lua_newtable(L);
+      for (auto &[key,value]: context->properties()) {
+        LuaType<string>::pushdata(L, value);
+        lua_setfield(L, -2, key.c_str());
+      }
+      return 1;
+    }
+    return 0;
+  }
+
+  // args : Context* , LuaObj table, bool force_write
+  int raw_set_properties(lua_State *L) {
+    auto context = LuaType<Context *>::todata(L, 1);
+    string key;
+    string value;
+    bool force_write =false;
+    if (context && lua_type(L, 2) == LUA_TTABLE) {
+      if (lua_gettop(L) >= 3 && lua_type(L, 3) == LUA_TBOOLEAN) {
+        force_write = lua_toboolean(L, 3);
+      }
+
+      lua_pushnil(L);
+      while (lua_next(L, 2) != 0 ) {
+        key.assign(lua_tostring(L, -2));
+        value.assign(lua_tostring(L, -1));
+        if ( force_write || context->get_property(key) != value ) {
+          context->set_property(key, value);
+        }
+        lua_pop(L, 1);
+      }
+    }
+    return 0;
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -765,6 +839,10 @@ namespace ContextReg {
     { "get_option", WRAPMEM(T::get_option) },
     { "set_property", WRAPMEM(T::set_property) },
     { "get_property", WRAPMEM(T::get_property) },
+    { "get_options", (raw_get_options) },
+    { "set_options", (raw_set_options) },
+    { "get_properties", (raw_get_properties) },
+    { "set_properties", (raw_set_properties) },
     { "clear_transient_options", WRAPMEM(T::ClearTransientOptions) },
     { NULL, NULL },
   };
@@ -781,6 +859,8 @@ namespace ContextReg {
     { "property_update_notifier", WRAPMEM(T::property_update_notifier) },
     { "unhandled_key_notifier", WRAPMEM(T::unhandled_key_notifier) },
     { "commit_history", WRAP(get_commit_history) },
+    { "options", (raw_get_options) },
+    { "properties", (raw_get_properties) },
     { NULL, NULL },
   };
 
@@ -788,6 +868,8 @@ namespace ContextReg {
     { "composition", WRAP(set_composition) },
     { "input", WRAPMEM(T::set_input) },
     { "caret_pos", WRAPMEM(T::set_caret_pos) },
+    { "options", (raw_set_options) },
+    { "properties", (raw_set_properties) },
     { NULL, NULL },
   };
 }
@@ -1346,6 +1428,7 @@ static int raw_connect(lua_State *L) {
   return 1;
 }
 
+
 namespace ConnectionReg {
   using T = boost::signals2::connection;
 
@@ -1369,6 +1452,7 @@ namespace ConnectionReg {
 
 namespace NotifierReg {
   typedef Context::Notifier T;
+
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
