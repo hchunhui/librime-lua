@@ -2050,6 +2050,49 @@ namespace MemoryReg {
   };
 }  // namespace MemoryReg
 
+//--- wrappers for Spans
+namespace SpansReg {
+  using T = Spans;
+
+  T make() {
+    return Spans();
+  }
+
+  size_t count(T& spans) {
+    return spans.Count();
+  }
+
+  size_t count_between(T& spans, size_t start, size_t end) {
+    return spans.Count(start, end);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "Spans", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "add_span", WRAPMEM(T, AddSpan) },
+    { "add_spans", WRAPMEM(T, AddSpans) },
+    { "previous_stop", WRAPMEM(T, PreviousStop) },
+    { "next_stop", WRAPMEM(T, NextStop) },
+    { "has_vertex", WRAPMEM(T, HasVertex) },
+    { "count_between", WRAP(count_between) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "start", WRAPMEM(T, start) },
+    { "end", WRAPMEM(T, end) },
+    { "count", WRAP(count) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}  // namespace SpansReg
+
 //--- wrappers for Phrase
 namespace PhraseReg {
   using T = Phrase;
@@ -2078,6 +2121,7 @@ namespace PhraseReg {
 
   static const luaL_Reg methods[] = {
     { "toCandidate", WRAP(toCandidate)},
+    { "spans", WRAPMEM(T, spans) },
     { NULL, NULL },
   };
 
@@ -2095,7 +2139,6 @@ namespace PhraseReg {
     { "weight", WRAPMEM(T, weight)},
     { "code", WRAPMEM(T, code)},
     { "entry", WRAPMEM(T, entry)},
-    //span
     //language doesn't wrap yet, so Wrap it later
     { NULL, NULL },
   };
@@ -2358,6 +2401,7 @@ void types_init(lua_State *L) {
   EXPORT(DictEntryReg, L);
   EXPORT(CodeReg, L);
   EXPORT(CommitEntryReg, L);
+  EXPORT(SpansReg, L);
   EXPORT(PhraseReg, L);
   EXPORT(SentenceReg, L);
   EXPORT(KeySequenceReg, L);
