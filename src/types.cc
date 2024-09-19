@@ -1214,6 +1214,15 @@ namespace ProjectionReg{
 namespace ConfigReg {
   using T = Config;
 
+  int raw_make(lua_State *L) {
+    an<T> config = New<T>();
+    if (auto cstr = lua_tostring(L, 1)) {
+      config->LoadFromFile(path(cstr));
+    }
+    LuaType<an<T>>::pushdata(L, config);
+    return 1;
+  }
+
   optional<bool> get_bool(T &t, const string &path) {
     bool v;
     if (t.GetBool(path, &v))
@@ -1272,15 +1281,23 @@ namespace ConfigReg {
     return t.SetItem(path, value);
   }
 
+  bool load_from_file(T &t, const string &f) {
+    return t.LoadFromFile(path(f));
+  }
+  bool save_to_file(T &t, const string &f) {
+    return t.SaveToFile(path(f));
+  }
+
   static const luaL_Reg funcs[] = {
+    { "Config", (raw_make)},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     //bool LoadFromStream(std::istream& stream);
     //bool SaveToStream(std::ostream& stream);
-    { "load_from_file", WRAPMEM(T::LoadFromFile) },
-    { "save_to_file", WRAPMEM(T::SaveToFile) },
+    { "load_from_file", WRAP(load_from_file) },
+    { "save_to_file", WRAP(save_to_file) },
 
     { "is_null", WRAPMEM(T::IsNull) },
     { "is_value", WRAPMEM(T::IsValue) },
