@@ -1272,6 +1272,13 @@ namespace ConfigReg {
     return t.SetItem(path, value);
   }
 
+  bool load_from_file(T &t, const string &f) {
+    return t.LoadFromFile(path(f));
+  }
+  bool save_to_file(T &t, const string &f) {
+    return t.SaveToFile(path(f));
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -1279,8 +1286,8 @@ namespace ConfigReg {
   static const luaL_Reg methods[] = {
     //bool LoadFromStream(std::istream& stream);
     //bool SaveToStream(std::ostream& stream);
-    { "load_from_file", WRAPMEM(T::LoadFromFile) },
-    { "save_to_file", WRAPMEM(T::SaveToFile) },
+    { "load_from_file", WRAP(load_from_file) },
+    { "save_to_file", WRAP(save_to_file) },
 
     { "is_null", WRAPMEM(T::IsNull) },
     { "is_value", WRAPMEM(T::IsValue) },
