@@ -1214,6 +1214,15 @@ namespace ProjectionReg{
 namespace ConfigReg {
   using T = Config;
 
+  int raw_make(lua_State *L) {
+    an<T> config = New<T>();
+    if (auto cstr = lua_tostring(L, 1)) {
+      config->LoadFromFile(path(cstr));
+    }
+    LuaType<an<T>>::pushdata(L, config);
+    return 1;
+  }
+
   optional<bool> get_bool(T &t, const string &path) {
     bool v;
     if (t.GetBool(path, &v))
@@ -1280,6 +1289,7 @@ namespace ConfigReg {
   }
 
   static const luaL_Reg funcs[] = {
+    { "Config", (raw_make)},
     { NULL, NULL },
   };
 
