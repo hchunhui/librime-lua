@@ -34,6 +34,8 @@ public:
 
   std::shared_ptr<LuaObj> newthreadx(lua_State *L, int nargs);
 
+  void gc();
+
   template <typename ... I>
   std::shared_ptr<LuaObj> newthread(I ... input);
 
@@ -52,5 +54,9 @@ public:
 private:
   lua_State *L_;
 };
+
+namespace LuaImpl {
+  int wrap_common(lua_State *L, int (*cfunc)(lua_State *));
+}
 
 #endif  // LIB_LUA_H_

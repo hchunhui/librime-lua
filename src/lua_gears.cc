@@ -1,5 +1,7 @@
 #include "lib/lua_templates.h"
 #include "lua_gears.h"
+#include <vector>
+#include <sstream>
 
 namespace rime {
 
@@ -21,6 +23,43 @@ bool LuaTranslation::Next() {
   }
 }
 
+LuaTranslation::~LuaTranslation() {
+  lua_->gc();
+}
+
+static std::vector<std::string> split_string(const std::string& str, const std::string& delimiter) {
+    std::vector<std::string> result;
+    size_t pos = 0;
+    size_t found;
+    while ((found = str.find(delimiter, pos)) != std::string::npos) {
+        result.push_back(str.substr(pos, found - pos));
+        pos = found + delimiter.length();
+    }
+    result.push_back(str.substr(pos));
+    return result;
+}
+static bool sub_module_init(lua_State *L, const Ticket &t,
+                            const std::vector<std::string>& vec_klass) {
+  size_t vec_klass_sz= vec_klass.size();
+  for (size_t index=1 ;index < vec_klass_sz; index++) {
+    lua_getfield(L, -1, vec_klass.at(index).c_str() );
+    if ( index < vec_klass_sz-1 && lua_type(L, -1) != LUA_TTABLE ) {
+      std::ostringstream ostr;
+      ostr << "Lua Compoment of initialize  error:("
+        << " klass: " << t.klass
+        << " module: "<< vec_klass.at(0)
+        << ", name_space: " << t.name_space
+        << ", sub-table(" <<index << ") "
+        << "\"" << vec_klass.at(index) << "\" type: " << luaL_typename(L, -1)
+        << " ): " << "type error expect table ";
+      LOG(ERROR) << ostr.str();
+
+      LuaType<string>::pushdata(L, ostr.str());
+      return false;
+    }
+  }
+  return true;
+}
 //---
 static void raw_init(lua_State *L, const Ticket &t,
                      an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini, an<LuaObj> *tags_match= NULL) {
@@ -33,9 +72,11 @@ static void raw_init(lua_State *L, const Ticket &t,
   *env = LuaObj::todata(L, -1);
   lua_pop(L, 1);
 
+  std::vector<std::string> _vec_klass = (t.klass[0] == '*') ?
+    split_string(t.klass.substr(1), "*") : split_string(t.klass, "*");
   if (t.klass.size() > 0 && t.klass[0] == '*') {
     lua_getglobal(L, "require");
-    lua_pushstring(L, t.klass.c_str() + 1);
+    lua_pushstring(L, _vec_klass.at(0).c_str());
     int status = lua_pcall(L, 1, 1, 0);
     if (status != LUA_OK) {
       const char *e = lua_tostring(L, -1);
@@ -46,7 +87,11 @@ static void raw_init(lua_State *L, const Ticket &t,
                  << " ): " << e;
     }
   } else {
-    lua_getglobal(L, t.klass.c_str());
+    lua_getglobal(L, _vec_klass.at(0).c_str());
+  }
+
+  if (_vec_klass.size() > 1) {
+    sub_module_init(L, t, _vec_klass);
   }
 
   if (lua_type(L, -1) == LUA_TTABLE) {
@@ -70,7 +115,7 @@ static void raw_init(lua_State *L, const Ticket &t,
       *fini = LuaObj::todata(L, -1);
     }
     lua_pop(L, 1);
-    
+
     if (tags_match) {
       lua_getfield(L, -1, "tags_match");
       if (lua_type(L, -1) == LUA_TFUNCTION) {

@@ -2,6 +2,23 @@
 #include "lua_templates.h"
 
 namespace LuaImpl {
+  int wrap_common(lua_State *L, int (*cfunc)(lua_State *)) {
+    char room[sizeof(C_State)];
+    C_State *C = new (&room) C_State();
+    lua_pushcfunction(L, cfunc);
+    lua_insert(L, 1);
+    lua_pushlightuserdata(L, (void *) C);
+    lua_insert(L, 2);
+    int status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
+    if (status != LUA_OK) {
+      C->~C_State();
+      lua_error(L);
+      abort(); // unreachable
+    }
+    C->~C_State();
+    return lua_gettop(L);
+  }
+
   static int index(lua_State *L) {
     if (luaL_getmetafield(L, 1, "methods") != LUA_TNIL) {
       lua_pushvalue(L, 2);
@@ -245,6 +262,10 @@ std::shared_ptr<LuaObj> Lua::getglobal(const std::string &v) {
   auto o = LuaObj::todata(L_, -1);
   lua_pop(L_, 1);
   return o;
+}
+
+void Lua::gc() {
+  lua_gc(L_, LUA_GCCOLLECT, 0);
 }
 
 LuaObj::LuaObj(lua_State *L, int i) : L_(L) {

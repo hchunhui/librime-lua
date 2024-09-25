@@ -1,3 +1,4 @@
+#include <rime_api.h>
 #include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/segmentation.h>
@@ -11,27 +12,72 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
+#include <rime/language.h>
 #include <rime/gear/memory.h>
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
+#include <rime/service.h>
 #include <rime/switcher.h>
 #include "lua_gears.h"
-#include <rime/service.h>
 #include <boost/regex.hpp>
 
 #include "lib/lua_export_type.h"
-#include "lib/luatype_boost_optional.h"
+#include "optional.h"
 
 #define ENABLE_TYPES_EXT
 
 using namespace rime;
-using boost::optional;
 
 namespace {
 
+template<typename> using void_t = void;
+
+template<typename T, typename = void>
+struct COMPAT {
+  // fallback version if librime is old
+  static an<ReverseDb> new_ReverseDb(const std::string &file) {
+    return New<ReverseDb>(string(rime_get_api()->get_user_data_dir()) + "/" + file);
+  }
+
+  static string get_shared_data_dir() {
+    return string(rime_get_api()->get_shared_data_dir());
+  }
+
+  static string get_user_data_dir() {
+    return string(rime_get_api()->get_user_data_dir());
+  }
+
+  static string get_sync_dir() {
+    return string(rime_get_api()->get_sync_dir());
+  }
+};
+
+template<typename T>
+struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
+  static an<ReverseDb> new_ReverseDb(const std::string &file) {
+    T &deployer = Service::instance().deployer();
+    return New<ReverseDb>(deployer.user_data_dir / file);
+  }
+
+  static string get_shared_data_dir() {
+    T &deployer = Service::instance().deployer();
+    return deployer.shared_data_dir.string();
+  }
+
+  static string get_user_data_dir() {
+    T &deployer = Service::instance().deployer();
+    return deployer.user_data_dir.string();
+  }
+
+  static string get_sync_dir() {
+    T &deployer = Service::instance().deployer();
+    return deployer.sync_dir.string();
+  }
+};
+
 //--- wrappers for Segment
 namespace SegmentReg {
-  typedef Segment T;
+  using T = Segment;
 
   T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
@@ -58,6 +104,10 @@ namespace SegmentReg {
       t.status = T::kConfirmed;
   }
 
+  string active_text(T &t, const string &r) {
+    return r.substr(t.start, t.end - t.start);
+  }
+
   static const luaL_Reg funcs[] = {
     { "Segment", WRAP(make) },
     { NULL, NULL },
@@ -70,6 +120,7 @@ namespace SegmentReg {
     { "has_tag", WRAPMEM(T::HasTag) },
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
     { "get_selected_candidate", WRAPMEM(T::GetSelectedCandidate) },
+    { "active_text", WRAP(active_text) },
     { NULL, NULL },
   };
 
@@ -102,9 +153,11 @@ namespace SegmentReg {
 
 //--- wrappers for an<Candidate>
 namespace CandidateReg {
-  typedef Candidate T;
+  using T = Candidate;
 
   string dynamic_type(T &c) {
+    if (dynamic_cast<Sentence *>(&c))
+      return "Sentence";
     if (dynamic_cast<Phrase *>(&c))
       return "Phrase";
     if (dynamic_cast<SimpleCandidate *>(&c))
@@ -143,9 +196,32 @@ namespace CandidateReg {
   }
 
   an<T> shadow_candidate(const an<T> item,
-      const string& type, const string& text, const string& comment)
+      const string& type, const string& text, const string& comment,
+      const bool inherit_comment)
   {
     return New<ShadowCandidate>(item, type, text, comment);
+  }
+
+  int raw_shadow_candidate(lua_State* L) {
+    size_t n = lua_gettop(L);
+    if (2 > n) {
+      return (1 == n) ?
+        luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
+        luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+    }
+    // init args(2-5) ( an<Candidate>, type [,text, comment,  inherit_comment])
+    if (5 < n)
+      lua_pop(L, n-5);
+    else if (4 == n)
+      lua_pushboolean(L, true);
+    else if (4 > n) {
+      for (int i=n; 4 > i ; i++)
+        lua_pushstring(L, "");
+      lua_pushboolean(L, true);
+    }
+    lua_pushcfunction(L, WRAP(shadow_candidate));
+    lua_insert(L, 1);
+    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
   }
 
   an<T> uniquified_candidate(const an<T> item,
@@ -153,6 +229,25 @@ namespace CandidateReg {
   {
     return New<UniquifiedCandidate>(item, type, text, comment);
   }
+  int raw_uniquified_candidate(lua_State* L) {
+    size_t n = lua_gettop(L);
+    if (2 > n) {
+      return (1 == n) ?
+        luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
+        luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
+    }
+    // init args(2-4) ( an<Candidate>, type [,text, comment])
+    if (4 < n)
+      lua_pop(L, n-4);
+    else if (4 > n) {
+      for (int i=n; 4 > i ; i++)
+        lua_pushstring(L, "");
+    }
+    lua_pushcfunction(L, WRAP(uniquified_candidate));
+    lua_insert(L, 1);
+    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+  }
+
   bool append(an<T> self, an<T> item) {
     if (auto cand=  As<UniquifiedCandidate>(self) ) {
       cand->Append(item);
@@ -162,11 +257,15 @@ namespace CandidateReg {
     return false;
   };
 
+  template<class OT>
+  an<OT> candidate_to_(an<T> t) {
+    return std::dynamic_pointer_cast<OT>(t);
+  };
 
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
-    { "ShadowCandidate", WRAP(shadow_candidate) },
-    { "UniquifiedCandidate", WRAP(uniquified_candidate) },
+    { "ShadowCandidate", (raw_shadow_candidate) },
+    { "UniquifiedCandidate", (raw_uniquified_candidate) },
     { NULL, NULL },
   };
 
@@ -174,8 +273,10 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
-    { "to_shadow_candidate", WRAP(shadow_candidate) },
-    { "to_uniquified_candidate", WRAP(uniquified_candidate) },
+    { "to_shadow_candidate", (raw_shadow_candidate) },
+    { "to_uniquified_candidate", (raw_uniquified_candidate) },
+    { "to_phrase", WRAP(candidate_to_<Phrase>)},
+    { "to_sentence", WRAP(candidate_to_<Sentence>)},
     { "append", WRAP(append)},
     { NULL, NULL },
   };
@@ -207,7 +308,7 @@ namespace CandidateReg {
 
 //--- wrappers for an<Translation>
 namespace TranslationReg {
-  typedef Translation T;
+  using T = Translation;
 
   int raw_make(lua_State *L) {
     Lua *lua = Lua::from_state(L);
@@ -248,6 +349,7 @@ namespace TranslationReg {
   };
 
   static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
     { NULL, NULL },
   };
 
@@ -257,10 +359,10 @@ namespace TranslationReg {
 }
 
 namespace ReverseDbReg {
-  typedef ReverseDb T;
+  using T = ReverseDb;
 
   an<T> make(const string &file) {
-    an<T> db = New<ReverseDb>(string(RimeGetUserDataDir()) +  "/" + file);
+    an<T> db = COMPAT<Deployer>::new_ReverseDb(file);
     db->Load();
     return db;
   }
@@ -293,12 +395,12 @@ namespace ReverseDbReg {
 }
 
 namespace SegmentationReg {
-  typedef Segmentation T;
+  using T = Segmentation;
 
-  optional<Segment &> back(T &t) {
+  Segment *back(T &t) {
     if (t.empty())
-      return {};
-    return t.back();
+      return nullptr;
+    return &t.back();
   }
 
   void pop_back(T &t) {
@@ -323,15 +425,15 @@ namespace SegmentationReg {
     return ret;
   }
 
-  optional<Segment &> get_at(T &t, const int idx) {
+  Segment *get_at(T &t, const int idx) {
     size_t size = t.size();
     int index = (idx < 0) ? size + idx : idx;
     if (index >=0 && index < size)
-      return t.at(index);
+      return &t.at(index);
 
     LOG(WARNING) << "the index(" << idx <<")"
       << " is out of range(-size .. size-1); size: "<< size ;
-    return {};
+    return nullptr;
   }
 
   static const luaL_Reg funcs[] = {
@@ -369,7 +471,7 @@ namespace SegmentationReg {
 }
 
 namespace MenuReg {
-  typedef Menu T;
+  using T = Menu;
 
   an<T> make() {
     return New<T>();
@@ -401,7 +503,7 @@ namespace MenuReg {
 }
 
 namespace KeyEventReg {
-  typedef KeyEvent T;
+  using T = KeyEvent;
 
   int keycode(const T &t) {
     return t.keycode();
@@ -411,12 +513,20 @@ namespace KeyEventReg {
     return t.modifier();
   }
 
-  an<T> make(const string &key) {
-    return New<T>(key) ;
+  int raw_make(lua_State *L) {
+    an<T> res;
+    int n = lua_gettop(L);
+    if (n == 1)
+      res = New<T>( string(lua_tostring(L, 1)) );
+    else if (n > 1)
+      res = New<T>( lua_tointeger(L, 1), lua_tointeger(L, 2) );
+
+    LuaType<an<T>>::pushdata(L, res);
+    return 1;
   }
 
   static const luaL_Reg funcs[] = {
-    { "KeyEvent", WRAP(make)  },
+    { "KeyEvent", raw_make  },
     { NULL, NULL },
   };
 
@@ -445,7 +555,7 @@ namespace KeyEventReg {
 }
 
 namespace EngineReg {
-  typedef Engine T;
+  using T = Engine;
 
   static void apply_schema(T *engine, the<Schema> &schema) {
     engine->ApplySchema(schema.release());
@@ -477,7 +587,7 @@ namespace EngineReg {
 }
 
 namespace CommitRecordReg {
-  typedef CommitRecord T;
+  using T = CommitRecord;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -502,9 +612,9 @@ namespace CommitRecordReg {
 }
 
 namespace CommitHistoryReg {
-  typedef CommitHistory T;
-  typedef CommitRecord CR;
-  typedef T::reverse_iterator R_ITER;
+  using T = CommitHistory;
+  using CR = CommitRecord;
+  using R_ITER = T::reverse_iterator;
 
   int raw_push(lua_State *L){
     C_State C;
@@ -536,10 +646,10 @@ namespace CommitHistoryReg {
     return 0;
   }
 
-  optional<CR &> back(T &t) {
+  CR *back(T &t) {
     if (t.empty())
-      return {};
-    return t.back();
+      return nullptr;
+    return &t.back();
   }
 
   vector<CR> to_table(T &t) {
@@ -606,7 +716,7 @@ namespace CommitHistoryReg {
 }
 
 namespace ContextReg {
-  typedef Context T;
+  using T = Context;
 
   Composition &get_composition(T &t) {
     return t.composition();
@@ -683,7 +793,7 @@ namespace ContextReg {
 }
 
 namespace PreeditReg {
-  typedef Preedit T;
+  using T = Preedit;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -711,16 +821,16 @@ namespace PreeditReg {
 }
 
 namespace CompositionReg {
-  typedef Composition T;
+  using T = Composition;
 
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
 
-  optional<Segment &> back(T &t) {
+  Segment *back(T &t) {
     if (t.empty())
-      return {};
-    return t.back();
+      return nullptr;
+    return &t.back();
   }
 
   void push_back(T &t, Segment &seg) {
@@ -761,7 +871,7 @@ namespace CompositionReg {
 }
 
 namespace SchemaReg {
-  typedef Schema T;
+  using T = Schema;
 
   the<T> make(const string &schema_id) {
     return std::unique_ptr<T>(new T(schema_id));
@@ -793,8 +903,8 @@ namespace SchemaReg {
 }
 
 namespace ConfigValueReg {
-  typedef ConfigValue T;
-  typedef ConfigItem E;
+  using T = ConfigValue;
+  using E = ConfigItem;
 
   // an<T> make(){
   //  return New<T>();
@@ -883,8 +993,8 @@ namespace ConfigValueReg {
   };
 }
 namespace ConfigListReg {
-  typedef ConfigList T;
-  typedef ConfigItem E;
+  using T = ConfigList;
+  using E = ConfigItem;
 
   an<T> make(){
     return New<T>();
@@ -935,8 +1045,8 @@ namespace ConfigListReg {
 
 
 namespace ConfigMapReg {
-  typedef ConfigMap T;
-  typedef ConfigItem E;
+  using T = ConfigMap;
+  using E = ConfigItem;
 
   an<T> make(){
     return New<T>();
@@ -999,10 +1109,15 @@ namespace ConfigMapReg {
 }
 
 namespace ConfigItemReg {
-  typedef ConfigItem T;
-  typedef ConfigMap M;
-  typedef ConfigList L;
-  typedef ConfigValue V;
+  using T = ConfigItem;
+  using M = ConfigMap;
+  using L = ConfigList;
+  using V = ConfigValue;
+
+template <class R>
+an<R> Get(an<T> t) {
+    return std::dynamic_pointer_cast<R>(t);
+};
 
   string type(T &t){
     switch (t.type()) {
@@ -1014,30 +1129,37 @@ namespace ConfigItemReg {
     return "";
   }
 
-//START_GET_
-//sed  sed -n -e'/\/\/START_GET_/,/\/\/END_GET_/p' src/types.cc | gcc -E -
-#define GET_(f_name,from ,rt, k_type) \
-  an<rt> f_name( an<from> t) { \
-    if (t->type() == from::k_type) \
-      return std::dynamic_pointer_cast<rt> (t);\
-    return nullptr;\
+  int get_obj(lua_State *L_) {
+    if (an<T> t = LuaType<an<T>>::todata(L_, 1)) {
+      auto t_type = t->type();
+      if (T::kScalar == t_type) {
+          lua_pushcfunction(L_, WRAP(Get<V>));
+      }
+      else if (T::kList == t_type) {
+          lua_pushcfunction(L_, WRAP(Get<L>));
+      }
+      else if (T::kMap == t_type) {
+          lua_pushcfunction(L_, WRAP(Get<M>));
+      }
+      else {
+        return 0;
+      }
+      lua_pushvalue(L_, 1);
+      lua_call(L_, 1, 1);
+      return 1;
+    }
+    return 0;
   }
-
-  GET_( get_value,T,  V, kScalar );
-  GET_( get_list, T,  L, kList );
-  GET_( get_map,  T,  M, kMap );
-
-#undef GET_
-//END_GET_
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"get_value",WRAP(get_value)},
-    {"get_list",WRAP(get_list)},
-    {"get_map",WRAP(get_map)},
+    {"get_value",WRAP(Get<V>)},
+    {"get_list",WRAP(Get<L>)},
+    {"get_map",WRAP(Get<M>)},
+    {"get_obj", get_obj},
     { NULL, NULL },
   };
 
@@ -1055,61 +1177,53 @@ namespace ConfigItemReg {
 namespace ProjectionReg{
   typedef Projection T;
 
-  //  an<T>, ... return bool
   int raw_load(lua_State *L) {
     int n = lua_gettop(L);
-    bool res = false;
-    if (1 < n) {
-      an<T> t = LuaType<an<T>>::todata(L,1);
-      an<ConfigList> cl;
-      if ( lua_isstring(L, 2) ){
-        //load from strings
-        cl = New<ConfigList>();
-        for (int i = 2; i<=n ; i++){
-          if (!lua_isstring(L,i)){
-            // fixed NULL will (core dumped) error.
-            LOG(ERROR) << "bad argument #" << i << " to'?' string expected";
-            lua_pop(L, n);
-            lua_pushboolean(L, false);
-            return 1;
-          }
-          cl->Append(
-              New<ConfigValue>( lua_tostring(L,i) ) );
+    bool res =false;
+    an<T> t = LuaType<an<T>>::todata(L,1);
+    an<ConfigList> cl ={};
+    if (lua_isuserdata(L,2)) {
+      cl = LuaType<an<ConfigList>>::todata(L, 2);
+    }
+    else if (lua_istable(L, 2)) {
+      cl = New<ConfigList>();
+      for (size_t i=1;;i++) {
+        lua_rawgeti(L, 2, i);
+        if (lua_isnil(L, -1)) {
+          break;
+        }
+        if (lua_isstring(L, -1)) {
+          auto item = New<ConfigValue>(lua_tostring(L, -1));
+          cl->Append(item);
         }
       }
-      else {
-        cl = LuaType<an<ConfigList>>::todata(L,2);
-      }
-      res= t->Load(cl);
     }
-    lua_pop(L, n);
+    res = t->Load(cl);
     lua_pushboolean(L, res);
     return 1;
   }
 
-  // return an<T>, bool(loaded success)
   int raw_make(lua_State *L) {
     int n = lua_gettop(L);
-    an<T> t = New<T>();
-    if ( 1 > n ) {
+    auto t = New<T>();
+    if ( 1 <= lua_gettop(L)) {
       LuaType<an<T>>::pushdata(L, t);
-      lua_pushboolean(L, false);
-      return 2;
-    }
-    else {
-      //  raw_load(t,...)
-      LuaType<an<T>>::pushdata(L, t);
-      lua_rotate(L, 1, 1);
+      lua_insert(L, 1);
       raw_load(L);
-      LuaType<an<T>>::pushdata(L, t);
-      lua_rotate(L, 1, 1);
-      return 2;
     }
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
-  string apply(T &t, const string &s) {
-    string res(s);
-    return (t.Apply(&res)) ? res : "";
+  int raw_apply(lua_State* L) {
+    an<T> t = LuaType<an<T>>::todata(L, 1);
+    string res(lua_tostring(L, 2));
+    bool ret_org_str = lua_gettop(L)>2 && lua_toboolean(L, 3);
+    if (!t->Apply(&res) && !ret_org_str)
+      res.clear();
+
+    LuaType<string>::pushdata(L, res);
+    return 1;
   }
 
   static const luaL_Reg funcs[] = {
@@ -1119,7 +1233,7 @@ namespace ProjectionReg{
 
   static const luaL_Reg methods[] = {
     {"load", raw_load},
-    {"apply",WRAP(apply)},
+    {"apply", raw_apply},
     { NULL, NULL },
   };
 
@@ -1133,7 +1247,7 @@ namespace ProjectionReg{
 }
 
 namespace ConfigReg {
-  typedef Config T;
+  using T = Config;
 
   optional<bool> get_bool(T &t, const string &path) {
     bool v;
@@ -1254,22 +1368,21 @@ static int raw_connect(lua_State *L) {
   Lua *lua = Lua::from_state(L);
   T & t = LuaType<T &>::todata(L, 1);
   an<LuaObj> o = LuaObj::todata(L, 2);
+  auto f = [lua, o](I... i) {
+    auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
+    if (!r.ok()) {
+                 auto e = r.get_err();
+      LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
+    }
+  };
 
-  auto c = t.connect
-    ([lua, o](I... i) {
-       auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
-       if (!r.ok()) {
-         auto e = r.get_err();
-         LOG(ERROR) << "Context::Notifier error(" << e.status << "): " << e.e;
-       }
-     });
-
+  auto c = (lua_gettop(L) > 2) ? t.connect(lua_tointeger(L, 3), f) : t.connect(f);
   LuaType<boost::signals2::connection>::pushdata(L, c);
   return 1;
 }
 
 namespace ConnectionReg {
-  typedef boost::signals2::connection T;
+  using T = boost::signals2::connection;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -1311,7 +1424,7 @@ namespace NotifierReg {
 }
 
 namespace OptionUpdateNotifierReg {
-  typedef Context::OptionUpdateNotifier T;
+  using T = Context::OptionUpdateNotifier;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -1332,7 +1445,7 @@ namespace OptionUpdateNotifierReg {
 }
 
 namespace PropertyUpdateNotifierReg {
-  typedef Context::PropertyUpdateNotifier T;
+  using T = Context::PropertyUpdateNotifier;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -1353,7 +1466,7 @@ namespace PropertyUpdateNotifierReg {
 }
 
 namespace KeyEventNotifierReg {
-  typedef Context::KeyEventNotifier T;
+  using T = Context::KeyEventNotifier;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -1400,10 +1513,33 @@ namespace LogReg {
   }
 }
 namespace CommitEntryReg {
-  typedef CommitEntry T;
+  using T = CommitEntry;
+  using D = DictEntry;
 
   vector<const rime::DictEntry*> get(const T& ce) {
     return ce.elements;
+  }
+  bool update_entry(const T &t, const D& entry, int commit, const string& prefix_str) {
+    if (!t.memory)
+      return false;
+    auto user_dict = t.memory->user_dict();
+    if (!user_dict || !user_dict->loaded())
+      return false;
+
+    return user_dict->UpdateEntry(entry, commit, prefix_str);
+  }
+
+  bool update(const T& t, int commit) {
+    if (!t.memory)
+      return false;
+    auto user_dict = t.memory->user_dict();
+    if (!user_dict || !user_dict->loaded())
+      return false;
+
+    for (const DictEntry* e : t.elements) {
+      user_dict->UpdateEntry(*e, commit);
+    }
+    return true;
   }
 
   static const luaL_Reg funcs[] = {
@@ -1412,6 +1548,8 @@ namespace CommitEntryReg {
 
   static const luaL_Reg methods[] = {
     {"get",WRAP(get)},
+    {"update_entry",WRAP(update_entry)},
+    {"update",WRAP(update)},
     { NULL, NULL },
   };
 
@@ -1424,13 +1562,18 @@ namespace CommitEntryReg {
   };
 }
 namespace DictEntryReg {
-  typedef DictEntry T;
-  an<T> make() {
-    return an<T>(new T());
+  using T = DictEntry;
+
+  int raw_make(lua_State* L) {
+    an<T> t = (lua_gettop(L)>0)
+      ? New<T>(LuaType<const T&>::todata(L,1)) : New<T>();
+
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   static const luaL_Reg funcs[] = {
-    {"DictEntry",WRAP(make)},
+    {"DictEntry",raw_make},
     { NULL, NULL },
   };
 
@@ -1463,8 +1606,7 @@ namespace DictEntryReg {
   };
 }
 namespace CodeReg {
-
-  typedef Code T;
+  using T = Code;
 
   an<T> make() {
     return an<T>(new Code());
@@ -1497,34 +1639,226 @@ namespace CodeReg {
     { NULL, NULL },
   };
 }
+
+namespace DictionaryReg {
+  using T = Dictionary;
+  using I = DictEntryIterator;
+  using D = DictEntry;
+
+  an<I> lookup_words(T& t, const string& code, bool predictive , size_t limit) {
+    an<I> ret=New<I>();
+    t.LookupWords(ret.get(),code, predictive, limit);
+    return ret;
+  }
+
+  vector<string> decode(T& t, const Code& code) {
+    vector<string> ret;
+    t.Decode(code, &ret);
+    return ret;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "lookup_words", WRAP(lookup_words)},
+    //{ "lookup", WRAPMEM(T, Lookup)},
+    { "decode", WRAP(decode)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "name", WRAPMEM(T, name)},
+    { "loaded", WRAPMEM(T, loaded)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace UserDictionaryReg {
+  using T = UserDictionary;
+  using I = UserDictEntryIterator;
+  using D = DictEntry;
+
+  an<I> lookup_words(T& t, const string& code, bool predictive , size_t limit) {
+    an<I> ret=New<I>();
+    t.LookupWords(ret.get(),code, predictive, limit);
+    return ret;
+  }
+  bool update_entry(T& t, const D& entry, int commits, const string& prefix,
+      const string lang_name) {
+    return (lang_name == t.name()) ? t.UpdateEntry(entry, commits, prefix) : false;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "lookup_words", WRAP(lookup_words)},
+    //{ "lookup", WRAPMEM(T, Lookup)},
+    { "update_entry", WRAP(update_entry)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "name", WRAPMEM(T, name)},
+    { "loaded", WRAPMEM(T, loaded)},
+    { "tick", WRAPMEM(T, tick)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace DictEntryIteratorReg {
+  using T = DictEntryIterator;
+  using D = DictEntry;
+
+  optional<an<D>> Next(T& t) {
+    if ( t.exhausted()) {
+      return {};
+    }
+    an<D> ret = t.Peek();
+     t.Next();
+    return ret;
+  }
+
+  int raw_iter(lua_State* L) {
+    int n = lua_gettop(L);
+    if (n>=1) { // :iter()
+      lua_pushcfunction(L, WRAP(Next));
+      lua_insert(L, 1);
+      return 2;
+    }
+    return 0;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"iter", raw_iter},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
+    {"size", WRAPMEM(T, entry_count)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+}
+
+namespace UserDictEntryIteratorReg {
+  using T = UserDictEntryIterator;
+  using D = DictEntry;
+
+  optional<an<D>> Next(T& t) {
+    if ( t.exhausted()) {
+      return {};
+    }
+    an<D> ret = t.Peek();
+     t.Next();
+    return ret;
+  }
+
+  int raw_iter(lua_State* L) {
+    int n = lua_gettop(L);
+    if (n>=1) { // :iter()
+      lua_pushcfunction(L, WRAP(Next));
+      lua_insert(L, 1);
+      return 2;
+    }
+    return 0;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"iter", raw_iter},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"exhausted", WRAPMEM(T, exhausted)},
+    {"size", WRAPMEM(T, cache_size)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 namespace MemoryReg {
   class LuaMemory : public Memory {
     an<LuaObj> memorize_callback;
     Lua *lua_;
   public:
-    using Memory::Memory;
-    DictEntryIterator iter;
-    UserDictEntryIterator uter;
+    an<DictEntryIterator> iter;
+    an<UserDictEntryIterator> uter;
 
-    LuaMemory(Lua *lua, const Ticket& ticket)
+    bool dictLookup(const string& str_code,
+        bool predictive, size_t expand_search_limit);
+
+    bool userLookup(const string& input, const bool isExpand);
+
+    an<DictEntryIterator> dictiterLookup(const string& str_code,
+        bool predictive, size_t expand_search_limit);
+
+    an<UserDictEntryIterator> useriterLookup(const string& input, const bool isExpand);
+
+    vector<string> decode(const Code& code);
+    bool update_userdict(const DictEntry& entry, const int commits,
+        const string& new_entry_prefix);
+
+    bool update_entry(const DictEntry& entry, const int commits,
+        const string& new_entry_prefix, const string& lang_string);
+
+    bool update_candidate(const an<Candidate> cand, const int commits);
+    const string lang_name() { return (language_) ? language_->name() : ""; };
+    virtual bool Memorize(const CommitEntry& entry);
+
+    LuaMemory(const Ticket& ticket, Lua* lua)
       : lua_(lua), Memory(ticket) {}
-
-    virtual bool Memorize(const CommitEntry&);
 
     void memorize(an<LuaObj> func) {
       memorize_callback = func;
     }
-
     void clearDict() {
-      iter = DictEntryIterator();
+      iter.reset();
     }
     void clearUser() {
-      uter = UserDictEntryIterator();
+      uter.reset();
+    }
+    void disconnect() {
+      dict_.reset();
+      user_dict_.reset();
+      language_.reset();
     }
   };
-  typedef LuaMemory T;
 
-  bool MemoryReg::LuaMemory::Memorize(const CommitEntry& commit_entry) {
+  vector<string> LuaMemory::decode(const Code& code) {
+    vector<string> res;
+    if (dict_ && dict_->loaded())
+      dict_->Decode(code,&res);
+    return res;
+  }
+
+  bool LuaMemory::Memorize(const CommitEntry& commit_entry) {
     if (!memorize_callback)
       return false;
 
@@ -1537,8 +1871,78 @@ namespace MemoryReg {
       return r.get();
   }
 
+  bool LuaMemory::dictLookup(const string& input, const bool isExpand, size_t limit) {
+    iter = New<DictEntryIterator>();// t= New<DictEntryIterator>();
+    limit = limit == 0 ? 0xffffffffffffffff : limit;
+    if (dict_ && dict_->loaded()) {
+      return dict_->LookupWords(iter.get(), input, isExpand, limit) > 0;
+    }
+    return false;
+  }
+
+  bool  LuaMemory::userLookup(const string& input, const bool isExpand) {
+    uter = New<UserDictEntryIterator>();
+    if (user_dict_ && user_dict_->loaded()) {
+      return user_dict_->LookupWords(uter.get(), input, isExpand) > 0;
+    }
+    return false;
+  }
+
+  an<DictEntryIterator> LuaMemory::dictiterLookup(const string& input, const bool isExpand, size_t limit) {
+    dictLookup(input, isExpand, limit);
+    return iter;
+  }
+
+  an<UserDictEntryIterator> LuaMemory::useriterLookup(const string& input, const bool isExpand) {
+    userLookup(input, isExpand);
+    return uter;
+  }
+
+
+  bool LuaMemory::update_userdict(const DictEntry& entry, const int commits,
+      const string& new_entry_prefix) {
+    if (user_dict_ && user_dict_->loaded())
+      return user_dict_->UpdateEntry(entry, commits, new_entry_prefix);
+
+    return false;
+  }
+
+  bool LuaMemory::update_entry(const DictEntry& entry, const int commits,
+      const string& new_entry_prefix, const string& lang_name)
+  {
+    if (user_dict_ && user_dict_->loaded() && lang_name == language_->name())
+      return user_dict_->UpdateEntry(entry, commits, new_entry_prefix);
+
+    return false;
+  }
+
+  bool LuaMemory::update_candidate(const an<Candidate> cand, const int commits) {
+    if (!user_dict_ || !user_dict_->loaded())
+      return false;
+
+    bool res = false;
+    vector<of<Candidate>> cands = Candidate::GetGenuineCandidates(cand);
+    for (auto cand : cands) {
+      if (auto c = std::dynamic_pointer_cast<Sentence>(cand)) {
+        if (*language_ == *c->language()) {
+          for (auto entry : c->components()) {
+            res |= user_dict()->UpdateEntry(c->entry(), commits);
+          }//components
+        }
+      }
+      else if (auto c = std::dynamic_pointer_cast<Phrase>(cand)) {
+        res |= (*language_ == *c->language()) &&
+          user_dict()->UpdateEntry(c->entry(), commits);
+      }
+    }// cands
+    return res;
+  }
+
   // XXX: Currently the WRAP macro is not generic enough,
   // so that we need a raw function to get the lua state / parse variable args.
+
+  using T = LuaMemory;
+
   int raw_make(lua_State *L) {
     // TODO: fix the memory leak
     C_State C;
@@ -1554,63 +1958,36 @@ namespace MemoryReg {
     if (3 <= n)
       translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
 
-    an<T> memoli = New<T>(lua, translatorTicket);
+    an<T> memoli = New<T>(translatorTicket, lua);
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }
 
-  bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
-    memory.clearDict();
-    limit = limit == 0 ? 0xffffffffffffffff : limit;
-    if (auto dict = memory.dict())
-      return dict->LookupWords(&memory.iter, input, isExpand, limit) > 0;
-    else
-      return false;
-  }
 
-  optional<an<DictEntry>> dictNext(T& memory) {
-    if (memory.iter.exhausted()) {
-      return {};
-    }
-    an<DictEntry> ret = memory.iter.Peek();
-    memory.iter.Next();
-    return ret;
-  }
-
-  bool userLookup(T& memory, const string& input, const bool isExpand) {
-    memory.clearUser();
-    if (auto dict = memory.user_dict())
-      return dict->LookupWords(&memory.uter, input, isExpand) > 0;
-    else
-      return false;
-  }
-
-  optional<an<DictEntry>> userNext(T& memory) {
-    if (memory.uter.exhausted()) {
-      return {};
-    }
-    an<DictEntry> ret = memory.uter.Peek();
-    memory.uter.Next();
-    return ret;
-  }
-
-  bool updateToUserdict(T& memory, const DictEntry& entry, const int commits, const string& new_entry_prefix) {
-    if (auto dict = memory.user_dict())
-      return dict->UpdateEntry(entry, commits, new_entry_prefix);
-    else
-      return false;
-  }
-
+  // :iter_user([func[,...]]) return next_func, entryiterator
+  //  return next_entry, enter_iter[,func[, ...]]
   int raw_iter_user(lua_State* L) {
-    lua_pushcfunction(L, WRAP(userNext));
-    lua_pushvalue(L, 1);
-    return 2;
+    an<T> t = LuaType<an<T>>::todata(L, 1);
+    LuaType<an<UserDictEntryIterator>>::pushdata(L, t->uter);
+    lua_replace(L, 1);
+    lua_getfield(L, 1, "iter");
+    lua_insert(L, 1);
+    if (lua_pcall(L, lua_gettop(L) -1 , 2,0) != LUA_OK)
+      return 0;
+    return lua_gettop(L);
   }
 
+  // :iter_user([func[,...]]) return next_func, entryiterator
+  //  return next_entry, enter_iter[,func[, ...]]
   int raw_iter_dict(lua_State* L) {
-    lua_pushcfunction(L, WRAP(dictNext));
-    lua_pushvalue(L, 1);
-    return 2;
+    an<T> t = LuaType<an<T>>::todata(L, 1);
+    LuaType<an<DictEntryIterator>>::pushdata(L, t->iter);
+    lua_replace(L, 1);
+    lua_getfield(L, 1, "iter");
+    lua_insert(L, 1);
+    if (lua_pcall(L, lua_gettop(L) -1 , 2,0) != LUA_OK)
+      return 0;
+    return lua_gettop(L);
   }
 
   static const luaL_Reg funcs[] = {
@@ -1618,24 +1995,29 @@ namespace MemoryReg {
       {NULL, NULL},
   };
 
-  std::vector<string> decode(T& memory, Code& code) {
-    std::vector<string> res;
-    if (auto dict = memory.dict())
-      dict->Decode(code,&res);
-    return res;
-  }
   static const luaL_Reg methods[] = {
-      { "dict_lookup", WRAP(dictLookup)},
-      { "user_lookup", WRAP(userLookup)},
+      {"start_session", WRAPMEM(T, StartSession)},
+      {"finish_session", WRAPMEM(T, FinishSession)},
+      {"discard_session", WRAPMEM(T, DiscardSession)},
+      { "dict_lookup", WRAPMEM(T::dictLookup)}, // bool
+      { "user_lookup", WRAPMEM(T::userLookup)}, // bool
+      { "dictiter_lookup", WRAPMEM(T::dictiterLookup)}, // iter
+      { "useriter_lookup", WRAPMEM(T::useriterLookup)}, // iter
       { "memorize", WRAPMEM(T::memorize)},
-      { "decode", WRAP(decode)},
+      { "decode", WRAPMEM(T::decode)},
       { "iter_dict", raw_iter_dict},
       { "iter_user", raw_iter_user},
-      { "update_userdict", WRAP(updateToUserdict)},
+      { "update_userdict", WRAPMEM(T::update_userdict)},
+      { "update_entry", WRAPMEM(T::update_entry)},
+      { "update_candidate", WRAPMEM(T::update_candidate)},
+      { "disconnect", WRAPMEM(T::disconnect)},
       {NULL, NULL},
   };
 
   static const luaL_Reg vars_get[] = {
+      { "lang_name", WRAPMEM(T, lang_name)},
+      { "dict", WRAPMEM(T, dict)},
+      { "user_dict", WRAPMEM(T, user_dict)},
       {NULL, NULL},
   };
 
@@ -1644,9 +2026,52 @@ namespace MemoryReg {
   };
 }  // namespace MemoryReg
 
+//--- wrappers for Spans
+namespace SpansReg {
+  using T = Spans;
+
+  T make() {
+    return Spans();
+  }
+
+  size_t count(T& spans) {
+    return spans.Count();
+  }
+
+  size_t count_between(T& spans, size_t start, size_t end) {
+    return spans.Count(start, end);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "Spans", WRAP(make) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "add_span", WRAPMEM(T, AddSpan) },
+    { "add_spans", WRAPMEM(T, AddSpans) },
+    { "previous_stop", WRAPMEM(T, PreviousStop) },
+    { "next_stop", WRAPMEM(T, NextStop) },
+    { "has_vertex", WRAPMEM(T, HasVertex) },
+    { "count_between", WRAP(count_between) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "start", WRAPMEM(T, start) },
+    { "end", WRAPMEM(T, end) },
+    { "count", WRAP(count) },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}  // namespace SpansReg
+
 //--- wrappers for Phrase
 namespace PhraseReg {
-  typedef Phrase T;
+  using T = Phrase;
 
   an<T> make(MemoryReg::LuaMemory& memory,
     const string& type,
@@ -1661,6 +2086,10 @@ namespace PhraseReg {
     return phrase;
   }
 
+  string lang_name(T &t){
+    return t.language()->name();
+  }
+
   static const luaL_Reg funcs[] = {
     { "Phrase", WRAP(make) },
     { NULL, NULL },
@@ -1668,11 +2097,13 @@ namespace PhraseReg {
 
   static const luaL_Reg methods[] = {
     { "toCandidate", WRAP(toCandidate)},
+    { "spans", WRAPMEM(T, spans) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
     { "language", WRAPMEM(T, language)},
+    { "lang_name", WRAP(lang_name)},
     { "type", WRAPMEM(T, type) },
     { "start", WRAPMEM(T, start) },
     { "_start", WRAPMEM(T, start) },
@@ -1684,7 +2115,6 @@ namespace PhraseReg {
     { "weight", WRAPMEM(T, weight)},
     { "code", WRAPMEM(T, code)},
     { "entry", WRAPMEM(T, entry)},
-    //span
     //language doesn't wrap yet, so Wrap it later
     { NULL, NULL },
   };
@@ -1702,9 +2132,75 @@ namespace PhraseReg {
     { NULL, NULL },
   };
 }// Phrase work with Translator
+//--- wrappers for Phrase
+namespace SentenceReg {
+  using T = Sentence;
+
+  an<Candidate> toCandidate(an<T> t) {
+    return t;
+  }
+
+  string lang_name(T& t){
+    return t.language()->name();
+  }
+
+  vector<DictEntry> components(T& t) {
+    return t.components();
+  }
+
+  vector<size_t> word_lengths(T& t) {
+    return t.word_lengths();
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { "toCandidate", WRAP(toCandidate)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { "language", WRAPMEM(T, language)},
+    { "lang_name", WRAP(lang_name)},
+    { "type", WRAPMEM(T, type) },
+    { "start", WRAPMEM(T, start) },
+    { "_start", WRAPMEM(T, start) },
+    { "_end", WRAPMEM(T, end) }, // end is keyword in Lua...
+    { "quality", WRAPMEM(T, quality) },
+    { "text", WRAPMEM(T, text) },
+    { "comment", WRAPMEM(T, comment) },
+    { "preedit", WRAPMEM(T, preedit) },
+    { "weight", WRAPMEM(T, weight)},
+    { "code", WRAPMEM(T, code)},
+    { "entry", WRAPMEM(T, entry)},
+    //span
+    //language doesn't wrap yet, so Wrap it later
+    // Sentence membors
+    { "word_lengths", WRAP(word_lengths)},
+    { "entrys", WRAP(components)},
+    { "entrys_size", WRAPMEM(T, size)},
+    { "entrys_empty", WRAPMEM(T, empty)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { "type", WRAPMEM(T, set_type) },
+    { "start", WRAPMEM(T, set_start) },
+    { "_start", WRAPMEM(T, set_start) },
+    { "_end", WRAPMEM(T, set_end) },
+    { "quality", WRAPMEM(T, set_quality) },
+    { "comment", WRAPMEM(T, set_comment) },
+    { "preedit", WRAPMEM(T, set_preedit) },
+    { "weight", WRAPMEM(T, set_weight)},
+    // set_syllabifier
+    { NULL, NULL },
+  };
+}// Sentence work with Translator
 
 namespace KeySequenceReg {
-  typedef KeySequence T;
+  using T = KeySequence;
 
   int raw_make(lua_State *L){
     an<T> t = (0<lua_gettop(L)) ? New<T>((  lua_tostring(L,1) )) : New<T>();
@@ -1740,43 +2236,23 @@ namespace KeySequenceReg {
 
 namespace RimeApiReg {
   string get_rime_version() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_version());
-  }
-
-  string get_shared_data_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_shared_data_dir());
-  }
-
-  string get_user_data_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_user_data_dir());
-  }
-
-  string get_sync_dir() {
-    RimeApi* rime = rime_get_api();
-    return string(rime->get_sync_dir());
+    return string(rime_get_api()->get_version());
   }
 
   string get_distribution_name(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_name;
+    return Service::instance().deployer().distribution_name;
   }
 
   string get_distribution_code_name(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_code_name;
+    return Service::instance().deployer().distribution_code_name;
   }
 
   string get_distribution_version(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.distribution_version;
+    return Service::instance().deployer().distribution_version;
   }
 
   string get_user_id(){
-    Deployer &deployer(Service::instance().deployer());
-    return deployer.user_id;
+    return Service::instance().deployer().user_id;
   }
 
 // boost::regex api
@@ -1808,9 +2284,9 @@ namespace RimeApiReg {
 
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
-    { "get_shared_data_dir", WRAP(get_shared_data_dir) },
-    { "get_user_data_dir", WRAP(get_user_data_dir) },
-    { "get_sync_dir", WRAP(get_sync_dir) },
+    { "get_shared_data_dir", WRAP(COMPAT<Deployer>::get_shared_data_dir) },
+    { "get_user_data_dir", WRAP(COMPAT<Deployer>::get_user_data_dir) },
+    { "get_sync_dir", WRAP(COMPAT<Deployer>::get_sync_dir) },
     { "get_distribution_name", WRAP(get_distribution_name) },
     { "get_distribution_code_name", WRAP(get_distribution_code_name) },
     { "get_distribution_version", WRAP(get_distribution_version) },
@@ -1829,7 +2305,7 @@ namespace RimeApiReg {
 }
 
 namespace SwitcherReg {
-  typedef Switcher T;
+  using T = Switcher;
 
   an<T> make(Engine *engine) {
     return New<T>(engine);
@@ -1894,10 +2370,16 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(MemoryReg, L);
+  EXPORT(DictionaryReg, L);
+  EXPORT(UserDictionaryReg, L);
+  EXPORT(DictEntryIteratorReg, L);
+  EXPORT(UserDictEntryIteratorReg, L);
   EXPORT(DictEntryReg, L);
   EXPORT(CodeReg, L);
   EXPORT(CommitEntryReg, L);
+  EXPORT(SpansReg, L);
   EXPORT(PhraseReg, L);
+  EXPORT(SentenceReg, L);
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
   LogReg::init(L);

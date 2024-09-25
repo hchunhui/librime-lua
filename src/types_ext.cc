@@ -5,21 +5,20 @@
  * Distributed under terms of the MIT license.
  */
 
+#include <cstddef>
 #include <rime/common.h>
 #include <rime/processor.h>
 #include <rime/segmentor.h>
 #include <rime/translator.h>
 #include <rime/filter.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
-#include <rime/dict/level_db.h>
+#include <rime/dict/user_db.h>
 
 #include "lib/lua_export_type.h"
-#include "lib/luatype_boost_optional.h"
-
+#include "optional.h"
 #include <utility>
 
 using namespace rime;
-
 namespace {
 
 template<typename> using void_t = void;
@@ -27,7 +26,7 @@ template<typename> using void_t = void;
 template<typename T, typename = void>
 struct COMPAT {
   // fallback version of name_space() if librime is old
-  static nullptr_t name_space(T &t) {
+  static std::nullptr_t name_space(T &t) {
     return nullptr;
   }
 };
@@ -39,8 +38,20 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().name_space())>> {
   }
 };
 
+// fallback version of file_path() if librime is old
+template<typename> struct void_t1 { using t = int; };
+template<typename T, typename void_t1<decltype(std::declval<T>().file_name())>::t = 0>
+std::string get_UserDb_file_path_string(const T &t) {
+    return t.file_name();
+}
+
+template<typename T, typename void_t1<decltype(std::declval<T>().file_path())>::t = 0>
+std::string get_UserDb_file_path_string(const T &t) {
+    return t.file_path().string();
+}
+
 namespace ProcessorReg{
-  typedef Processor T;
+  using T = Processor;
 
   int process_key_event(T &t, const KeyEvent &key){
     switch (t.ProcessKeyEvent(key) ){
@@ -71,7 +82,7 @@ namespace ProcessorReg{
 }
 
 namespace SegmentorReg{
-  typedef Segmentor T;
+  using T = Segmentor;
 
   bool proceed(T &t, Segmentation & s) {
     return t.Proceed(&s);
@@ -97,7 +108,7 @@ namespace SegmentorReg{
 }
 
 namespace TranslatorReg{
-  typedef Translator T;
+  using T = Translator;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -119,7 +130,7 @@ namespace TranslatorReg{
 }
 
 namespace FilterReg{
-  typedef Filter T;
+  using T = Filter;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -142,8 +153,8 @@ namespace FilterReg{
 }
 // ReverseDictionary
 namespace ReverseLookupDictionaryReg {
-  typedef ReverseLookupDictionary T;
-  typedef ReverseLookupDictionaryComponent C;
+  using T = ReverseLookupDictionary;
+  using C = ReverseLookupDictionaryComponent;
 
   an<T> make(const string& dict_name) {
     if ( auto c = (C *) T::Require("reverse_lookup_dictionary")){
@@ -186,7 +197,7 @@ namespace ReverseLookupDictionaryReg {
 
 // leveldb
 namespace DbAccessorReg{
-  typedef DbAccessor T;
+  using T = DbAccessor;
 
   // return key , value or nil
   int raw_next(lua_State* L){
@@ -236,44 +247,60 @@ namespace DbAccessorReg{
     { NULL, NULL },
   };
 }
-namespace LevelDbReg{
-  typedef LevelDb T;
-  typedef DbAccessor A;
+namespace UserDbReg{
+  using T = Db;
+  using A = DbAccessor;
 
-  //
-  an<T> make(const string& file_name, const string& db_name){
-    return New<LevelDb>(file_name,db_name,"userdb");
+  an<T> make(const string& db_name, const string& db_class) {
+    if (auto comp= Db::Require(db_class)) {
+      return an<T>(comp->Create(db_name));
+    }
+    return {};
   }
-  optional<string> fetch(an<T> t, const string& key){
+
+  an<T> make_leveldb(const string& db_name) {
+    return make(db_name, "userdb");
+  }
+
+  an<T> make_tabledb(const string& db_name) {
+    return make(db_name, "plain_userdb");
+  }
+
+  optional<string> fetch(an<T> t, const string& key) {
     string res;
     if ( t->Fetch(key,&res) )
       return res;
     return {};
   }
 
-  bool loaded(an<T> t){
-    return t->loaded();
-  }
-
   static const luaL_Reg funcs[] = {
-    {"LevelDb", WRAP(make)},
+    {"UserDb", WRAP(make)},// an<Db> LevelDb( db_file, db_name)
+    {"LevelDb", WRAP(make_leveldb)},// an<Db> LevelDb( db_file, db_name)
+    {"TableDb", WRAP(make_tabledb)},// Db UserDb( db_name, db_type:userdb|plain_userdb)
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"open", WRAPMEM(T::Open)},
-    {"open_read_only", WRAPMEM(T::OpenReadOnly)},
-    {"close", WRAPMEM(T::Close)},
-    {"query", WRAPMEM(T::Query)}, // query(prefix_key) return DbAccessor
+    {"open", WRAPMEM(T, Open)},
+    {"open_read_only", WRAPMEM(T, OpenReadOnly)},
+    {"close", WRAPMEM(T, Close)},
+    {"query", WRAPMEM(T, Query)}, // query(prefix_key) return DbAccessor
     {"fetch", WRAP(fetch)},  //   fetch(key) return value
-    {"update", WRAPMEM(T::Update)}, // update(key,value) return bool
-    {"erase", WRAPMEM(T::Erase)}, // erase(key) return bool
-    {"loaded",WRAPMEM(T,loaded)},
+    {"update", WRAPMEM(T, Update)}, // update(key,value) return bool
+    {"erase", WRAPMEM(T, Erase)}, // erase(key) return bool
 
+    {"loaded",WRAPMEM(T, loaded)},
+    {"disable", WRAPMEM(T, disable)},
+    {"enable", WRAPMEM(T, enable)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    {"_loaded",WRAPMEM(T, loaded)},
+    {"read_only",WRAPMEM(T, readonly)},
+    {"disabled",WRAPMEM(T, disabled)},
+    {"name", WRAPMEM(T, name)},
+    {"file_name", WRAP(get_UserDb_file_path_string<T>)},
     { NULL, NULL },
   };
 
@@ -283,10 +310,10 @@ namespace LevelDbReg{
 }
 
 namespace ComponentReg{
-  typedef Processor P;
-  typedef Segmentor S;
-  typedef Translator T;
-  typedef Filter F;
+  using P = Processor;
+  using S = Segmentor;
+  using T = Translator;
+  using F = Filter;
 
   template <typename O>
   int raw_create(lua_State *L){
@@ -314,6 +341,7 @@ namespace ComponentReg{
     }
   };
 
+
   static const luaL_Reg funcs[] = {
     {"Processor",  raw_create<P>},
     {"Segmentor"   , raw_create<S>},
@@ -331,6 +359,9 @@ namespace ComponentReg{
 
 }
 
+void table_translator_init(lua_State *L);
+void script_translator_init(lua_State *L);
+
 void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(ProcessorReg, L);
   EXPORT(SegmentorReg, L);
@@ -338,6 +369,9 @@ void LUAWRAPPER_LOCAL types_ext_init(lua_State *L) {
   EXPORT(FilterReg, L);
   EXPORT(ReverseLookupDictionaryReg, L);
   EXPORT(DbAccessorReg, L);
-  EXPORT(LevelDbReg, L);
+  EXPORT(UserDbReg, L);
   ComponentReg::init(L);
+  // add LtableTranslator ScriptTranslator in Component
+  table_translator_init(L);
+  script_translator_init(L);
 }
