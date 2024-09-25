@@ -1178,27 +1178,22 @@ namespace ProjectionReg{
   typedef Projection T;
 
   int raw_load(lua_State *L) {
-    int n = lua_gettop(L);
+    C_State C;
     bool res =false;
     an<T> t = LuaType<an<T>>::todata(L,1);
-    an<ConfigList> cl ={};
-    if (lua_isuserdata(L,2)) {
-      cl = LuaType<an<ConfigList>>::todata(L, 2);
+    if (lua_isuserdata(L, 2)) {
+      res = t->Load(LuaType<an<ConfigList>>::todata(L, 2));
     }
-    else if (lua_istable(L, 2)) {
-      cl = New<ConfigList>();
-      for (size_t i=1;;i++) {
-        lua_rawgeti(L, 2, i);
-        if (lua_isnil(L, -1)) {
-          break;
-        }
-        if (lua_isstring(L, -1)) {
-          auto item = New<ConfigValue>(lua_tostring(L, -1));
-          cl->Append(item);
-        }
+    else if (lua_istable(L, 2)){
+      auto cl = New<ConfigList>();
+      for ( auto &str : LuaType<vector<string>>::todata(L, 2, &C)) {
+        cl->Append(New<ConfigValue>(str));
       }
+      res = t->Load(cl);
     }
-    res = t->Load(cl);
+    else {
+
+    }
     lua_pushboolean(L, res);
     return 1;
   }
