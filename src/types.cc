@@ -1204,7 +1204,6 @@ namespace ProjectionReg{
   }
 
   int raw_make(lua_State *L) {
-    int n = lua_gettop(L);
     auto t = New<T>();
     if ( 1 <= lua_gettop(L)) {
       LuaType<an<T>>::pushdata(L, t);
