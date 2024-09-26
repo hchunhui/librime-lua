@@ -272,7 +272,9 @@ namespace CandidateReg {
     if (auto phrase = As<Phrase>(Candidate::GetGenuineCandidate(cand))) {
       return phrase->spans();
     }
-    return Spans();
+    Spans spans;
+    spans.AddSpan(cand->start(), cand->end());
+    return spans;
   }
 
   template<class OT>
@@ -2039,37 +2041,33 @@ namespace SpansReg {
     return spans.Count(start, end);
   }
 
-  vector<size_t> get_vertices(T &spans) {
+  vector<size_t> get_vertices(const T &spans) {
     vector<size_t> res;
-    if (spans.HasVertex(0)) {
-      size_t end = spans.end();
-      for (size_t stop =0; stop <= end; stop = spans.NextStop(stop)) {
+    size_t end = spans.end();
+    for (size_t stop =spans.start(); ; stop = spans.NextStop(stop)) {
+      if (spans.HasVertex(stop)) {
         res.push_back(stop);
-        if (stop == end)
-          break;
+      }
+      if (stop == end) {
+        break;
       }
     }
     return res;
   }
 
   int raw_set_vertices(lua_State *L) {
+    C_State C;
+    auto &spans = LuaType<Spans &>::todata(L, 1);
     if (lua_istable(L, 2)) {
-      Spans &spans = LuaType<Spans &>::todata(L, 1);
       spans.Clear();
-      for (int i=1;;i++) {
-        lua_rawgeti(L, 2,i);
-        if (lua_isnil(L, -1)) {
-          break;
+      for (auto vertex : LuaType<vector<int>>::todata(L, 2, &C)) {
+        if (vertex >=0) {
+          spans.AddVertex(vertex);
         }
-        else if (!lua_isinteger(L, -1)) {
-          return 0;
-        }
-        int v = lua_tointeger(L, -1);
-        if (0 <= v) {
-          spans.AddVertex(v);
-        }
-        lua_pop(L, 1);
       }
+    }
+    else {
+      luaL_error(L, "bad argument #2 to set_vertices (table expected, got %s)" , lua_typename(L, 2));
     }
     return 0;
   }
@@ -2087,6 +2085,7 @@ namespace SpansReg {
     { "next_stop", WRAPMEM(T, NextStop) },
     { "has_vertex", WRAPMEM(T, HasVertex) },
     { "count_between", WRAP(count_between) },
+    { "clear", WRAPMEM(T, Clear) },
     { NULL, NULL },
   };
 
