@@ -1,4 +1,5 @@
 #include "lua.h"
+#include <iostream>
 #include "lua_templates.h"
 
 namespace LuaImpl {
@@ -213,6 +214,12 @@ namespace LuaImpl {
 
     return 0;
   }
+}
+
+//  ostream << LuaErr
+std::ostream& operator<<(std::ostream& os, const LuaErr& err) {
+  os << " Error: (" << err.status << ") : " << err.e << ".";
+  return os;
 }
 
 Lua::Lua() {
