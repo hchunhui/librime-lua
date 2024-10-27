@@ -2048,8 +2048,8 @@ namespace SpansReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    { "start", WRAPMEM(T, start) },
-    { "end", WRAPMEM(T, end) },
+    { "_start", WRAPMEM(T, start) },
+    { "_end", WRAPMEM(T, end) },
     { "count", WRAP(count) },
     { NULL, NULL },
   };
