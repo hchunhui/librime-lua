@@ -116,6 +116,16 @@ namespace SegmentReg {
     return r.substr(t.start, t.end - t.start);
   }
 
+  inline Spans spans(const T &seg) {
+    Spans res;
+    if (auto phrase = As<Phrase>(
+          Candidate::GetGenuineCandidate(seg.GetSelectedCandidate()))) {
+      res.AddSpans(phrase->spans());
+    }
+    res.AddSpan(seg.start, seg.end);
+    return res;
+  }
+
   static const luaL_Reg funcs[] = {
     { "Segment", WRAP(make) },
     { NULL, NULL },
@@ -129,6 +139,7 @@ namespace SegmentReg {
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
     { "get_selected_candidate", WRAPMEM(T::GetSelectedCandidate) },
     { "active_text", WRAP(active_text) },
+    { "spans", WRAP(spans) },
     { NULL, NULL },
   };
 
@@ -265,6 +276,15 @@ namespace CandidateReg {
     return false;
   };
 
+  Spans spans(const an<Candidate> &cand) {
+    if (auto phrase = As<Phrase>(Candidate::GetGenuineCandidate(cand))) {
+      return phrase->spans();
+    }
+    Spans spans;
+    spans.AddSpan(cand->start(), cand->end());
+    return spans;
+  }
+
   template<class OT>
   an<OT> candidate_to_(an<T> t) {
     return std::dynamic_pointer_cast<OT>(t);
@@ -286,6 +306,7 @@ namespace CandidateReg {
     { "to_phrase", WRAP(candidate_to_<Phrase>)},
     { "to_sentence", WRAP(candidate_to_<Sentence>)},
     { "append", WRAP(append)},
+    { "spans", WRAP(spans)},
     { NULL, NULL },
   };
 
@@ -853,6 +874,18 @@ namespace CompositionReg {
     return t.empty();
   }
 
+  vector<Segment> get_segments(T &t) {
+    return t;
+  }
+
+  Spans spans(const T &t) {
+    Spans spans;
+    for (const auto &seg : t) {
+      spans.AddSpans( SegmentReg::spans(seg) );
+    }
+    return spans;
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -866,6 +899,7 @@ namespace CompositionReg {
     { "has_finished_composition", WRAPMEM(T::HasFinishedComposition) },
     { "get_prompt", WRAPMEM(T::GetPrompt) },
     { "toSegmentation" , WRAP(toSegmentation) },
+    { "spans", WRAP(spans)},
     { NULL, NULL },
   };
 
@@ -2061,6 +2095,37 @@ namespace SpansReg {
     return spans.Count(start, end);
   }
 
+  vector<size_t> get_vertices(const T &spans) {
+    vector<size_t> res;
+    size_t end = spans.end();
+    for (size_t stop = spans.start(); ; stop = spans.NextStop(stop)) {
+      if (spans.HasVertex(stop)) {
+        res.push_back(stop);
+      }
+      if (stop == end) {
+        break;
+      }
+    }
+    return res;
+  }
+
+  int raw_set_vertices(lua_State *L) {
+    C_State C;
+    auto &spans = LuaType<Spans &>::todata(L, 1);
+    if (lua_istable(L, 2)) {
+      spans.Clear();
+      for (auto vertex : LuaType<vector<int>>::todata(L, 2, &C)) {
+        if (vertex >=0) {
+          spans.AddVertex(vertex);
+        }
+      }
+    }
+    else {
+      luaL_error(L, "bad argument #2 to set_vertices (table expected, got %s)" , lua_typename(L, 2));
+    }
+    return 0;
+  }
+
   static const luaL_Reg funcs[] = {
     { "Spans", WRAP(make) },
     { NULL, NULL },
@@ -2069,10 +2134,12 @@ namespace SpansReg {
   static const luaL_Reg methods[] = {
     { "add_span", WRAPMEM(T, AddSpan) },
     { "add_spans", WRAPMEM(T, AddSpans) },
+    { "add_vertex", WRAPMEM(T, AddVertex)},
     { "previous_stop", WRAPMEM(T, PreviousStop) },
     { "next_stop", WRAPMEM(T, NextStop) },
     { "has_vertex", WRAPMEM(T, HasVertex) },
     { "count_between", WRAP(count_between) },
+    { "clear", WRAPMEM(T, Clear) },
     { NULL, NULL },
   };
 
@@ -2080,10 +2147,12 @@ namespace SpansReg {
     { "_start", WRAPMEM(T, start) },
     { "_end", WRAPMEM(T, end) },
     { "count", WRAP(count) },
+    { "vertices", WRAP(get_vertices)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
+    { "vertices", (raw_set_vertices)},
     { NULL, NULL },
   };
 }  // namespace SpansReg
