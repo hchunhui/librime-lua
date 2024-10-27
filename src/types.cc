@@ -50,6 +50,10 @@ struct COMPAT {
   static string get_sync_dir() {
     return string(rime_get_api()->get_sync_dir());
   }
+
+  static string to_path(const std::string &file) {
+    return file;
+  }
 };
 
 template<typename T>
@@ -72,6 +76,10 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
   static string get_sync_dir() {
     T &deployer = Service::instance().deployer();
     return deployer.sync_dir.string();
+  }
+
+  static path to_path(const std::string &file) {
+    return path(file);
   }
 };
 
@@ -1214,6 +1222,15 @@ namespace ProjectionReg{
 namespace ConfigReg {
   using T = Config;
 
+  int raw_make(lua_State *L) {
+    an<T> config = New<T>();
+    if (auto cstr = lua_tostring(L, 1)) {
+      config->LoadFromFile(COMPAT<Deployer>::to_path(cstr));
+    }
+    LuaType<an<T>>::pushdata(L, config);
+    return 1;
+  }
+
   optional<bool> get_bool(T &t, const string &path) {
     bool v;
     if (t.GetBool(path, &v))
@@ -1272,15 +1289,23 @@ namespace ConfigReg {
     return t.SetItem(path, value);
   }
 
+  bool load_from_file(T &t, const string &f) {
+    return t.LoadFromFile(COMPAT<Deployer>::to_path(f));
+  }
+  bool save_to_file(T &t, const string &f) {
+    return t.SaveToFile(COMPAT<Deployer>::to_path(f));
+  }
+
   static const luaL_Reg funcs[] = {
+    { "Config", (raw_make)},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     //bool LoadFromStream(std::istream& stream);
     //bool SaveToStream(std::ostream& stream);
-    { "load_from_file", WRAPMEM(T::LoadFromFile) },
-    { "save_to_file", WRAPMEM(T::SaveToFile) },
+    { "load_from_file", WRAP(load_from_file) },
+    { "save_to_file", WRAP(save_to_file) },
 
     { "is_null", WRAPMEM(T::IsNull) },
     { "is_value", WRAPMEM(T::IsValue) },
