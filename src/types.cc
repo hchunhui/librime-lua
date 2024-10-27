@@ -50,6 +50,10 @@ struct COMPAT {
   static string get_sync_dir() {
     return string(rime_get_api()->get_sync_dir());
   }
+
+  static string to_path(const std::string &file) {
+    return file;
+  }
 };
 
 template<typename T>
@@ -72,6 +76,10 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
   static string get_sync_dir() {
     T &deployer = Service::instance().deployer();
     return deployer.sync_dir.string();
+  }
+
+  static path to_path(const std::string &file) {
+    return path(file);
   }
 };
 
@@ -1217,7 +1225,7 @@ namespace ConfigReg {
   int raw_make(lua_State *L) {
     an<T> config = New<T>();
     if (auto cstr = lua_tostring(L, 1)) {
-      config->LoadFromFile(path(cstr));
+      config->LoadFromFile(COMPAT<Deployer>::to_path(cstr));
     }
     LuaType<an<T>>::pushdata(L, config);
     return 1;
@@ -1282,10 +1290,10 @@ namespace ConfigReg {
   }
 
   bool load_from_file(T &t, const string &f) {
-    return t.LoadFromFile(path(f));
+    return t.LoadFromFile(COMPAT<Deployer>::to_path(f));
   }
   bool save_to_file(T &t, const string &f) {
-    return t.SaveToFile(path(f));
+    return t.SaveToFile(COMPAT<Deployer>::to_path(f));
   }
 
   static const luaL_Reg funcs[] = {
