@@ -2283,6 +2283,7 @@ namespace SwitcherReg {
   };
 
   static const luaL_Reg methods[] = {
+    { "process_key", WRAPMEM(T::ProcessKey) },
     { "select_next_schema", WRAPMEM(T::SelectNextSchema) },
     { "is_auto_save", WRAPMEM(T::IsAutoSave) },
     { "refresh_menu", WRAPMEM(T::RefreshMenu) },
