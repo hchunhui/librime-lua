@@ -2044,7 +2044,7 @@ namespace SpansReg {
   vector<size_t> get_vertices(const T &spans) {
     vector<size_t> res;
     size_t end = spans.end();
-    for (size_t stop =spans.start(); ; stop = spans.NextStop(stop)) {
+    for (size_t stop = spans.start(); ; stop = spans.NextStop(stop)) {
       if (spans.HasVertex(stop)) {
         res.push_back(stop);
       }
