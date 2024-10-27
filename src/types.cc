@@ -1183,9 +1183,38 @@ an<R> Get(an<T> t) {
 }
 
 namespace ProjectionReg{
-  using T = Projection;
-  an<T> make(){
-    return New<T>();
+  typedef Projection T;
+
+  int raw_load(lua_State *L) {
+    C_State C;
+    bool res =false;
+    an<T> t = LuaType<an<T>>::todata(L,1);
+    if (lua_isuserdata(L, 2)) {
+      res = t->Load(LuaType<an<ConfigList>>::todata(L, 2));
+    }
+    else if (lua_istable(L, 2)){
+      auto cl = New<ConfigList>();
+      for ( auto &str : LuaType<vector<string>>::todata(L, 2, &C)) {
+        cl->Append(New<ConfigValue>(str));
+      }
+      res = t->Load(cl);
+    }
+    else {
+
+    }
+    lua_pushboolean(L, res);
+    return 1;
+  }
+
+  int raw_make(lua_State *L) {
+    auto t = New<T>();
+    if ( 1 <= lua_gettop(L)) {
+      LuaType<an<T>>::pushdata(L, t);
+      lua_insert(L, 1);
+      raw_load(L);
+    }
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   int raw_apply(lua_State* L) {
@@ -1200,12 +1229,12 @@ namespace ProjectionReg{
   }
 
   static const luaL_Reg funcs[] = {
-    {"Projection",WRAP(make)},
+    {"Projection",raw_make},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"load",WRAPMEM(T::Load)},
+    {"load", raw_load},
     {"apply", raw_apply},
     { NULL, NULL },
   };
