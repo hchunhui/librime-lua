@@ -951,8 +951,22 @@ namespace ConfigValueReg {
   // an<T> make(){
   //  return New<T>();
   // };
-  an<T> make(string s){
-    return New<T>(s);
+
+  int raw_make(lua_State *L) {
+    an<T> t = New<T>();
+    if (lua_gettop(L) > 0 && !lua_isnil(L, 1)) {
+      if (lua_isstring(L, 1)) {
+        t->SetString(lua_tostring(L, 1));
+      }
+      else if(lua_isboolean(L, 1)){
+        t->SetBool(lua_toboolean(L, 1));
+      }
+      else {
+        LOG(WARNING) << "args #1 type error: " << luaL_typename(L, 1);
+      }
+    }
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   };
 
   optional<bool> get_bool(T &t) {
@@ -1006,7 +1020,7 @@ namespace ConfigValueReg {
   }
 
   static const luaL_Reg funcs[] = {
-    {"ConfigValue", WRAP(make)},
+    {"ConfigValue",(raw_make)},
     { NULL, NULL },
   };
 
