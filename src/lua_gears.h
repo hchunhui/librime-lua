@@ -40,19 +40,7 @@ public:
   virtual an<Translation> Apply(an<Translation> translation,
                                 CandidateList* candidates);
 
-  virtual bool AppliesToSegment(Segment* segment) {
-    if ( ! tags_match_ )
-      return TagsMatch(segment);
-
-    auto r = lua_->call<bool, an<LuaObj>, Segment *, an<LuaObj>>(tags_match_, segment,  env_);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaFilter::AppliesToSegment of " << name_space_ << " error(" << e.status << "): " << e.e;
-      return false;
-    }
-    else
-      return  r.get();
-  }
+  virtual bool AppliesToSegment(Segment* segment);
 
 private:
   Lua *lua_;
