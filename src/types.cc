@@ -374,6 +374,8 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+    { "peek", WRAPMEM(T, Peek) },
+    { "next", WRAPMEM(T, Next) },
     { NULL, NULL },
   };
 
