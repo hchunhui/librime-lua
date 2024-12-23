@@ -24,4 +24,8 @@ static inline int xlua_resume(lua_State *L, int nargs)
 
 void xluaopen_utf8(lua_State *);
 
+#if LUA_VERSION_NUM < 504
+LUALIB_API int luaL_typeerror(lua_State *L, int arg, const char *tname);
+#endif
+
 #endif /* LUA_COMPAT_H */
