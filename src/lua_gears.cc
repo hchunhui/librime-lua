@@ -139,7 +139,7 @@ static void raw_init(lua_State *L, const Ticket &t,
 }
 
 //--- LuaFilter
-LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
+LuaFilter::LuaFilter(const Ticket& ticket, an<Lua> lua)
   : Filter(ticket), TagMatching(ticket), lua_(lua) {
   lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, &tags_match_);});
 }
@@ -148,7 +148,7 @@ an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
   auto f = lua_->newthread<an<LuaObj>, an<Translation>,
                            an<LuaObj>, CandidateList *>(func_, translation, env_, candidates);
-  return New<LuaTranslation>(lua_, f);
+  return New<LuaTranslation>(lua_.get(), f);
 }
 
 LuaFilter::~LuaFilter() {
@@ -162,7 +162,7 @@ LuaFilter::~LuaFilter() {
 }
 
 //--- LuaTranslator
-LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
+LuaTranslator::LuaTranslator(const Ticket& ticket, an<Lua> lua)
   : Translator(ticket), lua_(lua) {
   lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
 }
@@ -171,7 +171,7 @@ an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
   auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &,
                            an<LuaObj>>(func_, input, segment, env_);
-  an<Translation> t = New<LuaTranslation>(lua_, f);
+  an<Translation> t = New<LuaTranslation>(lua_.get(), f);
   if (t->exhausted())
     return an<Translation>();
   else
@@ -189,7 +189,7 @@ LuaTranslator::~LuaTranslator() {
 }
 
 //--- LuaSegmentor
-LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
+LuaSegmentor::LuaSegmentor(const Ticket& ticket, an<Lua> lua)
   : Segmentor(ticket), lua_(lua) {
   lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
 }
@@ -216,7 +216,7 @@ LuaSegmentor::~LuaSegmentor() {
 }
 
 //--- LuaProcessor
-LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
+LuaProcessor::LuaProcessor(const Ticket& ticket, an<Lua> lua)
   : Processor(ticket), lua_(lua) {
   lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
 }
