@@ -2,6 +2,9 @@
 #define LIB_LUA_TEMPLATES_H_
 
 #include "lua.h"
+#ifdef  __GNUC__
+#include <cxxabi.h>
+#endif
 #include <typeinfo>
 #include <vector>
 #include <set>
@@ -56,6 +59,9 @@ public:
 struct LUAWRAPPER_LOCAL LuaTypeInfo {
   const std::type_info *ti;
   size_t hash;
+#ifdef __GNUC__
+  mutable std::unique_ptr<char[]> demangleName_;
+#endif
 
   template<typename T>
   static const LuaTypeInfo &make() {
@@ -65,7 +71,17 @@ struct LUAWRAPPER_LOCAL LuaTypeInfo {
   }
 
   const char *name() const {
+#ifdef __GNUC__
+    int status = 0;
+    std::unique_ptr<char[]> demangledName(
+        abi::__cxa_demangle(ti->name(), nullptr, nullptr, &status));
+    if (status)
+      return ti->name();
+    demangleName_ = std::move(demangledName);
+    return demangleName_.get();
+#else
     return ti->name();
+#endif
   }
 
   bool operator==(const LuaTypeInfo &o) const {
