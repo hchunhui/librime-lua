@@ -7,7 +7,9 @@ schema:
   schema_id: cangjie5
 engine:
   translators:
-    - lua_translator@expand_translator
+    #- lua_translator@expand_translator
+    - lua_translator@*expand_translator@expand_translator # autoload
+    
 
 expand_translator:
 	wildcard: "*"
@@ -30,7 +32,7 @@ end
 
 local function memoryCallback1(commit)
   for i, dictentry in ipairs(commit:get()) do
-    commits:update_entry(dictentry, 1, "")
+    commit:update_entry(dictentry, 1, "")
   end
   --commits:update(1) --
 end
@@ -47,11 +49,14 @@ local function init(env)
   -- env.mem = Memory(env.engine, schema, "translator")
    config = env.engine.schema.config
    namespace = 'expand_translator'
-   env.wildcard = config:get_string(namespace .. '/wildcard')
+   env.wildcard = config:get_string(namespace .. '/wildcard') or "*"
    -- or try get config like this
    -- schema = Schema("cangjie5") -- schema_id
    -- config = schema.config
    log.info("expand_translator Initilized!")
+end
+local fini(env)
+   env.mem = nil 
 end
 
 
@@ -76,4 +81,4 @@ local function translate(inp,seg,env)
 	end
 end	
 
-return {init = init, func = translate}
+return {init = init, fini= fini, func = translate}
