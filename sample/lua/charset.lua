@@ -6,6 +6,9 @@
 查询unicode 编码
   1. https://unicode.org/charts/
 
+查询 Unicode 编码区
+  https://www.unicode.org/Public/UCD/latest/ucd/Blocks.txt
+
 导出函数
   1. charset_filter: 滤除含 CJK 扩展汉字的候选项
   2. charset_comment_filter: 为候选项加上其所属字符集的注释
@@ -24,7 +27,9 @@ local charset = {
    ["ExtD"] = { first = 0x2B740, last = 0x2B81F },      -- CJK Unified Ideographs Extension D - https://unicode.org/charts/PDF/U2B740.pdf
    ["ExtE"] = { first = 0x2B820, last = 0x2CEAF },      -- CJK Unified Ideographs Extension E - https://unicode.org/charts/PDF/U2B820.pdf
    ["ExtF"] = { first = 0x2CEB0, last = 0x2EBEF },      -- CJK Unified Ideographs Extension F - https://unicode.org/charts/PDF/U2CEB0.pdf
-   ["ExtG"] = { first = 0x30000, last = 0x3134A },      -- CJK Unified Ideographs Extension G - https://unicode.org/charts/PDF/U30000.pdf
+   ["ExtG"] = { first = 0x30000, last = 0x3134F },      -- CJK Unified Ideographs Extension G - https://unicode.org/charts/PDF/U30000.pdf
+   ["ExtH"] = { first = 0x31350, last = 0x323AF },      -- CJK Unified Ideographs Extension H - https://unicode.org/charts/PDF/U31350.pdf
+   ["ExtI"] = { first = 0x2EBF0, last = 0x2EE5F },      -- CJK Unified Ideographs Extension I - https://unicode.org/charts/PDF/U2EBF0.pdf
    ["Compat"] = { first = 0xF900, last = 0xFAFF },      -- CJK Compatibility Ideographs - https://unicode.org/charts/PDF/UF900.pdf
    ["CompatSupp"] = { first = 0x2F800, last = 0x2FA1F } -- CJK Compatibility Ideographs Supplement - https://unicode.org/charts/PDF/U2F800.pdf
 }
@@ -46,10 +51,16 @@ local function is_charset(s)
 end
 
 local function is_cjk_ext(c)
-   return is_charset("ExtA")(c) or is_charset("ExtB")(c) or
-      is_charset("ExtC")(c) or is_charset("ExtD")(c) or
-      is_charset("ExtE")(c) or is_charset("ExtF")(c) or
-      is_charset("ExtG")(c) or is_charset("Compat")(c) or
+   return is_charset("ExtA")(c) or
+      is_charset("ExtB")(c) or
+      is_charset("ExtC")(c) or
+      is_charset("ExtD")(c) or
+      is_charset("ExtE")(c) or
+      is_charset("ExtF")(c) or
+      is_charset("ExtG")(c) or
+      is_charset("ExtH")(c) or
+      is_charset("ExtI")(c) or
+      is_charset("Compat")(c) or
       is_charset("CompatSupp")(c)
 end
 
