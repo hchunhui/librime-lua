@@ -39,6 +39,20 @@ endif()
 aux_source_directory(src RIME_LUA_SRC)
 aux_source_directory(src/lib RIME_LUA_LIB_SRC)
 
+
+execute_process(
+    COMMAND git log -1 --format="%cs:%h"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR
+    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+configure_file(
+	${CMAKE_CURRENT_SOURCE_DIR}/src/git_version.h.in
+	${CMAKE_CURRENT_SOURCE_DIR}/src/git_version.h
+	@ONLY
+)
+
 add_library(rime-lua-objs OBJECT ${RIME_LUA_SRC} ${RIME_LUA_LIB_SRC} ${LUA_SRC})
 if(BUILD_SHARED_LIBS)
   set_target_properties(rime-lua-objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
