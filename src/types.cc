@@ -50,6 +50,10 @@ struct COMPAT {
   static string get_sync_dir() {
     return string(rime_get_api()->get_sync_dir());
   }
+
+  static string to_path(const std::string &file) {
+    return file;
+  }
 };
 
 template<typename T>
@@ -72,6 +76,10 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
   static string get_sync_dir() {
     T &deployer = Service::instance().deployer();
     return deployer.sync_dir.string();
+  }
+
+  static path to_path(const std::string &file) {
+    return path(file);
   }
 };
 
@@ -943,8 +951,22 @@ namespace ConfigValueReg {
   // an<T> make(){
   //  return New<T>();
   // };
-  an<T> make(string s){
-    return New<T>(s);
+
+  int raw_make(lua_State *L) {
+    an<T> t = New<T>();
+    if (lua_gettop(L) > 0 && !lua_isnil(L, 1)) {
+      if (lua_isstring(L, 1)) {
+        t->SetString(lua_tostring(L, 1));
+      }
+      else if(lua_isboolean(L, 1)){
+        t->SetBool(lua_toboolean(L, 1));
+      }
+      else {
+        LOG(WARNING) << "args #1 type error: " << luaL_typename(L, 1);
+      }
+    }
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   };
 
   optional<bool> get_bool(T &t) {
@@ -998,7 +1020,7 @@ namespace ConfigValueReg {
   }
 
   static const luaL_Reg funcs[] = {
-    {"ConfigValue", WRAP(make)},
+    {"ConfigValue",(raw_make)},
     { NULL, NULL },
   };
 
@@ -1209,9 +1231,38 @@ an<R> Get(an<T> t) {
 }
 
 namespace ProjectionReg{
-  using T = Projection;
-  an<T> make(){
-    return New<T>();
+  typedef Projection T;
+
+  int raw_load(lua_State *L) {
+    C_State C;
+    bool res =false;
+    an<T> t = LuaType<an<T>>::todata(L,1);
+    if (lua_isuserdata(L, 2)) {
+      res = t->Load(LuaType<an<ConfigList>>::todata(L, 2));
+    }
+    else if (lua_istable(L, 2)){
+      auto cl = New<ConfigList>();
+      for ( auto &str : LuaType<vector<string>>::todata(L, 2, &C)) {
+        cl->Append(New<ConfigValue>(str));
+      }
+      res = t->Load(cl);
+    }
+    else {
+
+    }
+    lua_pushboolean(L, res);
+    return 1;
+  }
+
+  int raw_make(lua_State *L) {
+    auto t = New<T>();
+    if ( 1 <= lua_gettop(L)) {
+      LuaType<an<T>>::pushdata(L, t);
+      lua_insert(L, 1);
+      raw_load(L);
+    }
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   int raw_apply(lua_State* L) {
@@ -1226,12 +1277,12 @@ namespace ProjectionReg{
   }
 
   static const luaL_Reg funcs[] = {
-    {"Projection",WRAP(make)},
+    {"Projection",raw_make},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"load",WRAPMEM(T::Load)},
+    {"load", raw_load},
     {"apply", raw_apply},
     { NULL, NULL },
   };
@@ -1247,6 +1298,15 @@ namespace ProjectionReg{
 
 namespace ConfigReg {
   using T = Config;
+
+  int raw_make(lua_State *L) {
+    an<T> config = New<T>();
+    if (auto cstr = lua_tostring(L, 1)) {
+      config->LoadFromFile(COMPAT<Deployer>::to_path(cstr));
+    }
+    LuaType<an<T>>::pushdata(L, config);
+    return 1;
+  }
 
   optional<bool> get_bool(T &t, const string &path) {
     bool v;
@@ -1306,15 +1366,23 @@ namespace ConfigReg {
     return t.SetItem(path, value);
   }
 
+  bool load_from_file(T &t, const string &f) {
+    return t.LoadFromFile(COMPAT<Deployer>::to_path(f));
+  }
+  bool save_to_file(T &t, const string &f) {
+    return t.SaveToFile(COMPAT<Deployer>::to_path(f));
+  }
+
   static const luaL_Reg funcs[] = {
+    { "Config", (raw_make)},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     //bool LoadFromStream(std::istream& stream);
     //bool SaveToStream(std::ostream& stream);
-    { "load_from_file", WRAPMEM(T::LoadFromFile) },
-    { "save_to_file", WRAPMEM(T::SaveToFile) },
+    { "load_from_file", WRAP(load_from_file) },
+    { "save_to_file", WRAP(save_to_file) },
 
     { "is_null", WRAPMEM(T::IsNull) },
     { "is_value", WRAPMEM(T::IsValue) },
@@ -2044,7 +2112,7 @@ namespace SpansReg {
   vector<size_t> get_vertices(const T &spans) {
     vector<size_t> res;
     size_t end = spans.end();
-    for (size_t stop =spans.start(); ; stop = spans.NextStop(stop)) {
+    for (size_t stop = spans.start(); ; stop = spans.NextStop(stop)) {
       if (spans.HasVertex(stop)) {
         res.push_back(stop);
       }
@@ -2090,8 +2158,8 @@ namespace SpansReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    { "start", WRAPMEM(T, start) },
-    { "end", WRAPMEM(T, end) },
+    { "_start", WRAPMEM(T, start) },
+    { "_end", WRAPMEM(T, end) },
     { "count", WRAP(count) },
     { "vertices", WRAP(get_vertices)},
     { NULL, NULL },
@@ -2352,6 +2420,7 @@ namespace SwitcherReg {
   };
 
   static const luaL_Reg methods[] = {
+    { "process_key", WRAPMEM(T::ProcessKey) },
     { "select_next_schema", WRAPMEM(T::SelectNextSchema) },
     { "is_auto_save", WRAPMEM(T::IsAutoSave) },
     { "refresh_menu", WRAPMEM(T::RefreshMenu) },
