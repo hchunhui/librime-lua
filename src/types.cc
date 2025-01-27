@@ -23,6 +23,7 @@
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
+#include "git_version.h"
 
 #define ENABLE_TYPES_EXT
 
@@ -2316,8 +2317,13 @@ namespace RimeApiReg {
     return boost::regex_replace(target, reg, fmt);
   }
 
+  string get_rime_lua_version() {
+	  return GIT_HASH;
+  }
+
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
+    { "get_rime_lua_version", WRAP(get_rime_lua_version) },
     { "get_shared_data_dir", WRAP(COMPAT<Deployer>::get_shared_data_dir) },
     { "get_user_data_dir", WRAP(COMPAT<Deployer>::get_user_data_dir) },
     { "get_sync_dir", WRAP(COMPAT<Deployer>::get_sync_dir) },
