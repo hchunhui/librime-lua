@@ -763,55 +763,6 @@ namespace ContextReg {
     return t.commit_history();
   }
 
-  std::map<string, bool> get_options(T &t) {
-    return t.options();
-  }
-  std::map<string, string> get_properties(T &t) {
-    return t.properties();
-  }
-
-  // args : Context* , LuaObj table, bool force_write
-  int raw_set_options(lua_State *L) {
-    //luaL_argexpected(L, lua_istable(L, 2), 2, "table"); // lua5.4
-    if (!lua_istable(L, 2)) {// raise typeerror
-      luaL_typeerror(L, 2, "table");
-    }
-    auto &context = LuaType<Context &>::todata(L, 1);
-    const bool force_write = lua_gettop(L) > 2 && lua_isboolean(L, 3)  && lua_toboolean(L, 3);
-
-    lua_pushnil(L);
-    while (lua_next(L, 2) != 0 ) {
-      string key = lua_tostring(L, -2);
-      bool value = lua_toboolean(L, -1);
-      if ( force_write || context.get_option(key) != value ) {
-        context.set_option(key, value);
-      }
-      lua_pop(L, 1);
-    }
-    return 0;
-  }
-
-  // args : Context* , LuaObj table, bool force_write
-  int raw_set_properties(lua_State *L) {
-    //luaL_argexpected(L, lua_istable(L, 2), 2, "table"); // lua5.4
-    if (!lua_istable(L, 2)) {// raise typeerror
-      luaL_typeerror(L, 2, "table");
-    }
-    auto &context = LuaType<Context &>::todata(L, 1);
-    const bool force_write = lua_gettop(L) > 2 && lua_isboolean(L, 3) && lua_toboolean(L, 3);
-
-    lua_pushnil(L);
-    while (lua_next(L, 2) != 0 ) {
-      string key = lua_tostring(L, -2);
-      string value = lua_tostring(L, -1);
-      if ( force_write || context.get_property(key) != value ) {
-        context.set_property(key, value);
-      }
-      lua_pop(L, 1);
-    }
-    return 0;
-  }
-
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -843,10 +794,8 @@ namespace ContextReg {
     { "get_option", WRAPMEM(T::get_option) },
     { "set_property", WRAPMEM(T::set_property) },
     { "get_property", WRAPMEM(T::get_property) },
-    { "get_options", WRAP(get_options) },
-    { "set_options", (raw_set_options) },
-    { "get_properties", WRAP(get_properties) },
-    { "set_properties", (raw_set_properties) },
+    { "get_options", WRAPMEM(T, options) },
+    { "get_properties", WRAPMEM(T, properties) },
     { "clear_transient_options", WRAPMEM(T::ClearTransientOptions) },
     { NULL, NULL },
   };
@@ -863,8 +812,8 @@ namespace ContextReg {
     { "property_update_notifier", WRAPMEM(T::property_update_notifier) },
     { "unhandled_key_notifier", WRAPMEM(T::unhandled_key_notifier) },
     { "commit_history", WRAP(get_commit_history) },
-    { "options", WRAP(get_options) },
-    { "properties", WRAP(get_properties) },
+    { "options", WRAPMEM(T, options) },
+    { "properties", WRAPMEM(T, properties) },
     { NULL, NULL },
   };
 
@@ -872,8 +821,6 @@ namespace ContextReg {
     { "composition", WRAP(set_composition) },
     { "input", WRAPMEM(T::set_input) },
     { "caret_pos", WRAPMEM(T::set_caret_pos) },
-    //{ "options", (raw_set_options) },
-    //{ "properties", (raw_set_properties) },
     { NULL, NULL },
   };
 }

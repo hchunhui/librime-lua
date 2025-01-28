@@ -444,6 +444,12 @@ struct LuaType<std::map<K,V>> {
   }
 };
 
+template<typename K, typename V>
+struct LuaType<const std::map<K, V>> : LuaType<std::map<K, V>> {};
+
+template<typename K, typename V>
+struct LuaType<const std::map<K, V> &> : LuaType<std::map<K, V>> {};
+
 template<typename T>
 struct LuaType<const std::vector<T>> : LuaType<std::vector<T>> {};
 
