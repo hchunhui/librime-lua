@@ -2,6 +2,7 @@
 #include "lua_gears.h"
 #include <vector>
 #include <sstream>
+#include <atomic>
 
 namespace rime {
 
@@ -24,7 +25,13 @@ bool LuaTranslation::Next() {
 }
 
 LuaTranslation::~LuaTranslation() {
-  lua_->gc();
+  static std::atomic<int> translation_count;
+  if (translation_count.load() < 16) {
+    translation_count.fetch_add(1);
+  } else {
+    lua_->gc();
+    translation_count.store(0);
+  }
 }
 
 static std::vector<std::string> split_string(const std::string& str, const std::string& delimiter) {
