@@ -23,7 +23,7 @@
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
-
+#include <time.h>
 #define ENABLE_TYPES_EXT
 
 using namespace rime;
@@ -2357,6 +2357,15 @@ namespace RimeApiReg {
     return Service::instance().deployer().user_id;
   }
 
+  int raw_gettime(lua_State *L) {
+    struct timespec ts;
+
+    timespec_get(&ts, TIME_UTC);
+    LuaType<long int>::pushdata(L, ts.tv_sec);
+    LuaType<long int>::pushdata(L, ts.tv_nsec);
+    return 2;
+  }
+
 // boost::regex api
   optional<std::vector<string>> regex_search(
       const string &target ,const string &pattern )
@@ -2396,6 +2405,7 @@ namespace RimeApiReg {
     { "regex_match", WRAP(regex_match) },
     { "regex_search", WRAP(regex_search) },
     { "regex_replace", WRAP(regex_replace) },
+    { "gettime", raw_gettime }, // return   sec, nsec
     { NULL, NULL },
   };
 
