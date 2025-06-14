@@ -172,6 +172,29 @@ namespace SegmentReg {
 
 //--- wrappers for an<Candidate>
 namespace CandidateReg {
+  // wirtable ShadowCandidate
+  class WShadowCandidate : public ShadowCandidate {
+    public:
+      WShadowCandidate(const an<Candidate>& item,
+          const string& type,
+          const string& text = string(),
+          const string& comment = string(),
+          const bool inherit_comment = true)
+        : ShadowCandidate(item, type, text, comment, inherit_comment),
+        preedit_(item->preedit()) {}
+
+      string preedit() const {
+        return preedit_.empty() ? item_->preedit() : preedit_;
+      }
+
+      void set_text(const string& text) {text_ = text;}
+      void set_comment(const string& comment) {comment_ = comment;}
+      void set_preedit(const string& preedit) {preedit_= preedit;}
+
+    protected:
+      string preedit_;
+  };
+
   using T = Candidate;
 
   string dynamic_type(T &c) {
@@ -181,6 +204,8 @@ namespace CandidateReg {
       return "Phrase";
     if (dynamic_cast<SimpleCandidate *>(&c))
       return "Simple";
+    if (dynamic_cast<WShadowCandidate *>(&c))
+      return "WShadow";
     if (dynamic_cast<ShadowCandidate *>(&c))
       return "Shadow";
     if (dynamic_cast<UniquifiedCandidate *>(&c))
@@ -191,6 +216,8 @@ namespace CandidateReg {
   void set_text(T &c, const string &v) {
     if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_text(v);
+    else if (auto p = dynamic_cast<WShadowCandidate *>(&c))
+      p->set_text(v);
   }
 
   void set_comment(T &c, const string &v) {
@@ -198,12 +225,16 @@ namespace CandidateReg {
       p->set_comment(v);
     else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
       p->set_comment(v);
+    else if (auto p = dynamic_cast<WShadowCandidate *>(&c))
+      p->set_comment(v);
   }
 
   void set_preedit(T &c, const string &v) {
     if (auto p = dynamic_cast<Phrase *>(&c))
       p->set_preedit(v);
     else if (auto p = dynamic_cast<SimpleCandidate *>(&c))
+      p->set_preedit(v);
+    else if (auto p = dynamic_cast<WShadowCandidate *>(&c))
       p->set_preedit(v);
   }
 
@@ -214,13 +245,7 @@ namespace CandidateReg {
     return New<SimpleCandidate>(type, start, end, text, comment);
   }
 
-  an<T> shadow_candidate(const an<T> item,
-      const string& type, const string& text, const string& comment,
-      const bool inherit_comment)
-  {
-    return New<ShadowCandidate>(item, type, text, comment);
-  }
-
+  template <typename ST>
   int raw_shadow_candidate(lua_State* L) {
     size_t n = lua_gettop(L);
     if (2 > n) {
@@ -228,20 +253,21 @@ namespace CandidateReg {
         luaL_error(L, "bad argument #2 to func (string expected, got no value)") :
         luaL_error(L, "bad argument #1 to func (an<Candidate> expected, got no value)");
     }
-    // init args(2-5) ( an<Candidate>, type [,text, comment,  inherit_comment])
-    if (5 < n)
-      lua_pop(L, n-5);
-    else if (4 == n)
-      lua_pushboolean(L, true);
-    else if (4 > n) {
-      for (int i=n; 4 > i ; i++)
+    // init args(3-5) ( an<Candidate>, type [,text, comment,  inherit_comment])
+    if (4 >= n ) {
+      for (int i=n; 4 >i; i++) {
         lua_pushstring(L, "");
+      }
       lua_pushboolean(L, true);
     }
-    lua_pushcfunction(L, WRAP(shadow_candidate));
-    lua_insert(L, 1);
-    return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+    an<T> scand = New<ST>(LuaType<an<T>>::todata(L, 1),lua_tostring(L,2),
+        lua_tostring(L,3), lua_tostring(L,4),lua_toboolean(L,5));
+
+    lua_pop(L, lua_gettop(L));
+    LuaType<an<T>>::pushdata(L,scand);
+    return 1;
   }
+
 
   an<T> uniquified_candidate(const an<T> item,
       const string& type, const string& text, const string& comment)
@@ -292,7 +318,8 @@ namespace CandidateReg {
 
   static const luaL_Reg funcs[] = {
     { "Candidate", WRAP(make) },
-    { "ShadowCandidate", (raw_shadow_candidate) },
+    { "ShadowCandidate", (raw_shadow_candidate<ShadowCandidate>) },
+    { "WShadowCandidate", (raw_shadow_candidate<WShadowCandidate>) },
     { "UniquifiedCandidate", (raw_uniquified_candidate) },
     { NULL, NULL },
   };
@@ -301,7 +328,8 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
-    { "to_shadow_candidate", (raw_shadow_candidate) },
+    { "to_wshadow_candidate", (raw_shadow_candidate<ShadowCandidate>) },
+    { "to_wshadow_candidate", (raw_shadow_candidate<WShadowCandidate>) },
     { "to_uniquified_candidate", (raw_uniquified_candidate) },
     { "to_phrase", WRAP(candidate_to_<Phrase>)},
     { "to_sentence", WRAP(candidate_to_<Sentence>)},
