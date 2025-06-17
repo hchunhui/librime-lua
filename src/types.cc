@@ -328,7 +328,7 @@ namespace CandidateReg {
     { "get_dynamic_type", WRAP(dynamic_type) },
     { "get_genuine", WRAP(T::GetGenuineCandidate) },
     { "get_genuines", WRAP(T::GetGenuineCandidates) },
-    { "to_wshadow_candidate", (raw_shadow_candidate<ShadowCandidate>) },
+    { "to_shadow_candidate", (raw_shadow_candidate<ShadowCandidate>) },
     { "to_wshadow_candidate", (raw_shadow_candidate<WShadowCandidate>) },
     { "to_uniquified_candidate", (raw_uniquified_candidate) },
     { "to_phrase", WRAP(candidate_to_<Phrase>)},
