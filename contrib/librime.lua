@@ -1,4 +1,4 @@
--- Last Change: 2024-12-15
+-- Last Change: 2025-06-18
 ---@meta rime
 
 --- 全局对象
@@ -29,7 +29,7 @@ function yield(cand) end
 --- 常量
 
 ---@enum ConfigType
-config_types = {
+local config_types = {
   kNull = "kNull",
   kScalar = "kScalar",
   kList = "kList",
@@ -37,7 +37,7 @@ config_types = {
 }
 
 ---@enum SegmentType
-segment_types = {
+local segment_types = {
   kVoid = "kVoid",
   kGuess = "kGuess",
   kSelected = "kSelected",
@@ -45,7 +45,7 @@ segment_types = {
 }
 
 ---@enum CandidateDynamicType
-candidate_dynamic_types = {
+local candidate_dynamic_types = {
   kSentence = "Sentence",
   kPhrase = "Phrase",
   kSimple = "Simple",
@@ -55,14 +55,14 @@ candidate_dynamic_types = {
 }
 
 ---@enum ProcessResult
-process_results = {
+local process_results = {
   kRejected = 0,
   kAccepted = 1,
   kNoop = 2,
 }
 
 ---@enum ModifierMask
-modifier_masks = {
+local modifier_masks = {
   kShift = 0x1,
   kLock = 0x2,
   kControl = 0x4,
