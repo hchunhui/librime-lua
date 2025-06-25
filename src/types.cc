@@ -20,6 +20,7 @@
 #include <rime/switcher.h>
 #include "lua_gears.h"
 #include <boost/regex.hpp>
+#include <chrono>
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
@@ -2357,6 +2358,13 @@ namespace RimeApiReg {
     return Service::instance().deployer().user_id;
   }
 
+  long get_time_ms() {
+    auto now = std::chrono::steady_clock::now();
+    auto duration = now.time_since_epoch();
+    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+    return millis.count();
+  }
+
 // boost::regex api
   optional<std::vector<string>> regex_search(
       const string &target ,const string &pattern )
@@ -2393,6 +2401,7 @@ namespace RimeApiReg {
     { "get_distribution_code_name", WRAP(get_distribution_code_name) },
     { "get_distribution_version", WRAP(get_distribution_version) },
     { "get_user_id", WRAP(get_user_id) },
+    { "get_time_ms", WRAP(get_time_ms) },
     { "regex_match", WRAP(regex_match) },
     { "regex_search", WRAP(regex_search) },
     { "regex_replace", WRAP(regex_replace) },
