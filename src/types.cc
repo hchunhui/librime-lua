@@ -33,6 +33,20 @@ namespace {
 
 template<typename> using void_t = void;
 
+template <typename T, typename = void>
+struct HighlightDispatcher {
+  static bool Highlight(T& t, size_t index) {
+    return false;
+  }
+};
+
+template <typename T>
+struct HighlightDispatcher<T, void_t<decltype(std::declval<T>().Highlight(std::declval<size_t>()))>> {
+  static bool Highlight(T& t, size_t index) {
+    return t.Highlight(index);
+  }
+};
+
 template<typename T, typename = void>
 struct COMPAT {
   // fallback version if librime is old
@@ -783,6 +797,7 @@ namespace ContextReg {
     { "clear", WRAPMEM(T::Clear) },
 
     { "select", WRAPMEM(T::Select) },
+    { "highlight", WRAP(HighlightDispatcher<Context>::Highlight) },
     { "confirm_current_selection", WRAPMEM(T::ConfirmCurrentSelection) },
     { "delete_current_selection", WRAPMEM(T::DeleteCurrentSelection) },
     { "confirm_previous_selection", WRAPMEM(T::ConfirmPreviousSelection) },
