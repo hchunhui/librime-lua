@@ -795,6 +795,8 @@ namespace ContextReg {
     { "get_option", WRAPMEM(T::get_option) },
     { "set_property", WRAPMEM(T::set_property) },
     { "get_property", WRAPMEM(T::get_property) },
+    { "get_options", WRAPMEM(T, options) },
+    { "get_properties", WRAPMEM(T, properties) },
     { "clear_transient_options", WRAPMEM(T::ClearTransientOptions) },
     { NULL, NULL },
   };
@@ -811,6 +813,8 @@ namespace ContextReg {
     { "property_update_notifier", WRAPMEM(T::property_update_notifier) },
     { "unhandled_key_notifier", WRAPMEM(T::unhandled_key_notifier) },
     { "commit_history", WRAP(get_commit_history) },
+    { "options", WRAPMEM(T, options) },
+    { "properties", WRAPMEM(T, properties) },
     { NULL, NULL },
   };
 
@@ -1449,6 +1453,7 @@ static int raw_connect(lua_State *L) {
   return 1;
 }
 
+
 namespace ConnectionReg {
   using T = boost::signals2::connection;
 
@@ -1472,6 +1477,7 @@ namespace ConnectionReg {
 
 namespace NotifierReg {
   typedef Context::Notifier T;
+
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
