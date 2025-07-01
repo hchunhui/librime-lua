@@ -12,6 +12,7 @@
 ---@field get_distribution_code_name fun(): string
 ---@field get_distribution_version fun(): string
 ---@field get_user_id fun(): string
+---@field get_time_ms fun(): number
 ---@field regex_match fun(input: string, pattern: string): boolean
 ---@field regex_search fun(input: string, pattern: string): string[] | nil
 ---@field regex_replace fun(input: string, pattern: string, fmt: string): string
