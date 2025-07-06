@@ -39,7 +39,7 @@
 template <typename O>
 int raw_make_translator(lua_State* L){
   int n = lua_gettop(L);
-  if (3 > n || 4 < n)
+  if (3 > n )
     return 0;
 
   C_State C;
@@ -49,7 +49,7 @@ int raw_make_translator(lua_State* L){
       LuaType<std::string>::todata(L, -1, &C)
       );
   DLOG(INFO) << "check Ticket:" << ticket.klass << "@" <<ticket.name_space ;
-  if ( n == 4 )
+  if ( 3 < n )
     ticket.schema = &(LuaType<rime::Schema &>::todata(L, 2) ); //overwrite schema
   Lua* lua= Lua::from_state(L);
   std::shared_ptr<O> obj = rime::New<O>(ticket, lua);

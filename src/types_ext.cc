@@ -317,10 +317,11 @@ namespace ComponentReg{
   using S = Segmentor;
   using T = Translator;
   using F = Filter;
+
   template <typename O>
   int raw_create(lua_State *L){
     int n = lua_gettop(L);
-    if (3 > n || 4 < n)
+    if (3 > n)
       return 0;
 
     C_State C;
@@ -332,24 +333,24 @@ namespace ComponentReg{
     // "table_translator"  call Component.TableTranslator(....)
     // "script_translator" call Component.ScriptTranslator(...)
     {
-      if (lua_getglobal(L, "Component")==LUA_TTABLE) {
-        if ( ticket.klass == "table_translator" &&
-            lua_getfield(L, -1, "TableTranslator")== LUA_TFUNCTION) {
-          lua_insert(L, 1); //move func to index 1
-          lua_pop(L, 1); // remove Componont table
-          LOG(ERROR) << "call Component.TableTranslator: args: " << lua_gettop(L) -1;
-          return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+      auto func = [L](const string &fn) -> int {
+        lua_getglobal(L, "Component");
+        lua_getfield(L, -1, fn.c_str());
+        if (lua_type(L, -1) != LUA_TFUNCTION) {
+          return 0;
         }
-        else if ( ticket.klass == "script_translator" &&
-            lua_getfield(L, -1, "ScriptTranslator")== LUA_TFUNCTION) {
-          lua_insert(L, 1); //move func to index 1
-          lua_pop(L, 1); // remove Componont table
-          return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
-        }
-      }
+        lua_insert(L, 1); //move func to index 1
+        lua_pop(L, 1); // remove Componont table
+        return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+      };
+
+      if (std::string_view(ticket.klass).substr(0, 16) == "table_translator")
+        return func("TableTranslator");
+      if (std::string_view(ticket.klass).substr(0, 17) == "script_translator")
+        return func("ScriptTranslator");
     }
 
-    if (n == 4)
+    if (3 < n)
       ticket.schema = &(LuaType<Schema &>::todata(L, 2) ); //overwrite schema
 
     if (auto c = O::Require(ticket.klass)) {
@@ -361,7 +362,7 @@ namespace ComponentReg{
       LOG(ERROR) << "error creating " << typeid(O).name() << ": '" << ticket.klass << "'";
       return 0;
     }
-  };
+  }
 
 
   static const luaL_Reg funcs[] = {
