@@ -321,7 +321,7 @@ namespace ComponentReg{
   template <typename O>
   int raw_create(lua_State *L){
     int n = lua_gettop(L);
-    if (3 > n)
+    if (3 > n || 4 < n)
       return 0;
 
     C_State C;
@@ -344,13 +344,13 @@ namespace ComponentReg{
         return  (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
       };
 
-      if (std::string_view(ticket.klass).substr(0, 16) == "table_translator")
+      if (ticket.klass == "table_translator")
         return func("TableTranslator");
-      if (std::string_view(ticket.klass).substr(0, 17) == "script_translator")
+      if (ticket.klass == "script_translator")
         return func("ScriptTranslator");
     }
 
-    if (3 < n)
+    if (4 == n)
       ticket.schema = &(LuaType<Schema &>::todata(L, 2) ); //overwrite schema
 
     if (auto c = O::Require(ticket.klass)) {
