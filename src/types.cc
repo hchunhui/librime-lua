@@ -932,7 +932,7 @@ namespace SchemaReg {
   using T = Schema;
 
   the<T> make(const string &schema_id) {
-    return std::unique_ptr<T>(new T(schema_id));
+    return std::make_unique<T>( schema_id.empty() ? ".default" : schema_id );
   };
 
   static const luaL_Reg funcs[] = {
