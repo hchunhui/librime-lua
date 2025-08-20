@@ -2407,6 +2407,216 @@ namespace RimeApiReg {
     return boost::regex_replace(target, reg, fmt);
   }
 
+  // X11 Keysym constants access functions
+  void init_keysyms(lua_State *L) {
+    // Define keysym structure for registration
+    struct KeysymEntry {
+      unsigned long value;
+      const char* name;
+    };
+
+    // All keysym entries to register
+    static const KeysymEntry keysyms[] = {
+      // TTY function keys
+      { XK_BackSpace,    "XK_BackSpace" },
+      { XK_Tab,          "XK_Tab" },
+      { XK_Linefeed,     "XK_Linefeed" },
+      { XK_Clear,        "XK_Clear" },
+      { XK_Return,       "XK_Return" },
+      { XK_Pause,        "XK_Pause" },
+      { XK_Scroll_Lock,  "XK_Scroll_Lock" },
+      { XK_Sys_Req,      "XK_Sys_Req" },
+      { XK_Escape,       "XK_Escape" },
+      { XK_Delete,       "XK_Delete" },
+
+      // International & multi-key character composition
+      { XK_Multi_key,         "XK_Multi_key" },
+      { XK_Codeinput,         "XK_Codeinput" },
+      { XK_SingleCandidate,   "XK_SingleCandidate" },
+      { XK_MultipleCandidate, "XK_MultipleCandidate" },
+      { XK_PreviousCandidate, "XK_PreviousCandidate" },
+
+      // Japanese keyboard support
+      { XK_Kanji,           "XK_Kanji" },
+      { XK_Muhenkan,        "XK_Muhenkan" },
+      { XK_Henkan_Mode,     "XK_Henkan_Mode" },
+      { XK_Henkan,          "XK_Henkan" },
+      { XK_Romaji,          "XK_Romaji" },
+      { XK_Hiragana,        "XK_Hiragana" },
+      { XK_Katakana,        "XK_Katakana" },
+      { XK_Hiragana_Katakana, "XK_Hiragana_Katakana" },
+      { XK_Zenkaku,         "XK_Zenkaku" },
+      { XK_Hankaku,         "XK_Hankaku" },
+      { XK_Zenkaku_Hankaku, "XK_Zenkaku_Hankaku" },
+      { XK_Touroku,         "XK_Touroku" },
+      { XK_Massyo,          "XK_Massyo" },
+      { XK_Kana_Lock,       "XK_Kana_Lock" },
+      { XK_Kana_Shift,      "XK_Kana_Shift" },
+      { XK_Eisu_Shift,      "XK_Eisu_Shift" },
+      { XK_Eisu_toggle,     "XK_Eisu_toggle" },
+
+      // Cursor control & motion
+      { XK_Home,      "XK_Home" },
+      { XK_Left,      "XK_Left" },
+      { XK_Up,        "XK_Up" },
+      { XK_Right,     "XK_Right" },
+      { XK_Down,      "XK_Down" },
+      { XK_Prior,     "XK_Prior" },
+      { XK_Page_Up,   "XK_Page_Up" },
+      { XK_Next,      "XK_Next" },
+      { XK_Page_Down, "XK_Page_Down" },
+      { XK_End,       "XK_End" },
+      { XK_Begin,     "XK_Begin" },
+
+      // Misc functions
+      { XK_Select,     "XK_Select" },
+      { XK_Print,      "XK_Print" },
+      { XK_Execute,    "XK_Execute" },
+      { XK_Insert,     "XK_Insert" },
+      { XK_Undo,       "XK_Undo" },
+      { XK_Redo,       "XK_Redo" },
+      { XK_Menu,       "XK_Menu" },
+      { XK_Find,       "XK_Find" },
+      { XK_Cancel,     "XK_Cancel" },
+      { XK_Help,       "XK_Help" },
+      { XK_Break,      "XK_Break" },
+      { XK_Mode_switch, "XK_Mode_switch" },
+      { XK_script_switch, "XK_script_switch" },
+      { XK_Num_Lock,   "XK_Num_Lock" },
+
+      // Keypad functions
+      { XK_KP_Space,    "XK_KP_Space" },
+      { XK_KP_Tab,      "XK_KP_Tab" },
+      { XK_KP_Enter,    "XK_KP_Enter" },
+      { XK_KP_F1,       "XK_KP_F1" },
+      { XK_KP_F2,       "XK_KP_F2" },
+      { XK_KP_F3,       "XK_KP_F3" },
+      { XK_KP_F4,       "XK_KP_F4" },
+      { XK_KP_Home,     "XK_KP_Home" },
+      { XK_KP_Left,     "XK_KP_Left" },
+      { XK_KP_Up,       "XK_KP_Up" },
+      { XK_KP_Right,    "XK_KP_Right" },
+      { XK_KP_Down,     "XK_KP_Down" },
+      { XK_KP_Prior,    "XK_KP_Prior" },
+      { XK_KP_Page_Up,  "XK_KP_Page_Up" },
+      { XK_KP_Next,     "XK_KP_Next" },
+      { XK_KP_Page_Down, "XK_KP_Page_Down" },
+      { XK_KP_End,      "XK_KP_End" },
+      { XK_KP_Begin,    "XK_KP_Begin" },
+      { XK_KP_Insert,   "XK_KP_Insert" },
+      { XK_KP_Delete,   "XK_KP_Delete" },
+      { XK_KP_Equal,    "XK_KP_Equal" },
+      { XK_KP_Multiply, "XK_KP_Multiply" },
+      { XK_KP_Add,      "XK_KP_Add" },
+      { XK_KP_Separator, "XK_KP_Separator" },
+      { XK_KP_Subtract, "XK_KP_Subtract" },
+      { XK_KP_Decimal,  "XK_KP_Decimal" },
+      { XK_KP_Divide,   "XK_KP_Divide" },
+
+      // Keypad numbers
+      { XK_KP_0, "XK_KP_0" }, { XK_KP_1, "XK_KP_1" }, { XK_KP_2, "XK_KP_2" }, { XK_KP_3, "XK_KP_3" }, { XK_KP_4, "XK_KP_4" },
+      { XK_KP_5, "XK_KP_5" }, { XK_KP_6, "XK_KP_6" }, { XK_KP_7, "XK_KP_7" }, { XK_KP_8, "XK_KP_8" }, { XK_KP_9, "XK_KP_9" },
+
+      // Function keys F1-F35
+      { XK_F1,  "XK_F1" },  { XK_F2,  "XK_F2" },  { XK_F3,  "XK_F3" },  { XK_F4,  "XK_F4" },  { XK_F5,  "XK_F5" },
+      { XK_F6,  "XK_F6" },  { XK_F7,  "XK_F7" },  { XK_F8,  "XK_F8" },  { XK_F9,  "XK_F9" },  { XK_F10, "XK_F10" },
+      { XK_F11, "XK_F11" }, { XK_F12, "XK_F12" }, { XK_F13, "XK_F13" }, { XK_F14, "XK_F14" }, { XK_F15, "XK_F15" },
+      { XK_F16, "XK_F16" }, { XK_F17, "XK_F17" }, { XK_F18, "XK_F18" }, { XK_F19, "XK_F19" }, { XK_F20, "XK_F20" },
+      { XK_F21, "XK_F21" }, { XK_F22, "XK_F22" }, { XK_F23, "XK_F23" }, { XK_F24, "XK_F24" }, { XK_F25, "XK_F25" },
+      { XK_F26, "XK_F26" }, { XK_F27, "XK_F27" }, { XK_F28, "XK_F28" }, { XK_F29, "XK_F29" }, { XK_F30, "XK_F30" },
+      { XK_F31, "XK_F31" }, { XK_F32, "XK_F32" }, { XK_F33, "XK_F33" }, { XK_F34, "XK_F34" }, { XK_F35, "XK_F35" },
+
+      // Modifiers
+      { XK_Shift_L,   "XK_Shift_L" },   { XK_Shift_R,   "XK_Shift_R" },
+      { XK_Control_L, "XK_Control_L" }, { XK_Control_R, "XK_Control_R" },
+      { XK_Caps_Lock, "XK_Caps_Lock" }, { XK_Shift_Lock, "XK_Shift_Lock" },
+      { XK_Meta_L,    "XK_Meta_L" },    { XK_Meta_R,    "XK_Meta_R" },
+      { XK_Alt_L,     "XK_Alt_L" },     { XK_Alt_R,     "XK_Alt_R" },
+      { XK_Super_L,   "XK_Super_L" },   { XK_Super_R,   "XK_Super_R" },
+      { XK_Hyper_L,   "XK_Hyper_L" },   { XK_Hyper_R,   "XK_Hyper_R" },
+
+      // Latin 1 (ISO/IEC 8859-1) punctuation
+      { XK_space,     "XK_space" },     { XK_exclam,    "XK_exclam" },    { XK_quotedbl,  "XK_quotedbl" },  { XK_numbersign, "XK_numbersign" },
+      { XK_dollar,    "XK_dollar" },    { XK_percent,   "XK_percent" },   { XK_ampersand, "XK_ampersand" }, { XK_apostrophe, "XK_apostrophe" },
+      { XK_parenleft, "XK_parenleft" }, { XK_parenright, "XK_parenright" }, { XK_asterisk, "XK_asterisk" }, { XK_plus,       "XK_plus" },
+      { XK_comma,     "XK_comma" },     { XK_minus,     "XK_minus" },     { XK_period,    "XK_period" },    { XK_slash,      "XK_slash" },
+
+      // Numbers 0-9
+      { XK_0, "XK_0" }, { XK_1, "XK_1" }, { XK_2, "XK_2" }, { XK_3, "XK_3" }, { XK_4, "XK_4" },
+      { XK_5, "XK_5" }, { XK_6, "XK_6" }, { XK_7, "XK_7" }, { XK_8, "XK_8" }, { XK_9, "XK_9" },
+
+      // More punctuation
+      { XK_colon,    "XK_colon" },    { XK_semicolon, "XK_semicolon" }, { XK_less,     "XK_less" },     { XK_equal,   "XK_equal" },
+      { XK_greater,  "XK_greater" },  { XK_question,  "XK_question" },  { XK_at,       "XK_at" },
+
+      // Uppercase letters A-Z
+      { XK_A, "XK_A" }, { XK_B, "XK_B" }, { XK_C, "XK_C" }, { XK_D, "XK_D" }, { XK_E, "XK_E" },
+      { XK_F, "XK_F" }, { XK_G, "XK_G" }, { XK_H, "XK_H" }, { XK_I, "XK_I" }, { XK_J, "XK_J" },
+      { XK_K, "XK_K" }, { XK_L, "XK_L" }, { XK_M, "XK_M" }, { XK_N, "XK_N" }, { XK_O, "XK_O" },
+      { XK_P, "XK_P" }, { XK_Q, "XK_Q" }, { XK_R, "XK_R" }, { XK_S, "XK_S" }, { XK_T, "XK_T" },
+      { XK_U, "XK_U" }, { XK_V, "XK_V" }, { XK_W, "XK_W" }, { XK_X, "XK_X" }, { XK_Y, "XK_Y" },
+      { XK_Z, "XK_Z" },
+
+      // More punctuation
+      { XK_bracketleft,  "XK_bracketleft" },  { XK_backslash,   "XK_backslash" },   { XK_bracketright, "XK_bracketright" },
+      { XK_asciicircum,  "XK_asciicircum" },  { XK_underscore,  "XK_underscore" },  { XK_grave,        "XK_grave" },
+
+      // Lowercase letters a-z
+      { XK_a, "XK_a" }, { XK_b, "XK_b" }, { XK_c, "XK_c" }, { XK_d, "XK_d" }, { XK_e, "XK_e" },
+      { XK_f, "XK_f" }, { XK_g, "XK_g" }, { XK_h, "XK_h" }, { XK_i, "XK_i" }, { XK_j, "XK_j" },
+      { XK_k, "XK_k" }, { XK_l, "XK_l" }, { XK_m, "XK_m" }, { XK_n, "XK_n" }, { XK_o, "XK_o" },
+      { XK_p, "XK_p" }, { XK_q, "XK_q" }, { XK_r, "XK_r" }, { XK_s, "XK_s" }, { XK_t, "XK_t" },
+      { XK_u, "XK_u" }, { XK_v, "XK_v" }, { XK_w, "XK_w" }, { XK_x, "XK_x" }, { XK_y, "XK_y" },
+      { XK_z, "XK_z" },
+
+      // Final punctuation
+      { XK_braceleft,   "XK_braceleft" },   { XK_bar,         "XK_bar" },         { XK_braceright,  "XK_braceright" },
+      { XK_asciitilde,  "XK_asciitilde" },
+
+      // Special symbol
+      { XK_VoidSymbol,  "XK_VoidSymbol" }
+    };
+
+    // Build metatable and vars_get following lua_export_type pattern.
+    const size_t count = sizeof(keysyms) / sizeof(keysyms[0]);
+
+    // create metatable
+    lua_newtable(L); // metatable
+
+    // create vars_get table and populate with integer values
+    lua_createtable(L, 0, 0); // vars_get
+    for (size_t i = 0; i < count; ++i) {
+      lua_pushinteger(L, keysyms[i].value);            // push integer
+      lua_setfield(L, -2, keysyms[i].name);           // vars_get[name] = integer
+    }
+    lua_setfield(L, -2, "vars_get"); // metatable.vars_get = vars_get
+
+    auto index_lambda = +[](lua_State *L) -> int {
+      if (luaL_getmetafield(L, 1, "vars_get") != LUA_TNIL) {
+        lua_pushvalue(L, 2);
+        lua_rawget(L, -2);
+        return 1;
+      }
+      return 0;
+    };
+
+    auto newindex_lambda = +[](lua_State *L) -> int {
+      return luaL_error(L, "rime_api.keysym is read-only");
+    };
+
+    lua_pushcfunction(L, (lua_CFunction)index_lambda);
+    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, (lua_CFunction)newindex_lambda);
+    lua_setfield(L, -2, "__newindex");
+
+    // create keysym table and set its metatable
+    lua_newtable(L); // keysym
+    lua_pushvalue(L, -2); // push metatable
+    lua_setmetatable(L, -2); // set metatable on keysym, pops metatable
+    lua_remove(L, -2);
+    lua_setfield(L, -2, "keysym");
+  }
+
   static const luaL_Reg funcs[]= {
     { "get_rime_version", WRAP(get_rime_version) },
     { "get_shared_data_dir", WRAP(COMPAT<Deployer>::get_shared_data_dir) },
@@ -2426,6 +2636,8 @@ namespace RimeApiReg {
   void init(lua_State *L) {
     lua_createtable(L, 0, 0);
     luaL_setfuncs(L, funcs, 0);
+    // Initialize keysym as read-only accessor
+    init_keysyms(L);
     lua_setglobal(L, "rime_api");
   }
 }
