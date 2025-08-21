@@ -332,6 +332,27 @@ local modifier_masks = {
 ---@field XK_braceright 0x007d|125 -- 右花括号 }
 ---@field XK_asciitilde 0x007e|126 -- 波浪号 ~
 ---@field XK_VoidSymbol 0xffffff|16777215 -- 空符号
+---@field kShiftMask 0x1|(1<<0) -- Shift键掩码
+---@field kLockMask 0x2|(1<<1) -- Lock键掩码
+---@field kControlMask 0x4|(1<<2) -- Control键掩码
+---@field kMod1Mask 0x8|(1<<3) -- Mod1键掩码（通常对应Alt键）
+---@field kMod2Mask 0x10|(1<<4) -- Mod2键掩码（通常对应Num Lock键）
+---@field kMod3Mask 0x20|(1<<5) -- Mod3键掩码
+---@field kMod4Mask 0x40|(1<<6) -- Mod4键掩码（通常对应Super键）
+---@field kMod5Mask 0x80|(1<<7) -- Mod5键掩码
+---@field kButton1Mask 0x100|(1<<8) -- 鼠标左键掩码
+---@field kButton2Mask 0x200|(1<<9) -- 鼠标中键掩码
+---@field kButton3Mask 0x400|(1<<10) -- 鼠标右键掩码
+---@field kButton4Mask 0x800|(1<<11) -- 鼠标滚轮上掩码
+---@field kButton5Mask 0x1000|(1<12) -- 鼠标滚轮下掩码
+---@field kHandleMask 0x1000000|(1<<24) -- 句柄掩码
+---@field kForwardMask 0x2000000|(1<<25) -- 前向掩码
+---@field kIgnoreMask 0x2000000|(1<<25) -- 忽略掩码, 等于kForwardMask
+---@field kSuperMask 0x4000000|(1<<26) -- Super键掩码
+---@field kHyperMask 0x8000000|(1<<27) -- Hyper键掩码
+---@field kMetaMask 0x10000000|(1<<28) -- Meta键掩码
+---@field kReleaseMask 0x40000000|(1<<30) -- 释放掩码
+---@field kModifierMask 0x5f001fff -- 所有修饰键掩码
 
 --- 工具
 

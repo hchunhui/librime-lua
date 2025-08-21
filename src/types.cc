@@ -2574,7 +2574,29 @@ namespace RimeApiReg {
       { XK_asciitilde,  "XK_asciitilde" },
 
       // Special symbol
-      { XK_VoidSymbol,  "XK_VoidSymbol" }
+      { XK_VoidSymbol,  "XK_VoidSymbol" },
+      // Modifier masks
+      {kShiftMask, "kShiftMask"},
+      {kLockMask, "kLockMask"},
+      {kControlMask, "kControlMask"},
+      {kMod1Mask, "kMod1Mask"},
+      {kMod2Mask, "kMod2Mask"},
+      {kMod3Mask, "kMod3Mask"},
+      {kMod4Mask, "kMod4Mask"},
+      {kMod5Mask, "kMod5Mask"},
+      {kButton1Mask, "kButton1Mask"},
+      {kButton2Mask, "kButton2Mask"},
+      {kButton3Mask, "kButton3Mask"},
+      {kButton4Mask, "kButton4Mask"},
+      {kButton5Mask, "kButton5Mask"},
+      {kHandledMask, "kHandledMask"},
+      {kForwardMask, "kForwardMask"},
+      {kIgnoredMask, "kIgnoredMask"},
+      {kSuperMask, "kSuperMask"},
+      {kHyperMask, "kHyperMask"},
+      {kMetaMask, "kMetaMask"},
+      {kReleaseMask, "kReleaseMask"},
+      {kModifierMask, "kModifierMask"},
     };
 
     // Build metatable and vars_get following lua_export_type pattern.
