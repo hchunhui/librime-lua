@@ -36,6 +36,7 @@ template<typename> using void_t = void;
 template <typename T, typename = void>
 struct HighlightDispatcher {
   static bool Highlight(T& t, size_t index) {
+    LOG(WARNING) << "librime does not support the ConText::Highlight()";
     return false;
   }
 };
@@ -49,8 +50,8 @@ struct HighlightDispatcher<T, void_t<decltype(std::declval<T>().Highlight(std::d
 
 template <typename T, typename = void>
 struct AbortNotifier  {
-  static void abort_notifier(T& t) {}
-  static void AbortComposition(T& t) {}
+  static void abort_notifier(T& t) { LOG(WARNING) << "librime does not support Context::abort_notifier()"; }
+  static void AbortComposition(T& t) { LOG(WARNING) << "librime does not support Context::AbortComposition()"; }
 };
 
 template <typename T>
