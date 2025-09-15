@@ -49,7 +49,7 @@ int raw_make_translator(lua_State* L){
       LuaType<std::string>::todata(L, -1, &C)
       );
   DLOG(INFO) << "check Ticket:" << ticket.klass << "@" <<ticket.name_space ;
-  if ( n == 4 )
+  if ( 4 == n )
     ticket.schema = &(LuaType<rime::Schema &>::todata(L, 2) ); //overwrite schema
   Lua* lua= Lua::from_state(L);
   std::shared_ptr<O> obj = rime::New<O>(ticket, lua);

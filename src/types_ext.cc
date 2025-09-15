@@ -13,6 +13,8 @@
 #include <rime/filter.h>
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/dict/user_db.h>
+#include <rime/dict/user_dictionary.h>
+#include <rime/gear/memory.h>
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
@@ -109,6 +111,7 @@ namespace SegmentorReg{
 
 namespace TranslatorReg{
   using T = Translator;
+  using M = Memory;
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -314,7 +317,6 @@ namespace ComponentReg{
   using S = Segmentor;
   using T = Translator;
   using F = Filter;
-
   template <typename O>
   int raw_create(lua_State *L){
     int n = lua_gettop(L);
@@ -324,10 +326,28 @@ namespace ComponentReg{
     C_State C;
     Ticket ticket(
       LuaType<Engine *>::todata(L, 1),
-      LuaType<string>::todata(L, -2, &C),
-      LuaType<string>::todata(L, -1, &C)
+      LuaType<string>::todata(L, -2, &C),// name_space
+      LuaType<string>::todata(L, -1, &C) // component name
     );
-    if (n == 4)
+    // "table_translator"  call Component.TableTranslator(....)
+    // "script_translator" call Component.ScriptTranslator(...)
+    {
+      auto func = [L](const string &fn)->int {
+        lua_getglobal(L, "Component");
+        lua_getfield(L, -1, fn.c_str());
+        if (lua_type(L, -1) != LUA_TFUNCTION)
+          return 0;
+        lua_insert(L, 1); // move func to index 1
+        lua_pop(L, 1); // remove Component table
+        return (LUA_OK==lua_pcall(L, lua_gettop(L)-1, 1, 0)) ? 1 : 0;
+      };
+      if ( ticket.klass == "table_translator" )
+        return func("TableTranslator");
+      if ( ticket.klass == "script_translator" )
+        return func("ScriptTranslator");
+    }
+
+    if (4 == n)
       ticket.schema = &(LuaType<Schema &>::todata(L, 2) ); //overwrite schema
 
     if (auto c = O::Require(ticket.klass)) {
@@ -339,7 +359,7 @@ namespace ComponentReg{
       LOG(ERROR) << "error creating " << typeid(O).name() << ": '" << ticket.klass << "'";
       return 0;
     }
-  };
+  }
 
 
   static const luaL_Reg funcs[] = {
