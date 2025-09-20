@@ -20,9 +20,8 @@ else()
   include_directories(thirdparty/lua5.4)
   aux_source_directory(thirdparty/lua5.4 LUA_SRC)
   add_definitions(-DLUA_COMPAT_5_3)
-  if(WIN32)
-    set_property(SOURCE ${LUA_SRC} PROPERTY COMPILE_DEFINITIONS LUA_BUILD_AS_DLL)
-  else()
+  if(NOT WIN32)
+    set(USE_INTREE_LUA ON)
     set_property(SOURCE ${LUA_SRC} PROPERTY COMPILE_DEFINITIONS LUA_USE_POSIX;LUA_USE_DLOPEN)
     execute_process(
       COMMAND ${CMAKE_C_COMPILER} -print-multiarch
@@ -48,3 +47,17 @@ set(plugin_name "rime-lua" PARENT_SCOPE)
 set(plugin_objs $<TARGET_OBJECTS:rime-lua-objs> PARENT_SCOPE)
 set(plugin_deps ${LUA_TARGET} ${rime_library} ${rime_gears_library} PARENT_SCOPE)
 set(plugin_modules "lua" PARENT_SCOPE)
+
+# Hide Lua symbols on Unix-like systems when using in-tree Lua
+# for external lua engine capability
+if (USE_INTREE_LUA)
+  # On Unix-like systems, hide Lua symbols using compiler attributes
+  # Apply to object files only to avoid affecting main library
+  set_target_properties(rime-lua-objs PROPERTIES
+    C_VISIBILITY_PRESET hidden
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+  )
+  # Apply hidden visibility to Lua source files specifically
+  set_source_files_properties(${LUA_SRC} PROPERTIES COMPILE_FLAGS "-fvisibility=hidden")
+endif(USE_INTREE_LUA)
