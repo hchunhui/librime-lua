@@ -560,8 +560,17 @@ namespace KeyEventReg {
   int raw_make(lua_State *L) {
     an<T> res;
     int n = lua_gettop(L);
-    if (n == 1)
-      res = New<T>( string(lua_tostring(L, 1)) );
+    if (n == 1) {
+      auto type= lua_type(L, 1);
+      if (type == LUA_TUSERDATA) {
+        auto k = LuaType<T&>::todata(L, 1);
+        res= New<T>(k.keycode(), k.modifier());
+      }
+      else if (type== LUA_TNUMBER)
+        res= New<T>(lua_tointeger(L, 1), 0);
+      else if (type == LUA_TSTRING)
+        res= New<T>(lua_tostring(L, 1));
+    }
     else if (n > 1)
       res = New<T>( lua_tointeger(L, 1), lua_tointeger(L, 2) );
 

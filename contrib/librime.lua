@@ -318,7 +318,7 @@ function ConfigValue(value) end
 ---@field eq fun(self: self, key: KeyEvent): boolean
 ---@field lt fun(self: self, key: KeyEvent): boolean
 
----@param repr string
+---@param repr string | integer | KeyEvent
 ---@return KeyEvent
 function KeyEvent(repr) end
 
