@@ -300,6 +300,40 @@ namespace CandidateReg {
     return spans;
   }
 
+  int raw_get_lua_data(lua_State *L) {
+    an<Candidate>& cand = LuaType<an<Candidate> &>::todata(L, 1);
+    if (auto obj = std::static_pointer_cast<LuaObj>(cand->get_data("_lua_data"))) {
+      LuaType<an<LuaObj>>::pushdata(L, obj);
+    } else {
+      lua_pushnil(L);
+    }
+    return 1;
+  }
+
+  int raw_set_lua_data(lua_State *L) {
+    C_State C;
+    int n = lua_gettop(L);
+    an<Candidate>& cand = LuaType<an<Candidate>& >::todata(L, 1);
+
+    // The candidate can outlive the translation. Upon the destruction
+    // of LuaTranslation, GC will free the thread's
+    // lua_State. Therefore, the data should be registered in the main
+    // thread.
+    lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+    lua_State* main_L = lua_tothread(L, -1);
+    lua_pop(L, 1);
+
+    // Move the lua data from thread L to main_L
+    lua_xmove(L, main_L, 1);
+
+    // Create the LuaObj using main_L
+    an<LuaObj> obj = LuaObj::todata(main_L, -1);
+    lua_pop(main_L, 1);
+
+    cand->set_data("_lua_data", std::static_pointer_cast<void>(obj));
+    return 0;
+  }
+
   template<class OT>
   an<OT> candidate_to_(an<T> t) {
     return std::dynamic_pointer_cast<OT>(t);
@@ -334,6 +368,7 @@ namespace CandidateReg {
     { "text", WRAPMEM(T, text) },
     { "comment", WRAPMEM(T, comment) },
     { "preedit", WRAPMEM(T, preedit) },
+    { "lua_data", (raw_get_lua_data) },
     { NULL, NULL },
   };
 
@@ -346,6 +381,7 @@ namespace CandidateReg {
     { "text", WRAP(set_text) },
     { "comment", WRAP(set_comment) },
     { "preedit", WRAP(set_preedit) },
+    { "lua_data", (raw_set_lua_data) },
     { NULL, NULL },
   };
 }
