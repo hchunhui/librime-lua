@@ -193,9 +193,20 @@ static void raw_init(lua_State *L, const Ticket &t,
   lua_pop(L, 1);
 }
 
+static size_t get_check_interval(lua_State *L) {
+  lua_getglobal(L, "_G");
+  lua_getfield(L, -1, "update_check_interval");
+  size_t check_interval = 0;
+  if (lua_type(L, -1) == LUA_TNUMBER)
+    check_interval = static_cast<size_t>(lua_tointeger(L, -1));
+  lua_pop(L, 2);
+  return check_interval;
+}
+
 LuaGearImpl::LuaGearImpl(const Ticket& ticket, Lua* lua, const std::string& impl_name)
   : lua_(lua), ticket_(ticket), impl_name_(demangle(impl_name.c_str())) {
   lua->to_state([&](lua_State *L) {
+    check_interval_ = get_check_interval(L);
     raw_init(L, ticket, &env_, &func_, &fini_, &tags_match_, &file_path_, &last_write_time_);
   });
 }
@@ -211,9 +222,9 @@ LuaGearImpl::~LuaGearImpl() {
 }
 
 void LuaGearImpl::ReloadIfModified() {
-  if (file_path_.empty()) return;
+  if (!check_interval_ || file_path_.empty()) return;
   time_t now = time(NULL);
-  if (now - last_check_time_ < 1) return;
+  if (now - last_check_time_ < check_interval_) return;
   last_check_time_ = now;
 
   std::error_code ec;
@@ -234,11 +245,21 @@ void LuaGearImpl::ReloadIfModified() {
         lua_setfield(L, -2, module_name.c_str());
         lua_pop(L, 2);
       } else {
+        // clear check_interval before dofile
+        lua_getglobal(L, "_G");
+        lua_pushnil(L);
+        lua_setfield(L, -2, "update_check_interval");
+        lua_pop(L, 1);
         // reload rime.lua
         if (luaL_dofile(L, file_path_.c_str())) {
           const char *e = lua_tostring(L, -1);
           LOG(ERROR) << "rime.lua error: " << e;
           lua_pop(L, 1);
+        } else {
+          check_interval_ = get_check_interval(L);
+          LOG(INFO) << "Lua module: " << file_path_
+            << " reloaded, new update_check_interval: "
+            << check_interval_;
         }
       }
       raw_init(L, ticket_, &env_, &func_, &fini_, &tags_match_, &file_path_);

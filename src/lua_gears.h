@@ -47,6 +47,7 @@ protected:
   an<LuaObj> func_;
   an<LuaObj> fini_;
   an<LuaObj> tags_match_;
+  size_t check_interval_ = 0;
 
   Ticket ticket_;
   std::string file_path_;
