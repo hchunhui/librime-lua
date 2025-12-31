@@ -2,8 +2,32 @@
 #include "lua_gears.h"
 #include <vector>
 #include <sstream>
+#include <typeinfo>
+#ifdef __GNUG__
+#include <cxxabi.h>
+#include <cstdlib>
+#include <memory>
+#endif
 
 namespace rime {
+
+static std::string demangle(const char* name) {
+#ifdef __GNUG__
+  int status = -1;
+  std::unique_ptr<char, void(*)(void*)> res {
+    abi::__cxa_demangle(name, NULL, NULL, &status),
+    std::free
+  };
+  std::string demangled_name = (status == 0) ? res.get() : name;
+#else
+  std::string demangled_name = name;
+#endif
+  auto pos = demangled_name.rfind("::");
+  if (pos != std::string::npos) {
+    return demangled_name.substr(pos + 2);
+  }
+  return demangled_name;
+}
 
 //--- LuaTranslation
 bool LuaTranslation::Next() {
@@ -62,7 +86,7 @@ static bool sub_module_init(lua_State *L, const Ticket &t,
 }
 //---
 static void raw_init(lua_State *L, const Ticket &t,
-                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini, an<LuaObj> *tags_match= NULL) {
+                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini, an<LuaObj> *tags_match= NULL, string* file_path = NULL, fs::file_time_type* last_write_time = NULL) {
   lua_newtable(L);
   Engine *e = t.engine;
   LuaType<Engine *>::pushdata(L, e);
@@ -75,6 +99,21 @@ static void raw_init(lua_State *L, const Ticket &t,
   std::vector<std::string> _vec_klass = (t.klass[0] == '*') ?
     split_string(t.klass.substr(1), "*") : split_string(t.klass, "*");
   if (t.klass.size() > 0 && t.klass[0] == '*') {
+    if (file_path) {
+      lua_getglobal(L, "package");
+      lua_getfield(L, -1, "searchpath");
+      lua_pushstring(L, _vec_klass.at(0).c_str());
+      lua_getfield(L, -3, "path");
+      if (lua_pcall(L, 2, 1, 0) == LUA_OK && lua_isstring(L, -1)) {
+        *file_path = lua_tostring(L, -1);
+        if (last_write_time) {
+          std::error_code ec;
+          *last_write_time = fs::last_write_time(*file_path, ec);
+        }
+      }
+      lua_pop(L, 2);
+    }
+
     lua_getglobal(L, "require");
     lua_pushstring(L, _vec_klass.at(0).c_str());
     int status = lua_pcall(L, 1, 1, 0);
@@ -138,37 +177,74 @@ static void raw_init(lua_State *L, const Ticket &t,
   lua_pop(L, 1);
 }
 
+LuaGearImpl::LuaGearImpl(const Ticket& ticket, Lua* lua, const std::string& impl_name)
+  : lua_(lua), ticket_(ticket), impl_name_(demangle(impl_name.c_str())) {
+  lua->to_state([&](lua_State *L) {
+    raw_init(L, ticket, &env_, &func_, &fini_, &tags_match_, &file_path_, &last_write_time_);
+  });
+}
+
+LuaGearImpl::~LuaGearImpl() {
+  if (fini_) {
+    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
+    if (!r.ok()) {
+      auto e = r.get_err();
+      LOG(ERROR) << impl_name_ << "::~" << impl_name_ << " of "<< ticket_.name_space << " error(" << e.status << "): " << e.e;
+    }
+  }
+}
+
+void LuaGearImpl::ReloadIfModified() {
+  if (file_path_.empty()) return;
+  time_t now = time(NULL);
+  if (now - last_check_time_ < 1) return;
+  last_check_time_ = now;
+
+  std::error_code ec;
+  auto current_time = fs::last_write_time(file_path_, ec);
+  if (!ec && current_time > last_write_time_) {
+    last_write_time_ = current_time;
+    LOG(INFO) << "Reloading Lua module: " << file_path_;
+    lua_->to_state([&](lua_State *L) {
+      if (ticket_.klass.size() > 0 && ticket_.klass[0] == '*') {
+        std::string module_name = ticket_.klass.substr(1);
+        size_t pos = module_name.find('*');
+        if (pos != std::string::npos) {
+          module_name = module_name.substr(0, pos);
+        }
+        lua_getglobal(L, "package");
+        lua_getfield(L, -1, "loaded");
+        lua_pushnil(L);
+        lua_setfield(L, -2, module_name.c_str());
+        lua_pop(L, 2);
+      }
+      raw_init(L, ticket_, &env_, &func_, &fini_, &tags_match_, &file_path_);
+    });
+  }
+}
+
 //--- LuaFilter
 LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
-  : Filter(ticket), TagMatching(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_, &tags_match_);});
+  : Filter(ticket), TagMatching(ticket), LuaGear(ticket, lua) {
 }
 
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
+  ReloadIfModified();
   auto f = lua_->newthread<an<LuaObj>, an<Translation>,
                            an<LuaObj>, CandidateList *>(func_, translation, env_, candidates);
   return New<LuaTranslation>(lua_, f);
 }
 
-LuaFilter::~LuaFilter() {
-  if (fini_) {
-    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaFilter::~LuaFilter of "<< name_space_ << " error(" << e.status << "): " << e.e;
-    }
-  }
-}
 
 //--- LuaTranslator
 LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
-  : Translator(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
+  : Translator(ticket), LuaGear(ticket, lua) {
 }
 
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
+  ReloadIfModified();
   auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &,
                            an<LuaObj>>(func_, input, segment, env_);
   an<Translation> t = New<LuaTranslation>(lua_, f);
@@ -178,23 +254,13 @@ an<Translation> LuaTranslator::Query(const string& input,
     return t;
 }
 
-LuaTranslator::~LuaTranslator() {
-  if (fini_) {
-    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaTranslator::~LuaTranslator of "<< name_space_ << " error(" << e.status << "): " << e.e;
-    }
-  }
-}
-
 //--- LuaSegmentor
 LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
-  : Segmentor(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
+  : Segmentor(ticket), LuaGear(ticket, lua) {
 }
 
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
+  ReloadIfModified();
   auto r = lua_->call<bool, an<LuaObj>, Segmentation &,
                       an<LuaObj>>(func_, *segmentation, env_);
   if (!r.ok()) {
@@ -205,23 +271,13 @@ bool LuaSegmentor::Proceed(Segmentation* segmentation) {
     return r.get();
 }
 
-LuaSegmentor::~LuaSegmentor() {
-  if (fini_) {
-    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaSegmentor::~LuaSegmentor of "<< name_space_ << " error(" << e.status << "): " << e.e;
-    }
-  }
-}
-
 //--- LuaProcessor
 LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
-  : Processor(ticket), lua_(lua) {
-  lua->to_state([&](lua_State *L) {raw_init(L, ticket, &env_, &func_, &fini_);});
+  : Processor(ticket), LuaGear(ticket, lua) {
 }
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
+  ReloadIfModified();
   auto r = lua_->call<int, an<LuaObj>, const KeyEvent&,
                       an<LuaObj>>(func_, key_event, env_);
   if (!r.ok()) {
@@ -234,16 +290,6 @@ ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
     case 1: return kAccepted;
     default: return kNoop;
     }
-}
-
-LuaProcessor::~LuaProcessor() {
-  if (fini_) {
-    auto r = lua_->void_call<an<LuaObj>, an<LuaObj>>(fini_, env_);
-    if (!r.ok()) {
-      auto e = r.get_err();
-      LOG(ERROR) << "LuaProcessor::~LuaProcessor of "<< name_space_ << " error(" << e.status << "): " << e.e;
-    }
-  }
 }
 
 }  // namespace rime

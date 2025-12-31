@@ -8,7 +8,10 @@
 #include <rime/processor.h>
 #include <rime/gear/filter_commons.h>
 #include "lib/lua.h"
+#include <filesystem>
+#include <ctime>
 
+namespace fs = std::filesystem;
 namespace rime {
 
 class LuaTranslation : public Translation {
@@ -32,15 +35,42 @@ private:
   an<LuaObj> f_;
 };
 
-class LuaFilter : public Filter, TagMatching {
+class LuaGearImpl {
+public:
+  LuaGearImpl(const Ticket& ticket, Lua* lua, const std::string& impl_name);
+  ~LuaGearImpl();
+  void ReloadIfModified();
+
+protected:
+  Lua *lua_;
+  an<LuaObj> env_;
+  an<LuaObj> func_;
+  an<LuaObj> fini_;
+  an<LuaObj> tags_match_;
+
+  Ticket ticket_;
+  std::string file_path_;
+  std::string impl_name_;
+  std::filesystem::file_time_type last_write_time_;
+  std::time_t last_check_time_ = 0;
+};
+
+template <typename T>
+class LuaGear : public LuaGearImpl {
+public:
+  LuaGear(const Ticket& ticket, Lua* lua)
+    : LuaGearImpl(ticket, lua, typeid(T).name()) {}
+};
+
+class LuaFilter : public Filter, TagMatching, public LuaGear<LuaFilter> {
 public:
   explicit LuaFilter(const Ticket& ticket, Lua* lua);
-  virtual ~LuaFilter();
 
   virtual an<Translation> Apply(an<Translation> translation,
                                 CandidateList* candidates);
 
   virtual bool AppliesToSegment(Segment* segment) {
+    ReloadIfModified();
     if ( ! tags_match_ )
       return TagsMatch(segment);
 
@@ -53,56 +83,28 @@ public:
     else
       return  r.get();
   }
-
-private:
-  Lua *lua_;
-  an<LuaObj> env_;
-  an<LuaObj> func_;
-  an<LuaObj> fini_;
-  an<LuaObj> tags_match_;
 };
 
-class LuaTranslator : public Translator {
+class LuaTranslator : public Translator, public LuaGear<LuaTranslator> {
 public:
   explicit LuaTranslator(const Ticket& ticket, Lua* lua);
-  virtual ~LuaTranslator();
 
   virtual an<Translation> Query(const string& input,
                                 const Segment& segment);
-
-private:
-  Lua *lua_;
-  an<LuaObj> env_;
-  an<LuaObj> func_;
-  an<LuaObj> fini_;
 };
 
-class LuaSegmentor : public Segmentor {
+class LuaSegmentor : public Segmentor, public LuaGear<LuaSegmentor> {
 public:
   explicit LuaSegmentor(const Ticket& ticket, Lua *lua);
-  virtual ~LuaSegmentor();
 
   virtual bool Proceed(Segmentation* Segmentation);
-
-private:
-  Lua *lua_;
-  an<LuaObj> env_;
-  an<LuaObj> func_;
-  an<LuaObj> fini_;
 };
 
-class LuaProcessor : public Processor {
+class LuaProcessor : public Processor, public LuaGear<LuaProcessor> {
 public:
   LuaProcessor(const Ticket& ticket, Lua *lua);
-  virtual ~LuaProcessor();
 
   virtual ProcessResult ProcessKeyEvent(const KeyEvent& key_event);
-
-private:
-  Lua *lua_;
-  an<LuaObj> env_;
-  an<LuaObj> func_;
-  an<LuaObj> fini_;
 };
 
 template<typename T>
