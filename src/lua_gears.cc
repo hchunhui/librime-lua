@@ -1,5 +1,6 @@
 #include "lib/lua_templates.h"
 #include "lua_gears.h"
+#include "rime_compat.h"
 #include <vector>
 #include <sstream>
 #include <typeinfo>
@@ -127,6 +128,21 @@ static void raw_init(lua_State *L, const Ticket &t,
     }
   } else {
     lua_getglobal(L, _vec_klass.at(0).c_str());
+    if (file_path) {
+      const auto user_dir = COMPAT<rime::Deployer>::get_user_data_dir();
+      const auto shared_dir = COMPAT<rime::Deployer>::get_shared_data_dir();
+      const auto user_file = user_dir + LUA_DIRSEP "rime.lua";
+      const auto shared_file = shared_dir + LUA_DIRSEP "rime.lua";
+      std::error_code ec;
+      if (std::filesystem::exists(user_file, ec)) {
+        *file_path = user_file;
+      } else if (std::filesystem::exists(shared_file, ec)) {
+        *file_path = shared_file;
+      }
+      if (last_write_time && !file_path->empty()) {
+        *last_write_time = std::filesystem::last_write_time(*file_path, ec);
+      }
+    }
   }
 
   if (_vec_klass.size() > 1) {
@@ -217,6 +233,13 @@ void LuaGearImpl::ReloadIfModified() {
         lua_pushnil(L);
         lua_setfield(L, -2, module_name.c_str());
         lua_pop(L, 2);
+      } else {
+        // reload rime.lua
+        if (luaL_dofile(L, file_path_.c_str())) {
+          const char *e = lua_tostring(L, -1);
+          LOG(ERROR) << "rime.lua error: " << e;
+          lua_pop(L, 1);
+        }
       }
       raw_init(L, ticket_, &env_, &func_, &fini_, &tags_match_, &file_path_);
     });
