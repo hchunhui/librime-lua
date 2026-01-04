@@ -2,6 +2,8 @@
 #include "lua_gears.h"
 #include "rime_compat.h"
 #include <vector>
+#include <map>
+#include <mutex>
 #include <sstream>
 #include <typeinfo>
 #ifdef __GNUG__
@@ -28,6 +30,65 @@ static std::string demangle(const char* name) {
     return demangled_name.substr(pos + 2);
   }
   return demangled_name;
+}
+
+static std::map<std::string, std::string> module_path_cache;
+static std::mutex module_path_cache_mutex;
+
+static bool check_dirty_modules(lua_State *L, fs::file_time_type last_write_time, const std::string& skip_module) {
+  std::vector<std::string> modules;
+  lua_getglobal(L, "package");
+  lua_getfield(L, -1, "loaded");
+  lua_pushnil(L);
+  while (lua_next(L, -2) != 0) {
+    if (lua_type(L, -2) == LUA_TSTRING) {
+      modules.push_back(lua_tostring(L, -2));
+    }
+    lua_pop(L, 1);
+  }
+  lua_pop(L, 2);
+
+  bool dirty = false;
+  for (const auto& name : modules) {
+    if (name == skip_module) continue;
+
+    std::string path;
+    {
+      std::lock_guard<std::mutex> lock(module_path_cache_mutex);
+      auto it = module_path_cache.find(name);
+      if (it != module_path_cache.end()) {
+        path = it->second;
+      }
+    }
+
+    if (path.empty()) {
+      lua_getglobal(L, "package");
+      lua_getfield(L, -1, "searchpath");
+      lua_pushstring(L, name.c_str());
+      lua_getfield(L, -3, "path");
+      if (lua_pcall(L, 2, 1, 0) == LUA_OK && lua_isstring(L, -1)) {
+        path = lua_tostring(L, -1);
+        std::lock_guard<std::mutex> lock(module_path_cache_mutex);
+        module_path_cache[name] = path;
+      }
+      lua_pop(L, 2);
+    }
+
+    if (!path.empty()) {
+      std::error_code ec;
+      auto t = fs::last_write_time(path, ec);
+      if (!ec && t > last_write_time) {
+        dirty = true;
+        lua_getglobal(L, "package");
+        lua_getfield(L, -1, "loaded");
+        lua_pushnil(L);
+        lua_setfield(L, -2, name.c_str());
+        lua_pop(L, 2);
+        LOG(INFO) << "Reloading dirty module: " << name << " (" << path << ")";
+      }
+    }
+  }
+  return dirty;
 }
 
 //--- LuaTranslation
@@ -121,22 +182,35 @@ void LuaGearImpl::ReloadIfModified() {
   if (now - last_check_time_ < check_interval_) return;
   last_check_time_ = now;
 
+  bool changed = false;
   std::error_code ec;
   auto current_time = fs::last_write_time(file_path_, ec);
   if (!ec && current_time > last_write_time_) {
-    last_write_time_ = current_time;
-    LOG(INFO) << "Reloading Lua module: " << file_path_;
-    lua_->to_state([&](lua_State *L) {
-      if (ticket_.klass.size() > 0 && ticket_.klass[0] == '*') {
-        std::string module_name = ticket_.klass.substr(1);
-        size_t pos = module_name.find('*');
-        if (pos != std::string::npos) {
-          module_name = module_name.substr(0, pos);
-        }
+    changed = true;
+  }
+
+  lua_->to_state([&](lua_State *L) {
+    std::string current_module;
+    if (ticket_.klass.size() > 0 && ticket_.klass[0] == '*') {
+      current_module = ticket_.klass.substr(1);
+      size_t pos = current_module.find('*');
+      if (pos != std::string::npos) {
+        current_module = current_module.substr(0, pos);
+      }
+    }
+
+    if (check_dirty_modules(L, last_write_time_, current_module)) {
+      changed = true;
+    }
+
+    if (changed) {
+      last_write_time_ = fs::file_time_type::clock::now();
+      LOG(INFO) << "Reloading Lua module: " << file_path_;
+      if (!current_module.empty()) {
         lua_getglobal(L, "package");
         lua_getfield(L, -1, "loaded");
         lua_pushnil(L);
-        lua_setfield(L, -2, module_name.c_str());
+        lua_setfield(L, -2, current_module.c_str());
         lua_pop(L, 2);
       } else {
         // clear check_interval before dofile
@@ -157,8 +231,8 @@ void LuaGearImpl::ReloadIfModified() {
         }
       }
       RawInit(L);
-    });
-  }
+    }
+  });
 }
 
 void LuaGearImpl::RawInit(lua_State* L) {
@@ -180,8 +254,7 @@ void LuaGearImpl::RawInit(lua_State* L) {
     lua_getfield(L, -3, "path");
     if (lua_pcall(L, 2, 1, 0) == LUA_OK && lua_isstring(L, -1)) {
       file_path_ = lua_tostring(L, -1);
-      std::error_code ec;
-      last_write_time_ = fs::last_write_time(file_path_, ec);
+      last_write_time_ = fs::file_time_type::clock::now();
     }
     lua_pop(L, 2);
 
@@ -198,18 +271,18 @@ void LuaGearImpl::RawInit(lua_State* L) {
     }
   } else {
     lua_getglobal(L, _vec_klass.at(0).c_str());
-    const auto user_dir = COMPAT<rime::Deployer>::get_user_data_dir();
-    const auto shared_dir = COMPAT<rime::Deployer>::get_shared_data_dir();
-    const auto user_file = user_dir + LUA_DIRSEP "rime.lua";
-    const auto shared_file = shared_dir + LUA_DIRSEP "rime.lua";
+    static const fs::path user_dir = fs::path(COMPAT<rime::Deployer>::get_user_data_dir());
+    static const fs::path shared_dir = fs::path(COMPAT<rime::Deployer>::get_shared_data_dir());
+    static const auto user_file = user_dir / "rime.lua";
+    static const auto shared_file = shared_dir / "rime.lua";
     std::error_code ec;
     if (std::filesystem::exists(user_file, ec)) {
-      file_path_ = user_file;
+      file_path_ = user_file.string();
     } else if (std::filesystem::exists(shared_file, ec)) {
-      file_path_ = shared_file;
+      file_path_ = shared_file.string();
     }
     if (!file_path_.empty()) {
-      last_write_time_ = std::filesystem::last_write_time(file_path_, ec);
+      last_write_time_ = fs::file_time_type::clock::now();
     }
   }
 

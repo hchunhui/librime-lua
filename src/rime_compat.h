@@ -3,6 +3,7 @@
 
 #include <string>
 #include <type_traits>
+#include <filesystem>
 #include <rime/common.h>
 #include <rime/service.h>
 #include <rime_api.h>
@@ -14,11 +15,11 @@ template<typename> using void_t = void;
 template<typename T, typename = void>
 struct COMPAT {
   static std::string get_shared_data_dir() {
-    return std::string(rime_get_api()->get_shared_data_dir());
+    return std::filesystem::path(rime_get_api()->get_shared_data_dir()).lexically_normal().string();
   }
 
   static std::string get_user_data_dir() {
-    return std::string(rime_get_api()->get_user_data_dir());
+    return std::filesystem::path(rime_get_api()->get_user_data_dir()).lexically_normal().string();
   }
 };
 
@@ -27,12 +28,12 @@ struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
   static std::string get_shared_data_dir() {
     // path::string() returns native encoding on Windows
     T &deployer = rime::Service::instance().deployer();
-    return deployer.shared_data_dir.string();
+    return deployer.shared_data_dir.lexically_normal().string();
   }
 
   static std::string get_user_data_dir() {
     T &deployer = rime::Service::instance().deployer();
-    return deployer.user_data_dir.string();
+    return deployer.user_data_dir.lexically_normal().string();
   }
 };
 
