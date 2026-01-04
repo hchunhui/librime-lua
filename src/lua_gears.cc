@@ -86,112 +86,6 @@ static bool sub_module_init(lua_State *L, const Ticket &t,
   return true;
 }
 //---
-static void raw_init(lua_State *L, const Ticket &t,
-                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini, an<LuaObj> *tags_match= NULL, string* file_path = NULL, fs::file_time_type* last_write_time = NULL) {
-  lua_newtable(L);
-  Engine *e = t.engine;
-  LuaType<Engine *>::pushdata(L, e);
-  lua_setfield(L, -2, "engine");
-  LuaType<const string &>::pushdata(L, t.name_space);
-  lua_setfield(L, -2, "name_space");
-  *env = LuaObj::todata(L, -1);
-  lua_pop(L, 1);
-
-  std::vector<std::string> _vec_klass = (t.klass[0] == '*') ?
-    split_string(t.klass.substr(1), "*") : split_string(t.klass, "*");
-  if (t.klass.size() > 0 && t.klass[0] == '*') {
-    if (file_path) {
-      lua_getglobal(L, "package");
-      lua_getfield(L, -1, "searchpath");
-      lua_pushstring(L, _vec_klass.at(0).c_str());
-      lua_getfield(L, -3, "path");
-      if (lua_pcall(L, 2, 1, 0) == LUA_OK && lua_isstring(L, -1)) {
-        *file_path = lua_tostring(L, -1);
-        if (last_write_time) {
-          std::error_code ec;
-          *last_write_time = fs::last_write_time(*file_path, ec);
-        }
-      }
-      lua_pop(L, 2);
-    }
-
-    lua_getglobal(L, "require");
-    lua_pushstring(L, _vec_klass.at(0).c_str());
-    int status = lua_pcall(L, 1, 1, 0);
-    if (status != LUA_OK) {
-      const char *e = lua_tostring(L, -1);
-      LOG(ERROR) << "Lua Compoment of autoload error:("
-                 << " module: "<< t.klass
-                 << " name_space: " << t.name_space
-                 << " status: " << status
-                 << " ): " << e;
-    }
-  } else {
-    lua_getglobal(L, _vec_klass.at(0).c_str());
-    if (file_path) {
-      const auto user_dir = COMPAT<rime::Deployer>::get_user_data_dir();
-      const auto shared_dir = COMPAT<rime::Deployer>::get_shared_data_dir();
-      const auto user_file = user_dir + LUA_DIRSEP "rime.lua";
-      const auto shared_file = shared_dir + LUA_DIRSEP "rime.lua";
-      std::error_code ec;
-      if (std::filesystem::exists(user_file, ec)) {
-        *file_path = user_file;
-      } else if (std::filesystem::exists(shared_file, ec)) {
-        *file_path = shared_file;
-      }
-      if (last_write_time && !file_path->empty()) {
-        *last_write_time = std::filesystem::last_write_time(*file_path, ec);
-      }
-    }
-  }
-
-  if (_vec_klass.size() > 1) {
-    sub_module_init(L, t, _vec_klass);
-  }
-
-  if (lua_type(L, -1) == LUA_TTABLE) {
-    lua_getfield(L, -1, "init");
-    if (lua_type(L, -1) == LUA_TFUNCTION) {
-      LuaObj::pushdata(L, *env);
-      int status = lua_pcall(L, 1, 1, 0);
-      if (status != LUA_OK) {
-        const char *e = lua_tostring(L, -1);
-        LOG(ERROR) << "Lua Compoment of initialize  error:("
-          << " module: "<< t.klass
-          << " name_space: " << t.name_space
-          << " status: " << status
-          << " ): " << e;
-      }
-    }
-    lua_pop(L, 1);
-
-    lua_getfield(L, -1, "fini");
-    if (lua_type(L, -1) == LUA_TFUNCTION) {
-      *fini = LuaObj::todata(L, -1);
-    }
-    lua_pop(L, 1);
-
-    if (tags_match) {
-      lua_getfield(L, -1, "tags_match");
-      if (lua_type(L, -1) == LUA_TFUNCTION) {
-        *tags_match = LuaObj::todata(L, -1);
-      }
-      lua_pop(L, 1);
-    }
-
-    lua_getfield(L, -1, "func");
-  }
-
-  if (lua_type(L, -1) != LUA_TFUNCTION) {
-    LOG(ERROR) << "Lua Compoment of initialize  error:("
-      << " module: "<< t.klass
-      << " name_space: " << t.name_space
-      << " func type: " << luaL_typename(L, -1)
-      << " ): " << "func type error expect function ";
-  }
-  *func = LuaObj::todata(L, -1);
-  lua_pop(L, 1);
-}
 
 static size_t get_check_interval(lua_State *L) {
   lua_getglobal(L, "_G");
@@ -207,7 +101,7 @@ LuaGearImpl::LuaGearImpl(const Ticket& ticket, Lua* lua, const std::string& impl
   : lua_(lua), ticket_(ticket), impl_name_(demangle(impl_name.c_str())) {
   lua->to_state([&](lua_State *L) {
     check_interval_ = get_check_interval(L);
-    raw_init(L, ticket, &env_, &func_, &fini_, &tags_match_, &file_path_, &last_write_time_);
+    RawInit(L);
   });
 }
 
@@ -262,16 +156,112 @@ void LuaGearImpl::ReloadIfModified() {
             << check_interval_;
         }
       }
-      raw_init(L, ticket_, &env_, &func_, &fini_, &tags_match_, &file_path_);
+      RawInit(L);
     });
   }
 }
 
-//--- LuaFilter
-LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
-  : Filter(ticket), TagMatching(ticket), LuaGear(ticket, lua) {
+void LuaGearImpl::RawInit(lua_State* L) {
+  lua_newtable(L);
+  Engine *e = ticket_.engine;
+  LuaType<Engine *>::pushdata(L, e);
+  lua_setfield(L, -2, "engine");
+  LuaType<const string &>::pushdata(L, ticket_.name_space);
+  lua_setfield(L, -2, "name_space");
+  env_ = LuaObj::todata(L, -1);
+  lua_pop(L, 1);
+
+  std::vector<std::string> _vec_klass = (ticket_.klass[0] == '*') ?
+    split_string(ticket_.klass.substr(1), "*") : split_string(ticket_.klass, "*");
+  if (ticket_.klass.size() > 0 && ticket_.klass[0] == '*') {
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "searchpath");
+    lua_pushstring(L, _vec_klass.at(0).c_str());
+    lua_getfield(L, -3, "path");
+    if (lua_pcall(L, 2, 1, 0) == LUA_OK && lua_isstring(L, -1)) {
+      file_path_ = lua_tostring(L, -1);
+      std::error_code ec;
+      last_write_time_ = fs::last_write_time(file_path_, ec);
+    }
+    lua_pop(L, 2);
+
+    lua_getglobal(L, "require");
+    lua_pushstring(L, _vec_klass.at(0).c_str());
+    int status = lua_pcall(L, 1, 1, 0);
+    if (status != LUA_OK) {
+      const char *e = lua_tostring(L, -1);
+      LOG(ERROR) << "Lua Compoment of autoload error:("
+        << " module: "<< ticket_.klass
+        << " name_space: " << ticket_.name_space
+        << " status: " << status
+        << " ): " << e;
+    }
+  } else {
+    lua_getglobal(L, _vec_klass.at(0).c_str());
+    const auto user_dir = COMPAT<rime::Deployer>::get_user_data_dir();
+    const auto shared_dir = COMPAT<rime::Deployer>::get_shared_data_dir();
+    const auto user_file = user_dir + LUA_DIRSEP "rime.lua";
+    const auto shared_file = shared_dir + LUA_DIRSEP "rime.lua";
+    std::error_code ec;
+    if (std::filesystem::exists(user_file, ec)) {
+      file_path_ = user_file;
+    } else if (std::filesystem::exists(shared_file, ec)) {
+      file_path_ = shared_file;
+    }
+    if (!file_path_.empty()) {
+      last_write_time_ = std::filesystem::last_write_time(file_path_, ec);
+    }
+  }
+
+  if (_vec_klass.size() > 1) {
+    sub_module_init(L, ticket_, _vec_klass);
+  }
+
+  if (lua_type(L, -1) == LUA_TTABLE) {
+    lua_getfield(L, -1, "init");
+    if (lua_type(L, -1) == LUA_TFUNCTION) {
+      LuaObj::pushdata(L, env_);
+      int status = lua_pcall(L, 1, 1, 0);
+      if (status != LUA_OK) {
+        const char *e = lua_tostring(L, -1);
+        LOG(ERROR) << "Lua Compoment of initialize  error:("
+          << " module: "<< ticket_.klass
+          << " name_space: " << ticket_.name_space
+          << " status: " << status
+          << " ): " << e;
+      }
+    }
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "fini");
+    if (lua_type(L, -1) == LUA_TFUNCTION) {
+      fini_ = LuaObj::todata(L, -1);
+    }
+    lua_pop(L, 1);
+
+    if (tags_match_) {
+      lua_getfield(L, -1, "tags_match");
+      if (lua_type(L, -1) == LUA_TFUNCTION) {
+        tags_match_ = LuaObj::todata(L, -1);
+      }
+      lua_pop(L, 1);
+    }
+
+    lua_getfield(L, -1, "func");
+  }
+
+  if (lua_type(L, -1) != LUA_TFUNCTION) {
+    LOG(ERROR) << "Lua Compoment of initialize  error:("
+      << " module: "<< ticket_.klass
+      << " name_space: " << ticket_.name_space
+      << " func type: " << luaL_typename(L, -1)
+      << " ): " << "func type error expect function ";
+  }
+  func_ = LuaObj::todata(L, -1);
+  lua_pop(L, 1);
 }
 
+//--- LuaFilter
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
   ReloadIfModified();
@@ -280,12 +270,7 @@ an<Translation> LuaFilter::Apply(
   return New<LuaTranslation>(lua_, f);
 }
 
-
 //--- LuaTranslator
-LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
-  : Translator(ticket), LuaGear(ticket, lua) {
-}
-
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
   ReloadIfModified();
@@ -299,10 +284,6 @@ an<Translation> LuaTranslator::Query(const string& input,
 }
 
 //--- LuaSegmentor
-LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
-  : Segmentor(ticket), LuaGear(ticket, lua) {
-}
-
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
   ReloadIfModified();
   auto r = lua_->call<bool, an<LuaObj>, Segmentation &,
@@ -316,9 +297,6 @@ bool LuaSegmentor::Proceed(Segmentation* segmentation) {
 }
 
 //--- LuaProcessor
-LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
-  : Processor(ticket), LuaGear(ticket, lua) {
-}
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
   ReloadIfModified();

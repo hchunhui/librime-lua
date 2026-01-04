@@ -41,6 +41,9 @@ public:
   ~LuaGearImpl();
   void ReloadIfModified();
 
+private:
+  void RawInit(lua_State* L);
+
 protected:
   Lua *lua_;
   an<LuaObj> env_;
@@ -65,7 +68,8 @@ public:
 
 class LuaFilter : public Filter, TagMatching, public LuaGear<LuaFilter> {
 public:
-  explicit LuaFilter(const Ticket& ticket, Lua* lua);
+  explicit LuaFilter(const Ticket& ticket, Lua* lua)
+    : Filter(ticket), TagMatching(ticket), LuaGear(ticket, lua) {}
 
   virtual an<Translation> Apply(an<Translation> translation,
                                 CandidateList* candidates);
@@ -88,7 +92,8 @@ public:
 
 class LuaTranslator : public Translator, public LuaGear<LuaTranslator> {
 public:
-  explicit LuaTranslator(const Ticket& ticket, Lua* lua);
+  explicit LuaTranslator(const Ticket& ticket, Lua* lua)
+    : Translator(ticket), LuaGear(ticket, lua) {}
 
   virtual an<Translation> Query(const string& input,
                                 const Segment& segment);
@@ -96,14 +101,16 @@ public:
 
 class LuaSegmentor : public Segmentor, public LuaGear<LuaSegmentor> {
 public:
-  explicit LuaSegmentor(const Ticket& ticket, Lua *lua);
+  explicit LuaSegmentor(const Ticket& ticket, Lua *lua)
+    : Segmentor(ticket), LuaGear(ticket, lua) {}
 
   virtual bool Proceed(Segmentation* Segmentation);
 };
 
 class LuaProcessor : public Processor, public LuaGear<LuaProcessor> {
 public:
-  LuaProcessor(const Ticket& ticket, Lua *lua);
+  LuaProcessor(const Ticket& ticket, Lua *lua)
+    : Processor(ticket), LuaGear(ticket, lua) {}
 
   virtual ProcessResult ProcessKeyEvent(const KeyEvent& key_event);
 };
