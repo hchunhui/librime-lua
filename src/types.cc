@@ -51,7 +51,15 @@ template<typename T, typename = void>
 struct COMPAT {
   // fallback version if librime is old
   static an<ReverseDb> new_ReverseDb(const std::string &file) {
-    return New<ReverseDb>(string(rime_get_api()->get_user_data_dir()) + "/" + file);
+    string target_path = string(rime_get_api()->get_user_data_dir()) + "/" + file;
+    string shared_path = string(rime_get_api()->get_shared_data_dir()) + "/" + file;
+
+    if (!std::filesystem::exists(target_path) &&
+        std::filesystem::exists(shared_path)) {
+      target_path = shared_path;
+    }
+
+    return New<ReverseDb>(target_path);
   }
 
   static string get_shared_data_dir() {
@@ -75,7 +83,16 @@ template<typename T>
 struct COMPAT<T, void_t<decltype(std::declval<T>().user_data_dir.string())>> {
   static an<ReverseDb> new_ReverseDb(const std::string &file) {
     T &deployer = Service::instance().deployer();
-    return New<ReverseDb>(deployer.user_data_dir / file);
+
+    path target_path = deployer.user_data_dir / file;
+    path shared_path = deployer.shared_data_dir / file;
+
+    if (!std::filesystem::exists(target_path) &&
+        std::filesystem::exists(shared_path)) {
+      target_path = shared_path;
+    }
+
+    return New<ReverseDb>(target_path);
   }
 
   static string get_shared_data_dir() {
