@@ -1,5 +1,6 @@
 #include "lib/lua_templates.h"
 #include "lua_gears.h"
+#include <atomic>
 #include <vector>
 #include <sstream>
 
@@ -24,7 +25,13 @@ bool LuaTranslation::Next() {
 }
 
 LuaTranslation::~LuaTranslation() {
-  lua_->gc();
+  static std::atomic<unsigned int> counter {0};
+  int c = counter.fetch_add(1, std::memory_order_relaxed);
+  if (c % 256 == 0) {
+    lua_->gc();
+  } else {
+    lua_->gc_step(32);
+  }
 }
 
 static std::vector<std::string> split_string(const std::string& str, const std::string& delimiter) {
