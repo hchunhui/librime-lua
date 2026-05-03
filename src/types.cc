@@ -36,6 +36,7 @@ template<typename> using void_t = void;
 template <typename T, typename = void>
 struct HighlightDispatcher {
   static bool Highlight(T& t, size_t index) {
+    LOG(WARNING) << "librime does not support the ConText::Highlight()";
     return false;
   }
 };
@@ -45,6 +46,18 @@ struct HighlightDispatcher<T, void_t<decltype(std::declval<T>().Highlight(std::d
   static bool Highlight(T& t, size_t index) {
     return t.Highlight(index);
   }
+};
+
+template <typename T, typename = void>
+struct AbortNotifier  {
+  static void abort_notifier(T& t) { LOG(WARNING) << "librime does not support Context::abort_notifier()"; }
+  static void AbortComposition(T& t) { LOG(WARNING) << "librime does not support Context::AbortComposition()"; }
+};
+
+template <typename T>
+struct AbortNotifier<T, void_t<decltype(std::declval<T>().AbortComposition())>> {
+    static Context::Notifier& abort_notifier(T& t) { return t.abort_notifier(); }
+    static void AbortComposition(T& t) { t.AbortComposition();}
 };
 
 template<typename T, typename = void>
@@ -823,6 +836,8 @@ namespace ContextReg {
     { "reopen_previous_segment", WRAPMEM(T::ReopenPreviousSegment) },
     { "clear_non_confirmed_composition", WRAPMEM(T::ClearNonConfirmedComposition) },
     { "refresh_non_confirmed_composition", WRAPMEM(T::RefreshNonConfirmedComposition) },
+    { "abort_composition", WRAP(AbortNotifier<T>::AbortComposition)},
+
     { "set_option", WRAPMEM(T::set_option) },
     { "get_option", WRAPMEM(T::get_option) },
     { "set_property", WRAPMEM(T::set_property) },
@@ -842,6 +857,7 @@ namespace ContextReg {
     { "option_update_notifier", WRAPMEM(T::option_update_notifier) },
     { "property_update_notifier", WRAPMEM(T::property_update_notifier) },
     { "unhandled_key_notifier", WRAPMEM(T::unhandled_key_notifier) },
+    { "abort_notifier", WRAP(AbortNotifier<T>::abort_notifier) },
     { "commit_history", WRAP(get_commit_history) },
     { NULL, NULL },
   };
