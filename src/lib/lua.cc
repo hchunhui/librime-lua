@@ -26,18 +26,19 @@ namespace LuaImpl {
       if (!lua_isnil(L, -1)) {
         return 1;
       } else {
-        lua_pop(L, 1);
+        lua_pop(L, 1); // self key methods (nil)
       }
     }
+    lua_pop(L, 1); // self key (methods)
 
     if (luaL_getmetafield(L, 1, "vars_get") != LUA_TNIL) {
       lua_pushvalue(L, 2);
       lua_rawget(L, -2);
       if (!lua_isnil(L, -1)) {
         auto f = lua_tocfunction(L, -1);
-        lua_pop(L, 1);
+        lua_pop(L, 2); // self key (vars_get cfunction)
         if (f) {
-          lua_remove(L, 2);
+          lua_remove(L, 2); // self (key)
           return f(L);
         }
       }
@@ -51,9 +52,9 @@ namespace LuaImpl {
       lua_rawget(L, -2);
       if (!lua_isnil(L, -1)) {
         auto f = lua_tocfunction(L, -1);
-        lua_pop(L, 1);
+        lua_pop(L, 2); // self key value (vars_set cfunction)
         if (f) {
-          lua_remove(L, 2);
+          lua_remove(L, 2); // self (key) value
           return f(L);
         }
       }
