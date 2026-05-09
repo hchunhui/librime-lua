@@ -21,6 +21,8 @@
 #include "lua_gears.h"
 #include <boost/regex.hpp>
 #include <chrono>
+#include <set>
+#include <map>
 
 #include "lib/lua_export_type.h"
 #include "optional.h"
@@ -1463,12 +1465,41 @@ namespace ConfigReg {
   };
 }
 
+class NotifierRecursionGuard {
+public:
+  NotifierRecursionGuard(void* notifier) : notifier_ptr(notifier) {
+    auto& depth = call_depths[notifier_ptr];
+    current_depth = ++depth;
+  }
+
+  ~NotifierRecursionGuard() {
+    auto& depth = call_depths[notifier_ptr];
+    --depth;
+    if (depth == 0)
+      call_depths.erase(notifier_ptr);
+  }
+
+  bool should_skip() const {
+    return current_depth > 1;
+  }
+
+private:
+  static thread_local std::map<void*, int> call_depths;
+  void* notifier_ptr;
+  int current_depth;
+};
+
+thread_local std::map<void*, int> NotifierRecursionGuard::call_depths;
+
 template<typename T, typename ... I>
 static int raw_connect(lua_State *L) {
   Lua *lua = Lua::from_state(L);
   T & t = LuaType<T &>::todata(L, 1);
   an<LuaObj> o = LuaObj::todata(L, 2);
-  auto f = [lua, o](I... i) {
+  auto f = [lua, o, &t](I... i) {
+    NotifierRecursionGuard guard(&t);
+    if (guard.should_skip())
+      return;
     auto r = lua->void_call<an<LuaObj>, Context *>(o, i...);
     if (!r.ok()) {
                  auto e = r.get_err();
@@ -1479,6 +1510,17 @@ static int raw_connect(lua_State *L) {
   auto c = (lua_gettop(L) > 2) ? t.connect(lua_tointeger(L, 3), f) : t.connect(f);
   LuaType<boost::signals2::connection>::pushdata(L, c);
   return 1;
+}
+
+template <typename T, typename C, typename... I>
+static void notify(T& t, C c, I... i) {
+  if (reinterpret_cast<void*>(&t) ==
+          reinterpret_cast<void*>(&c->select_notifier()) &&
+      c->composition().empty()) {
+    LOG(ERROR) << "notify of select error error : segments is empty";
+    return;
+  }
+  t(c, i...);
 }
 
 namespace ConnectionReg {
@@ -1511,6 +1553,7 @@ namespace NotifierReg {
 
   static const luaL_Reg methods[] = {
     { "connect", raw_connect<T, Context *>},
+    { "notify", WRAP((notify<T, Context*>))},
     { NULL, NULL },
   };
 
@@ -1532,6 +1575,7 @@ namespace OptionUpdateNotifierReg {
 
   static const luaL_Reg methods[] = {
     { "connect", raw_connect<T, Context *, const string&>},
+    { "notify", WRAP((notify<T, Context*, const string&>))},
     { NULL, NULL },
   };
 
@@ -1553,6 +1597,7 @@ namespace PropertyUpdateNotifierReg {
 
   static const luaL_Reg methods[] = {
     { "connect", raw_connect<T, Context *, const string&>},
+    { "notify", WRAP((notify<T, Context*, const string&>))},
     { NULL, NULL },
   };
 
@@ -1574,6 +1619,7 @@ namespace KeyEventNotifierReg {
 
   static const luaL_Reg methods[] = {
     { "connect", raw_connect<T, Context *, const KeyEvent&>},
+    { "notify", WRAP((notify<T, Context*, const KeyEvent&>))},
     { NULL, NULL },
   };
 
