@@ -1,4 +1,4 @@
--- Last Change: 2025-06-18
+-- Last Change: 2026-08-31
 ---@meta rime
 
 --- 全局对象
@@ -19,9 +19,9 @@
 rime_api = {}
 
 ---@class Log
----@field info fun(string)
----@field warning fun(string)
----@field error fun(string)
+---@field info fun(message: string)
+---@field warning fun(message: string)
+---@field error fun(message: string)
 log = {}
 
 ---@param cand Candidate
@@ -68,17 +68,30 @@ local modifier_masks = {
   kLock = 0x2,
   kControl = 0x4,
   kAlt = 0x8,
+  kMod2 = 0x10,
+  kMod3 = 0x20,
+  kMod4 = 0x40,
+  kMod5 = 0x80,
+  kButton1 = 0x100,
+  kButton2 = 0x200,
+  kButton3 = 0x400,
+  kButton4 = 0x800,
+  kButton5 = 0x1000,
+  kSuper = 0x4000000,
+  kHyper = 0x8000000,
+  kMeta = 0x10000000,
+  kRelease = 0x40000000,
+  kIgnored = 0x2000000,
 }
 
 --- 工具
 
 ---@class Set
 ---@field empty fun(self: self): boolean
----@field __index function
----@field __add function
----@field __sub function
----@field __mul function
----@field __set function
+---@field __index fun(self: self, key: any): any
+---@field __add fun(self: self, other: Set): Set
+---@field __sub fun(self: self, other: Set): Set
+---@field __mul fun(self: self, other: Set): Set
 
 ---@param values any[]
 ---@return Set
@@ -117,8 +130,8 @@ function Set(values) end
 ---@field get_preedit fun(self: self): Preedit
 ---@field is_composing fun(self: self): boolean
 ---@field has_menu fun(self: self): boolean
----@field get_selected_candidate fun(self: self): Candidate
----@field push_input fun(self: self, text: string)
+---@field get_selected_candidate fun(self: self): Candidate?
+---@field push_input fun(self: self, text: string): boolean
 ---@field pop_input fun(self: self, len: integer): boolean
 ---@field delete_input fun(self: self, len: integer): boolean
 ---@field clear fun(self: self)
@@ -146,9 +159,9 @@ function Set(values) end
 
 ---@class Composition
 ---@field empty fun(self: self): boolean
----@field back fun(self: self): Segment
+---@field back fun(self: self): Segment?
 ---@field pop_back fun(self: self)
----@field push_back fun(self: self)
+---@field push_back fun(self: self, seg: Segment)
 ---@field has_finished_composition fun(self: self): boolean
 ---@field get_prompt fun(self: self): string
 ---@field toSegmentation fun(self: self): Segmentation
@@ -170,7 +183,7 @@ function Set(values) end
 ---@field get_current_segment_length fun(self: self): integer
 ---@field get_confirmed_position fun(self: self): integer
 ---@field get_segments fun(self: self): Segment[]
----@field get_at fun(self: self, index: integer): Segment
+---@field get_at fun(self: self, index: integer): Segment?
 
 ---@class Segment
 ---@field status SegmentType
@@ -179,15 +192,15 @@ function Set(values) end
 ---@field _end integer
 ---@field length integer
 ---@field tags Set
----@field menu Menu
+---@field menu Menu?
 ---@field selected_index integer
 ---@field prompt string
 ---@field clear fun(self: self)
 ---@field close fun(self: self)
----@field reopen fun(self: self, caret_pos: integer)
+---@field reopen fun(self: self, caret_pos: integer): boolean
 ---@field has_tag fun(self: self, tag: string): boolean
----@field get_candidate_at fun(self: self, index: integer): Candidate
----@field get_selected_candidate fun(self: self): Candidate
+---@field get_candidate_at fun(self: self, index: integer): Candidate?
+---@field get_selected_candidate fun(self: self): Candidate?
 ---@field active_text fun(self: self, text: string): string
 ---@field spans fun(self: self): Spans
 
@@ -216,7 +229,7 @@ function Spans() end
 ---@class Schema
 ---@field schema_id string
 ---@field schema_name string
----@field config Config
+---@field config Config?
 ---@field page_size integer
 ---@field select_keys string
 
@@ -247,7 +260,11 @@ function Schema(schema_id) end
 ---@field set_list fun(self: self, conf_path: string, list: ConfigList): boolean
 ---@field get_map fun(self: self, conf_path: string): ConfigMap|nil
 ---@field set_map fun(self: self, conf_path: string, map: ConfigMap): boolean
----@field get_list_size fun(self: self, conf_path: string): integer|nil
+---@field get_list_size fun(self: self, conf_path: string): integer
+
+---@param filename? string
+---@return Config
+function Config(filename) end
 
 ---@class ConfigMap
 ---@field type ConfigType
@@ -258,8 +275,8 @@ function Schema(schema_id) end
 ---@field keys fun(self: self): string[]
 ---@field get fun(self: self, key: string): ConfigItem|nil
 ---@field get_value fun(self: self, key: string): ConfigValue|nil
----@field set fun(self: self, key: string, item: ConfigItem)
----@field clear fun(self: self)
+---@field set fun(self: self, key: string, item: ConfigItem): boolean
+---@field clear fun(self: self): boolean
 
 ---@return ConfigMap
 function ConfigMap() end
@@ -287,13 +304,13 @@ function ConfigList() end
 ---@field get_bool fun(self: self): boolean|nil
 ---@field get_int fun(self: self): integer|nil
 ---@field get_double fun(self: self): number|nil
----@field get_string fun(self: self): string|nil
----@field set_bool fun(self: self, b: boolean)
----@field set_int fun(self: self, i: integer)
----@field set_double fun(self: self, f: number)
----@field set_string fun(self: self, s: string)
+---@field get_string fun(self: self): string
+---@field set_bool fun(self: self, value: boolean): boolean
+---@field set_int fun(self: self, value: integer): boolean
+---@field set_double fun(self: self, value: number): boolean
+---@field set_string fun(self: self, value: string): boolean
 
----@param value string | boolean
+---@param value? string | number | boolean
 ---@return ConfigValue
 function ConfigValue(value) end
 
@@ -332,7 +349,7 @@ function KeyEvent(keycode, modifier) end
 ---@field repr fun(self: self): string
 ---@field toKeyEvent fun(self: self): KeyEvent[]
 
----@param repr string?
+---@param repr? string
 ---@return KeySequence
 function KeySequence(repr) end
 
@@ -348,11 +365,11 @@ function KeySequence(repr) end
 ---@field get_dynamic_type fun(self: self): CandidateDynamicType
 ---@field get_genuine fun(self: self): Candidate
 ---@field get_genuines fun(self: self): Candidate[]
----@field to_shadow_candidate fun(self: self, type: string?, text: string?, comment: string?, inherit_comment: boolean?): ShadowCandidate
----@field to_uniquified_candidate fun(self: self, type: string?, text: string?, comment: string?): UniquifiedCandidate
+---@field to_shadow_candidate fun(self: self, type: string, text?: string, comment?: string, inherit_comment?: boolean): ShadowCandidate
+---@field to_uniquified_candidate fun(self: self, type: string, text?: string, comment?: string): UniquifiedCandidate
 ---@field to_phrase fun(self: self): Phrase
 ---@field to_sentence fun(self: self): Sentence
----@field append fun(self: self, cand: Candidate)
+---@field append fun(self: self, cand: Candidate): boolean
 ---@field spans fun(self: self): Spans
 
 ---@param type string
@@ -366,23 +383,26 @@ function Candidate(type, start, _end, text, comment) end
 ---@class UniquifiedCandidate: Candidate
 
 ---@param candidate Candidate
----@param type string?
----@param text string?
----@param comment string?
+---@param type string
+---@param text? string
+---@param comment? string
+---@return UniquifiedCandidate
 function UniquifiedCandidate(candidate, type, text, comment) end
 
 ---@class ShadowCandidate: Candidate
 
 ---@param candidate Candidate
----@param type string?
----@param text string?
----@param comment string?
----@param inherit_comment boolean?
+---@param type string
+---@param text? string
+---@param comment? string
+---@param inherit_comment? boolean
 ---@return ShadowCandidate
 function ShadowCandidate(candidate, type, text, comment, inherit_comment) end
 
+---@class Language
+
 ---@class Phrase
------@field language Language 暂时不支持
+---@field language Language?
 ---@field lang_name string
 ---@field type string
 ---@field start integer
@@ -407,7 +427,7 @@ function ShadowCandidate(candidate, type, text, comment, inherit_comment) end
 function Phrase(memory, type, start, _end, entry) end
 
 ---@class Sentence
------@field language Language 暂时不支持
+---@field language Language?
 ---@field lang_name string
 ---@field type string
 ---@field start integer
@@ -440,34 +460,34 @@ function Menu() end
 ---@field convert fun(self: self, text: string): string
 ---@field convert_text fun(self: self, text: string): string
 ---@field random_convert_text fun(self: self, text: string): string
----@field convert_word fun(self: self, text: string): string[]
+---@field convert_word fun(self: self, text: string): string[]?
 
 ---@param filename string
----@return Opencc
+---@return Opencc?
 function Opencc(filename) end
 
 ---@class Dictionary
 ---@field name string
 ---@field loaded boolean
----@field lookup_words fun(self: self, code: string, predictive: boolean, limit: integer): boolean
+---@field lookup_words fun(self: self, code: string, predictive: boolean, limit: integer): DictEntryIterator
 ---@field decode fun(self: self, code: Code): string[]
 
 ---@class DictEntryIterator
 ---@field exhausted boolean
 ---@field size integer
----@field iter fun(self: self): fun(): DictEntry|nil
+---@field iter fun(self: self): (fun(iterator: DictEntryIterator): DictEntry?), DictEntryIterator
 
 ---@class UserDictionary
 ---@field name string
 ---@field loaded boolean
 ---@field tick integer
----@field lookup_words fun(self: self, code: string, predictive: boolean, limit: integer): boolean
+---@field lookup_words fun(self: self, code: string, predictive: boolean, limit: integer): UserDictEntryIterator
 ---@field update_entry fun(self: self, entry: DictEntry, commits: integer, prefix: string, lang_name: string): boolean
 
 ---@class UserDictEntryIterator
 ---@field exhausted boolean
 ---@field size integer
----@field iter fun(self: self): fun(): DictEntry|nil
+---@field iter fun(self: self): (fun(iterator: UserDictEntryIterator): DictEntry?), UserDictEntryIterator
 
 ---@class ReverseDb
 ---@field lookup fun(self: self, key: string): string
@@ -481,7 +501,7 @@ function ReverseDb(file_name) end
 ---@field lookup_stems fun(self: self, key: string): string
 
 ---@param dict_name string
----@return ReverseLookup
+---@return ReverseLookup?
 function ReverseLookup(dict_name) end
 
 ---@class DictEntry
@@ -494,10 +514,11 @@ function ReverseLookup(dict_name) end
 ---@field remaining_code_length integer "~ao"
 ---@field code Code
 
+---@param other? DictEntry
 ---@return DictEntry
-function DictEntry() end
+function DictEntry(other) end
 
----@class CommitEntry: DictEntry
+---@class CommitEntry
 ---@field get fun(self: self): DictEntry[]
 ---@field update_entry fun(self: self, entry: DictEntry, commit: integer, prefix: string): boolean
 ---@field update fun(self: self, commit: integer): boolean
@@ -511,14 +532,17 @@ function Code() end
 
 ---@class Translation
 ---@field exhausted boolean
----@field iter fun(self: self): fun(): Candidate|nil
+---@field iter fun(self: self): (fun(translation: Translation): Candidate?), Translation
 
-function Translation() end
+---@param func function
+---@param ... any
+---@return Translation
+function Translation(func, ...) end
 
 ---@class Memory
 ---@field lang_name string
----@field dict Dictionary
----@field user_dict UserDictionary
+---@field dict Dictionary?
+---@field user_dict UserDictionary?
 ---@field start_session fun(self: self): boolean
 ---@field finish_session fun(self: self): boolean
 ---@field discard_session fun(self: self): boolean
@@ -526,53 +550,59 @@ function Translation() end
 ---@field user_lookup fun(self: self, input: string, predictive: boolean): boolean
 ---@field dictiter_lookup fun(self: self, input: string, predictive: boolean, limit: integer): DictEntryIterator
 ---@field useriter_lookup fun(self: self, input: string, predictive: boolean): UserDictEntryIterator
----@field memorize fun(self: self, callback: fun(ce: CommitEntry))
+---@field memorize fun(self: self, callback: fun(commit_entry: CommitEntry): boolean)
 ---@field decode fun(self: self, code: Code): string[]
----@field iter_dict fun(self: self): fun(): DictEntry|nil
----@field iter_user fun(self: self): fun(): DictEntry|nil
+---@field iter_dict fun(self: self): (fun(iterator: DictEntryIterator): DictEntry?), DictEntryIterator
+---@field iter_user fun(self: self): (fun(iterator: UserDictEntryIterator): DictEntry?), UserDictEntryIterator
 ---@field update_userdict fun(self: self, entry: DictEntry, commits: integer, prefix: string): boolean
----@field update_entry fun(self: self, entry: DictEntry, commits: integer, prefix: string, lang_name?: string): boolean
+---@field update_entry fun(self: self, entry: DictEntry, commits: integer, prefix: string, lang_name: string): boolean
 ---@field update_candidate fun(self: self, candidate: Candidate, commits: integer): boolean
 ---@field disconnect fun(self: self)
 
 ---@param engine Engine
 ---@param schema Schema
----@param namespace string?
+---@param namespace? string
 ---@return Memory
 function Memory(engine, schema, namespace) end
 
 ---@class Projection
----@field load fun(self: self, rules: ConfigList): boolean
+---@field load fun(self: self, rules: ConfigList|string[]): boolean
 ---@field apply fun(self: self, str: string, ret_org_str?: boolean): string
 
 ---@return Projection
 function Projection() end
 
 ---@class Component
----@field Processor fun(engine: Engine, namespace: string, klass: string): Processor
----@field Translator fun(engine: Engine, namespace: string, klass: string): Translator
----@field Segmentor fun(engine: Engine, namespace: string, klass: string): Segmentor
----@field Filter fun(engine: Engine, namespace: string, klass: string): Filter
----@field ScriptTranslator fun(engine: Engine, namespace: string, klass: string): ScriptTranslator
----@field TableTranslator fun(engine: Engine, namespace: string, klass: string): TableTranslator
+---@field Processor fun(engine: Engine, namespace: string, klass: string): Processor?
+---@field Processor fun(engine: Engine, schema: Schema, namespace: string, klass: string): Processor?
+---@field Translator fun(engine: Engine, namespace: string, klass: string): Translator?
+---@field Translator fun(engine: Engine, schema: Schema, namespace: string, klass: string): Translator?
+---@field Segmentor fun(engine: Engine, namespace: string, klass: string): Segmentor?
+---@field Segmentor fun(engine: Engine, schema: Schema, namespace: string, klass: string): Segmentor?
+---@field Filter fun(engine: Engine, namespace: string, klass: string): Filter?
+---@field Filter fun(engine: Engine, schema: Schema, namespace: string, klass: string): Filter?
+---@field ScriptTranslator fun(engine: Engine, namespace: string, klass: string): ScriptTranslator?
+---@field ScriptTranslator fun(engine: Engine, schema: Schema, namespace: string, klass: string): ScriptTranslator?
+---@field TableTranslator fun(engine: Engine, namespace: string, klass: string): TableTranslator?
+---@field TableTranslator fun(engine: Engine, schema: Schema, namespace: string, klass: string): TableTranslator?
 Component = {}
 
 ---@class Processor
----@field name_space string
+---@field name_space string?
 ---@field process_key_event fun(self: self, key_event: KeyEvent): ProcessResult
 
 ---@class Segmentor
----@field name_space string
+---@field name_space string?
 ---@field proceed fun(self: self, segmentation: Segmentation): boolean
 
 ---@class Translator
----@field name_space string
----@field query fun(self: self, input: string, segment: Segment): Translation
+---@field name_space string?
+---@field query fun(self: self, input: string, segment: Segment): Translation?
 
 ---@class ScriptTranslator
 ---@field name_space string
 ---@field lang_name string
----@field memorize_callback fun(ce: CommitEntry)
+---@field memorize_callback (fun(translator: ScriptTranslator, commit_entry: CommitEntry): boolean)?
 ---@field max_homophones integer
 ---@field spelling_hints integer
 ---@field always_show_comments boolean
@@ -585,23 +615,23 @@ Component = {}
 ---@field initial_quality number
 ---@field preedit_formatter Projection
 ---@field comment_formatter Projection
----@field dict Dictionary
----@field user_dict UserDictionary
+---@field dict Dictionary?
+---@field user_dict UserDictionary?
 ---@field translator Translator
----@field query fun(self: self, input: string, segment: Segment): Translation
+---@field query fun(self: self, input: string, segment: Segment): Translation?
 ---@field start_session fun(self: self): boolean
 ---@field finish_session fun(self: self): boolean
 ---@field discard_session fun(self: self): boolean
----@field memorize fun(self: self, callback: fun(ce: CommitEntry))
+---@field memorize fun(self: self, commit_entry: CommitEntry): boolean
 ---@field update_entry fun(self: self, entry: DictEntry, commits: integer, prefix: string): boolean
 ---@field reload_user_dict_disabling_patterns fun(self: self, config_list: ConfigList): boolean
----@field set_memorize_callback fun(self: self, callback: fun(ce: CommitEntry))
+---@field set_memorize_callback fun(self: self, callback?: fun(translator: ScriptTranslator, commit_entry: CommitEntry): boolean): boolean
 ---@field disconnect fun(self: self)
 
 ---@class TableTranslator
 ---@field name_space string
 ---@field lang_name string
----@field memorize_callback fun(ce: CommitEntry)
+---@field memorize_callback (fun(translator: TableTranslator, commit_entry: CommitEntry): boolean)?
 ---@field enable_charset_filter boolean
 ---@field enable_encoder boolean
 ---@field enable_sentence boolean
@@ -617,34 +647,37 @@ Component = {}
 ---@field initial_quality number
 ---@field preedit_formatter Projection
 ---@field comment_formatter Projection
----@field dict Dictionary
----@field user_dict UserDictionary
+---@field dict Dictionary?
+---@field user_dict UserDictionary?
 ---@field translator Translator
----@field query fun(self: self, input: string, segment: Segment): Translation
+---@field query fun(self: self, input: string, segment: Segment): Translation?
 ---@field start_session fun(self: self): boolean
 ---@field finish_session fun(self: self): boolean
 ---@field discard_session fun(self: self): boolean
----@field memorize fun(self: self, callback: fun(ce: CommitEntry))
+---@field memorize fun(self: self, commit_entry: CommitEntry): boolean
 ---@field update_entry fun(self: self, entry: DictEntry, commits: integer, prefix: string): boolean
 ---@field reload_user_dict_disabling_patterns fun(self: self, config_list: ConfigList): boolean
----@field set_memorize_callback fun(self: self, callback: fun(ce: CommitEntry))
+---@field set_memorize_callback fun(self: self, callback?: fun(translator: TableTranslator, commit_entry: CommitEntry): boolean): boolean
 ---@field disconnect fun(self: self)
 
 ---@class Filter
----@field name_space string
----@field apply fun(self: self, translation: Translation): Translation
+---@field name_space string?
+---@field apply fun(self: self, translation: Translation, candidates: CandidateList): Translation?
+---@field applies_to_segment fun(self: self, segment: Segment): boolean
+
+---@class CandidateList
 
 ---@class Notifier
----@field connect fun(self: self, f: fun(ctx: Context), group: integer|nil): Connection
+---@field connect fun(self: self, f: fun(ctx: Context), group?: integer): Connection
 
 ---@class OptionUpdateNotifier: Notifier
----@field connect fun(self: self, f: fun(ctx: Context, name: string), group:integer|nil): function[]
+---@field connect fun(self: self, f: fun(ctx: Context, name: string), group?: integer): Connection
 
 ---@class PropertyUpdateNotifier: Notifier
----@field connect fun(self: self, f: fun(ctx: Context, name: string), group:integer|nil): function[]
+---@field connect fun(self: self, f: fun(ctx: Context, name: string), group?: integer): Connection
 
 ---@class KeyEventNotifier: Notifier
----@field connect fun(self: self, f: fun(ctx: Context, key: string), group:integer|nil): function[]
+---@field connect fun(self: self, f: fun(ctx: Context, key: KeyEvent), group?: integer): Connection
 
 ---@class Connection
 ---@field disconnect fun(self: self)
@@ -670,19 +703,23 @@ function Switcher(engine) end
 
 ---@class CommitHistory
 ---@field size integer
----@field push fun(self: self, key_event: KeyEvent)
+---@field push fun(self: self, value: Composition | string, text: string)
+---@field push fun(self: self, value: KeyEvent)
 ---@field back fun(self: self): CommitRecord|nil
 ---@field to_table fun(self: self): CommitRecord[]
----@field iter fun(self: self): fun(): (number, CommitRecord)|nil
+---@field repr fun(self: self): string
+---@field iter fun(self: self): (fun(history: CommitHistory, iterator: CommitHistoryIterator): CommitHistoryIterator, CommitRecord?), CommitHistory, CommitHistoryIterator
 ---@field latest_text fun(self: self): string
 ---@field empty fun(self: self): boolean
 ---@field clear fun(self: self)
 ---@field pop_back fun(self: self)
 
+---@class CommitHistoryIterator
+
 ---@class DbAccessor
 ---@field reset fun(self: self): boolean
 ---@field jump fun(self: self, prefix: string): boolean
----@field iter fun(self: self): fun(): (string, string) | nil
+---@field iter fun(self: self): (fun(accessor: DbAccessor): string?, string?), DbAccessor
 
 ---@class UserDb
 ---@field _loaded boolean
@@ -693,27 +730,27 @@ function Switcher(engine) end
 ---@field open fun(self: self): boolean
 ---@field open_read_only fun(self: self): boolean
 ---@field close fun(self: self): boolean
----@field query fun(self: self, prefix: string): DbAccessor
+---@field query fun(self: self, prefix: string): DbAccessor?
 ---@field fetch fun(self: self, key: string): string|nil
 ---@field update fun(self: self, key: string, value: string): boolean
 ---@field erase fun(self: self, key: string): boolean
 ---@field loaded fun(self: self): boolean
----@field disable fun(self: self): boolean
----@field enable fun(self: self): boolean
+---@field disable fun(self: self)
+---@field enable fun(self: self)
 
 ---@param db_name string
 ---@param db_class string
----@return UserDb
+---@return UserDb?
 function UserDb(db_name, db_class) end
 
 ---@class LevelDb: UserDb
 
 ---@param db_name string
----@return LevelDb
+---@return LevelDb?
 function LevelDb(db_name) end
 
 ---@class TableDb: UserDb
 
 ---@param db_name string
----@return TableDb
+---@return TableDb?
 function TableDb(db_name) end
