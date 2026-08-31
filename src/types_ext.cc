@@ -253,12 +253,27 @@ namespace DbAccessorReg{
 namespace UserDbReg{
   using T = Db;
   using A = DbAccessor;
+  class UserDbPool {
+    public:
+      UserDbPool(){};
+      an<T> GetDb(const string& db_name, const string& db_class) {
+        string db_key  = db_name + "." + db_class;
+        an<T> db = db_pool_[db_key].lock();
+        if (!db){
+          if(auto comp= Db::Require(db_class)) {
+            db.reset(comp->Create(db_name));
+            db_pool_[db_key] = db;
+          }
+        }
+        return db;
+      }
+    protected:
+      map<string, weak<T>> db_pool_;
+  };
 
+  static UserDbPool db_pool;
   an<T> make(const string& db_name, const string& db_class) {
-    if (auto comp= Db::Require(db_class)) {
-      return an<T>(comp->Create(db_name));
-    }
-    return {};
+    return db_pool.GetDb(db_name, db_class);
   }
 
   an<T> make_leveldb(const string& db_name) {
