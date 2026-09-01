@@ -5,6 +5,7 @@
 #include <typeinfo>
 #include <vector>
 #include <set>
+#include <map>
 #include <cstring>
 
 #ifdef __GNUC__
@@ -418,6 +419,36 @@ struct LuaType<std::set<T>> {
     return o;
   }
 };
+
+// Map
+template<typename K, typename V>
+struct LuaType<std::map<K,V>> {
+  static void pushdata(lua_State *L, const std::map<K, V> &o) {
+    lua_createtable(L, 0, o.size());
+    for (auto it = o.begin(); it != o.end(); it++) {
+      LuaType<K>::pushdata(L, it->first);
+      LuaType<V>::pushdata(L, it->second);
+      lua_rawset(L, -3);
+    }
+  }
+
+  static std::map<K, V> &todata(lua_State *L, int j, C_State *C) {
+    auto &o = C->alloc<std::map<K, V>>();
+    o.clear();
+    lua_pushnil(L);  /* first key */
+    while (lua_next(L, j) != 0) {
+      o.insert( {LuaType<K>::todata(L, -2, C), LuaType<V>::todata(L, -1, C)});
+      lua_pop(L, 1);
+    }
+    return o;
+  }
+};
+
+template<typename K, typename V>
+struct LuaType<const std::map<K, V>> : LuaType<std::map<K, V>> {};
+
+template<typename K, typename V>
+struct LuaType<const std::map<K, V> &> : LuaType<std::map<K, V>> {};
 
 template<typename T>
 struct LuaType<const std::vector<T>> : LuaType<std::vector<T>> {};

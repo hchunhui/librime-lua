@@ -46,3 +46,21 @@ void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
   lua_pop(L, nup);  /* remove upvalues */
 }
 #endif
+
+//copy from lua 5.4
+#if LUA_VERSION_NUM < 504
+  int luaL_typeerror(lua_State *L, int arg, const char *tname) {
+    const char *msg;
+    const char *typearg;
+    luaL_getmetafield(L, arg, "__name");
+    int type = lua_type(L, -1);
+    if (type == LUA_TSTRING)
+      typearg = lua_tostring(L, -1);
+    else if (type == LUA_TLIGHTUSERDATA)
+      typearg = "light userdata";
+    else
+      typearg = luaL_typename(L, arg);
+    msg = lua_pushfstring(L, "%s expected, got %s", tname, typearg);
+    return luaL_argerror(L, arg, msg);
+  }
+#endif
