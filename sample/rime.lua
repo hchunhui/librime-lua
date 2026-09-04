@@ -64,6 +64,10 @@ date_translator = require("date")
 -- 详见 `lua/time.lua`
 time_translator = require("time")
 
+-- week_translator: 将 `week` 翻译为当前星期
+-- 详见 `lua/week.lua`
+week_translator = require("week")
+
 -- number_translator: 将 `/` + 阿拉伯数字 翻译为大小写汉字
 -- 详见 `lua/number.lua`
 number_translator = require("number")
