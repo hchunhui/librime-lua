@@ -817,12 +817,14 @@ namespace ContextReg {
     { "highlight", WRAP(HighlightDispatcher<Context>::Highlight) },
     { "confirm_current_selection", WRAPMEM(T::ConfirmCurrentSelection) },
     { "delete_current_selection", WRAPMEM(T::DeleteCurrentSelection) },
-    { "confirm_previous_selection", WRAPMEM(T::ConfirmPreviousSelection) },
+    { "confirm_previous_selection", WRAPMEM(T::ConfirmPreviousSelection) }, // deprecated
     { "reopen_previous_selection", WRAPMEM(T::ReopenPreviousSelection) },
     { "clear_previous_segment", WRAPMEM(T::ClearPreviousSegment) },
     { "reopen_previous_segment", WRAPMEM(T::ReopenPreviousSegment) },
     { "clear_non_confirmed_composition", WRAPMEM(T::ClearNonConfirmedComposition) },
     { "refresh_non_confirmed_composition", WRAPMEM(T::RefreshNonConfirmedComposition) },
+    { "begin_editing", WRAPMEM(T::BeginEditing) },
+    { "highlight", WRAPMEM(T::Highlight)}, // set candidate_selected without select_notifier
     { "set_option", WRAPMEM(T::set_option) },
     { "get_option", WRAPMEM(T::get_option) },
     { "set_property", WRAPMEM(T::set_property) },
