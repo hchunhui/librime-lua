@@ -22,6 +22,9 @@ private:
 };
 
 struct LuaErr { int status; std::string e; };
+
+std::ostream& operator<<(std::ostream& os, const LuaErr& err);
+
 template <typename T>
 using LuaResult = Result<T, LuaErr>;
 
