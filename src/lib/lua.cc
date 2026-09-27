@@ -3,7 +3,7 @@
 
 namespace LuaImpl {
   int wrap_common(lua_State *L, int (*cfunc)(lua_State *)) {
-    char room[sizeof(C_State)];
+    alignas(C_State) char room[sizeof(C_State)];
     C_State *C = new (&room) C_State();
     lua_pushcfunction(L, cfunc);
     lua_insert(L, 1);
