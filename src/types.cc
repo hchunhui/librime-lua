@@ -2026,7 +2026,7 @@ namespace MemoryReg {
       if (auto c = std::dynamic_pointer_cast<Sentence>(cand)) {
         if (*language_ == *c->language()) {
           for (auto entry : c->components()) {
-            res |= user_dict()->UpdateEntry(c->entry(), commits);
+            res |= user_dict()->UpdateEntry(entry, commits);
           }//components
         }
       }
