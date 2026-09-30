@@ -69,7 +69,18 @@ static bool sub_module_init(lua_State *L, const Ticket &t,
 }
 //---
 static void raw_init(lua_State *L, const Ticket &t,
-                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini, an<LuaObj> *tags_match= NULL) {
+                     an<LuaObj> *env, an<LuaObj> *func, an<LuaObj> *fini,
+                     an<LuaObj> *tags_match = NULL) {
+  int top = lua_gettop(L);
+
+  if (t.klass.empty()) {
+    LOG(ERROR) << "Lua Compoment of initialize error:("
+      << " name_space: " << t.name_space
+      << " ): " << "empty module name ";
+    lua_settop(L, top);
+    return;
+  }
+
   lua_newtable(L);
   Engine *e = t.engine;
   LuaType<Engine *>::pushdata(L, e);
@@ -81,25 +92,31 @@ static void raw_init(lua_State *L, const Ticket &t,
 
   std::vector<std::string> _vec_klass = (t.klass[0] == '*') ?
     split_string(t.klass.substr(1), "*") : split_string(t.klass, "*");
-  if (t.klass.size() > 0 && t.klass[0] == '*') {
+  if (t.klass[0] == '*') {
     lua_getglobal(L, "require");
     lua_pushstring(L, _vec_klass.at(0).c_str());
     int status = lua_pcall(L, 1, 1, 0);
     if (status != LUA_OK) {
       const char *e = lua_tostring(L, -1);
       LOG(ERROR) << "Lua Compoment of autoload error:("
-                 << " module: "<< t.klass
+                 << " module: " << t.klass
                  << " name_space: " << t.name_space
                  << " status: " << status
-                 << " ): " << e;
+                 << " ): " << (e ? e : luaL_typename(L, -1));
+      lua_settop(L, top);
+      return;
     }
   } else {
     lua_getglobal(L, _vec_klass.at(0).c_str());
   }
 
-  if (_vec_klass.size() > 1) {
-    sub_module_init(L, t, _vec_klass);
+  if (_vec_klass.size() > 1 && !sub_module_init(L, t, _vec_klass)) {
+    lua_settop(L, top);
+    return;
   }
+
+  an<LuaObj> local_fini;
+  an<LuaObj> local_tags_match;
 
   if (lua_type(L, -1) == LUA_TTABLE) {
     lua_getfield(L, -1, "init");
@@ -109,24 +126,26 @@ static void raw_init(lua_State *L, const Ticket &t,
       if (status != LUA_OK) {
         const char *e = lua_tostring(L, -1);
         LOG(ERROR) << "Lua Compoment of initialize  error:("
-          << " module: "<< t.klass
+          << " module: " << t.klass
           << " name_space: " << t.name_space
           << " status: " << status
-          << " ): " << e;
+          << " ): " << (e ? e : luaL_typename(L, -1));
+        lua_settop(L, top);
+        return;
       }
     }
     lua_pop(L, 1);
 
     lua_getfield(L, -1, "fini");
     if (lua_type(L, -1) == LUA_TFUNCTION) {
-      *fini = LuaObj::todata(L, -1);
+      local_fini = LuaObj::todata(L, -1);
     }
     lua_pop(L, 1);
 
     if (tags_match) {
       lua_getfield(L, -1, "tags_match");
       if (lua_type(L, -1) == LUA_TFUNCTION) {
-        *tags_match = LuaObj::todata(L, -1);
+        local_tags_match = LuaObj::todata(L, -1);
       }
       lua_pop(L, 1);
     }
@@ -136,13 +155,20 @@ static void raw_init(lua_State *L, const Ticket &t,
 
   if (lua_type(L, -1) != LUA_TFUNCTION) {
     LOG(ERROR) << "Lua Compoment of initialize  error:("
-      << " module: "<< t.klass
+      << " module: " << t.klass
       << " name_space: " << t.name_space
       << " func type: " << luaL_typename(L, -1)
       << " ): " << "func type error expect function ";
+    lua_settop(L, top);
+    return;
   }
+
   *func = LuaObj::todata(L, -1);
-  lua_pop(L, 1);
+  *fini = local_fini;
+  if (tags_match)
+    *tags_match = local_tags_match;
+
+  lua_settop(L, top);
 }
 
 //--- LuaFilter
@@ -153,6 +179,8 @@ LuaFilter::LuaFilter(const Ticket& ticket, Lua* lua)
 
 an<Translation> LuaFilter::Apply(
   an<Translation> translation, CandidateList* candidates) {
+  if (!func_)
+    return translation;
   auto f = lua_->newthread<an<LuaObj>, an<Translation>,
                            an<LuaObj>, CandidateList *>(func_, translation, env_, candidates);
   return New<LuaTranslation>(lua_, f);
@@ -176,6 +204,8 @@ LuaTranslator::LuaTranslator(const Ticket& ticket, Lua* lua)
 
 an<Translation> LuaTranslator::Query(const string& input,
                                      const Segment& segment) {
+  if (!func_)
+    return an<Translation>();
   auto f = lua_->newthread<an<LuaObj>, const string &, const Segment &,
                            an<LuaObj>>(func_, input, segment, env_);
   an<Translation> t = New<LuaTranslation>(lua_, f);
@@ -202,6 +232,8 @@ LuaSegmentor::LuaSegmentor(const Ticket& ticket, Lua *lua)
 }
 
 bool LuaSegmentor::Proceed(Segmentation* segmentation) {
+  if (!func_)
+    return true;
   auto r = lua_->call<bool, an<LuaObj>, Segmentation &,
                       an<LuaObj>>(func_, *segmentation, env_);
   if (!r.ok()) {
@@ -229,6 +261,8 @@ LuaProcessor::LuaProcessor(const Ticket& ticket, Lua* lua)
 }
 
 ProcessResult LuaProcessor::ProcessKeyEvent(const KeyEvent& key_event) {
+  if (!func_)
+    return kNoop;
   auto r = lua_->call<int, an<LuaObj>, const KeyEvent&,
                       an<LuaObj>>(func_, key_event, env_);
   if (!r.ok()) {

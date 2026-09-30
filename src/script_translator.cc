@@ -97,8 +97,11 @@ namespace ScriptTranslatorReg {
   }
 
   void T::set_enable_correction(bool enable) {
-    if ((enable_correction_ = enable && !corrector_))
+    enable_correction_ = enable;
+    if (enable && !corrector_)
       init_correction();
+    else if (!enable)
+      corrector_.reset();
   }
 
   bool T::update_entry(const DictEntry& entry,
