@@ -1,0 +1,5 @@
+#ifndef GIT_VERSION_H
+#define GIT_VERSION_H
+#define GIT_HASH @GIT_HASH@
+
+#endif // GIT_VERSION_H
