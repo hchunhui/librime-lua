@@ -20,6 +20,12 @@ local confs = {
     numeral = { [0] = "〇", "一", "二", "三", "四", "五", "六", "七", "八", "九" }
   },
   {
+    comment = " 兼词",
+    numeral = { [0] = "又", "一", "二", "三", "四", "五", "六", "七", "八", "九" },
+    place = { [0] = "", "十廿卅卌圩圆进枯桦", "百", "千" },
+    group = { [0] = "", "万", "亿", "万亿", "亿亿" }
+  },
+  {
     comment = " 大寫",
     numeral = { [0] = "零", "壹", "貳", "參", "肆", "伍", "陸", "柒", "捌", "玖" },
     place = { [0] = "", "拾", "佰", "仟" },
@@ -34,6 +40,12 @@ local confs = {
   {
     comment = " 序數",
     numeral = { [0] = "〇", "一", "二", "三", "四", "五", "六", "七", "八", "九" }
+  },
+  {
+    comment = " 兼詞",
+    numeral = { [0] = "又", "一", "二", "三", "四", "五", "六", "七", "八", "九" },
+    place = { [0] = "", "十廿卅卌圩圓進枯樺", "百", "千" },
+    group = { [0] = "", "萬", "億", "兆", "京" }
   }
 }
 
@@ -46,6 +58,8 @@ local function read_seg(conf, n)
     local d = tonumber(string.sub(n, -1, -1))
     if conf.place == nil then
       s = conf.numeral[d] .. s
+    elseif i == 1 and d > 0 and string.len(conf.place[1]) == 27 then
+      s = string.sub(conf.place[1], d * 3 - 2, d * 3) .. s
     elseif d == 1 and i == 1 and string.len(n) == 1 then
       s = conf.place[i] .. s
     elseif d ~= 0 then
