@@ -30,6 +30,7 @@ local charset = {
    ["ExtG"] = { first = 0x30000, last = 0x3134F },      -- CJK Unified Ideographs Extension G - https://unicode.org/charts/PDF/U30000.pdf
    ["ExtH"] = { first = 0x31350, last = 0x323AF },      -- CJK Unified Ideographs Extension H - https://unicode.org/charts/PDF/U31350.pdf
    ["ExtI"] = { first = 0x2EBF0, last = 0x2EE5F },      -- CJK Unified Ideographs Extension I - https://unicode.org/charts/PDF/U2EBF0.pdf
+   ["ExtJ"] = { first = 0x323B0, last = 0x3347F },      -- CJK Unified Ideographs Extension J - https://unicode.org/charts/PDF/U323B0.pdf
    ["Compat"] = { first = 0xF900, last = 0xFAFF },      -- CJK Compatibility Ideographs - https://unicode.org/charts/PDF/UF900.pdf
    ["CompatSupp"] = { first = 0x2F800, last = 0x2FA1F } -- CJK Compatibility Ideographs Supplement - https://unicode.org/charts/PDF/U2F800.pdf
 }
@@ -60,6 +61,7 @@ local function is_cjk_ext(c)
       is_charset("ExtG")(c) or
       is_charset("ExtH")(c) or
       is_charset("ExtI")(c) or
+      is_charset("ExtJ")(c) or
       is_charset("Compat")(c) or
       is_charset("CompatSupp")(c)
 end
