@@ -12,7 +12,7 @@ void lua_export_type(lua_State *L,
                   ns::funcs, ns::methods, ns::vars_get, ns::vars_set)
 
 #define EXPORT_CST_TYPE(ns, L) \
-  lua_export_type(L, LuaType<const ns::T>::type(), LuaType<ns::T>::gc, \
+  lua_export_type(L, LuaType<const ns::T>::type(), LuaType<const ns::T>::gc, \
                   ns::funcs, ns::methods, ns::vars_get, ns::vars_set)
 
 #define EXPORT_REF_TYPE(ns, L) \

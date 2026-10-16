@@ -3,7 +3,7 @@
 
 namespace LuaImpl {
   int wrap_common(lua_State *L, int (*cfunc)(lua_State *)) {
-    char room[sizeof(C_State)];
+    alignas(C_State) char room[sizeof(C_State)];
     C_State *C = new (&room) C_State();
     lua_pushcfunction(L, cfunc);
     lua_insert(L, 1);
@@ -228,6 +228,7 @@ Lua::Lua() {
 }
 
 Lua::~Lua() {
+  closing_ = true;   // lua_close 内部会跑 GC；此后禁止任何重入的 GC 调用
   lua_close(L_);
 }
 
@@ -265,7 +266,20 @@ std::shared_ptr<LuaObj> Lua::getglobal(const std::string &v) {
 }
 
 void Lua::gc() {
+  // 关闭 Lua 状态时（Lua::~Lua -> lua_close）GC 已在运行：此处再调就是对正在跑的 GC
+  // 的重入调用，Lua 5.3 的 GC 状态机会活锁（进程 100% CPU、lua_close 永不返回）。
+  // 守卫放在这里而不是各调用点——所有 GC 驱动都经过这两个函数（单一咽喉点）。
+  if (closing_) {
+    return;
+  }
   lua_gc(L_, LUA_GCCOLLECT, 0);
+}
+
+void Lua::gc_step(int kb) {
+  if (closing_) {
+    return;
+  }
+  lua_gc(L_, LUA_GCSTEP, kb);
 }
 
 LuaObj::LuaObj(lua_State *L, int i) : L_(L) {

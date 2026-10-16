@@ -35,6 +35,7 @@ public:
   std::shared_ptr<LuaObj> newthreadx(lua_State *L, int nargs);
 
   void gc();
+  void gc_step(int kb);
 
   template <typename ... I>
   std::shared_ptr<LuaObj> newthread(I ... input);
@@ -53,6 +54,8 @@ public:
   static Lua *from_state(lua_State *L);
 private:
   lua_State *L_;
+  // 析构期间为真（此时 lua_close 内部的 GC 正在跑，见 lua.cc 的两个守卫）
+  bool closing_ = false;
 };
 
 namespace LuaImpl {
